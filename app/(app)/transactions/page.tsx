@@ -2,10 +2,16 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { TransactionList } from '@/components/transactions/transaction-list'
 
-export default async function TransactionsPage() {
+interface Props {
+  searchParams: Promise<{ type?: string }>
+}
+
+export default async function TransactionsPage({ searchParams }: Props) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
+
+  const { type } = await searchParams
 
   const [{ data: transactions }, { data: accounts }, { data: categories }] = await Promise.all([
     supabase
@@ -18,6 +24,8 @@ export default async function TransactionsPage() {
     supabase.from('categories').select('*').or(`user_id.eq.${user.id},is_default.eq.true`).order('name'),
   ])
 
+  const initialFilter = type === 'income' ? 'income' : type === 'expense' ? 'expense' : 'all'
+
   return (
     <div className="p-6">
       <TransactionList
@@ -25,6 +33,7 @@ export default async function TransactionsPage() {
         accounts={accounts ?? []}
         categories={categories ?? []}
         userId={user.id}
+        initialFilter={initialFilter}
       />
     </div>
   )

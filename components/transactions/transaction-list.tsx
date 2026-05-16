@@ -17,11 +17,12 @@ interface Props {
   accounts: Account[]
   categories: Category[]
   userId: string
+  initialFilter?: 'all' | 'income' | 'expense'
 }
 
-export function TransactionList({ transactions, accounts, categories, userId }: Props) {
+export function TransactionList({ transactions, accounts, categories, userId, initialFilter = 'all' }: Props) {
   const [open, setOpen] = useState(false)
-  const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all')
+  const [filter, setFilter] = useState<'all' | 'income' | 'expense'>(initialFilter)
   const router = useRouter()
   const supabase = createClient()
 
