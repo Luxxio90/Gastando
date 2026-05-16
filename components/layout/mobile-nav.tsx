@@ -3,22 +3,22 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Bell, CreditCard, LayoutDashboard, PiggyBank, Settings } from 'lucide-react'
+import { Bell, CreditCard, LayoutDashboard, PiggyBank, Wallet } from 'lucide-react'
 
 const navItems = [
-  { href: '/avisos', label: 'Avisos', icon: Bell },
+  { href: '/tarjetas', label: 'Tarjetas', icon: Wallet },
   { href: '/accounts', label: 'Cuentas', icon: CreditCard },
   { href: '/dashboard', label: 'Home', icon: LayoutDashboard, center: true },
-  { href: '/budgets', label: 'Presupuestos', icon: PiggyBank },
-  { href: '/settings', label: 'Ajustes', icon: Settings },
+  { href: '/budgets', label: 'Presupuesto', icon: PiggyBank },
+  { href: '/avisos', label: 'Avisos', icon: Bell },
 ]
 
 export function MobileNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 md:hidden">
-      <div className="flex items-end justify-around px-2 pb-1 pt-0.5">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-100 md:hidden shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+      <div className="flex items-center justify-around px-1 py-2">
         {navItems.map(({ href, label, icon: Icon, center }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
 
@@ -27,15 +27,15 @@ export function MobileNav() {
               <Link
                 key={href}
                 href={href}
-                className="flex flex-col items-center gap-0.5 relative -top-3"
+                className="flex flex-col items-center gap-1"
               >
                 <div className={cn(
-                  'h-12 w-12 rounded-full flex items-center justify-center shadow-lg transition-colors',
-                  active ? 'bg-emerald-700' : 'bg-gray-900'
+                  'h-11 w-11 rounded-2xl flex items-center justify-center transition-colors',
+                  active ? 'bg-emerald-500' : 'bg-gray-900'
                 )}>
                   <Icon className="h-5 w-5 text-white" />
                 </div>
-                <span className={cn('text-[10px] font-medium', active ? 'text-emerald-600' : 'text-gray-400')}>
+                <span className={cn('text-xs font-medium', active ? 'text-emerald-600' : 'text-gray-400')}>
                   {label}
                 </span>
               </Link>
@@ -46,10 +46,10 @@ export function MobileNav() {
             <Link
               key={href}
               href={href}
-              className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl"
+              className="flex flex-col items-center gap-1 px-3 py-1 rounded-xl"
             >
-              <Icon className={cn('h-4 w-4', active ? 'text-emerald-600' : 'text-gray-400')} />
-              <span className={cn('text-[10px] font-medium', active ? 'text-emerald-600' : 'text-gray-400')}>
+              <Icon className={cn('h-5 w-5', active ? 'text-emerald-500' : 'text-gray-400')} />
+              <span className={cn('text-xs font-medium', active ? 'text-emerald-500' : 'text-gray-400')}>
                 {label}
               </span>
             </Link>
