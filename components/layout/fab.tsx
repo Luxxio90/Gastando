@@ -1,15 +1,16 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, X, ArrowUpCircle, ArrowDownCircle } from 'lucide-react'
+import { Plus, X, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { TransactionDialog } from '@/components/transactions/transaction-dialog'
+import { TransferDialog } from '@/components/transactions/transfer-dialog'
 import { Account, Category } from '@/types'
 
 export function FloatingActionButton({ userId }: { userId: string }) {
   const [open, setOpen] = useState(false)
-  const [dialogType, setDialogType] = useState<'income' | 'expense' | null>(null)
+  const [dialogType, setDialogType] = useState<'income' | 'expense' | 'transfer' | null>(null)
   const [accounts, setAccounts] = useState<Account[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const supabase = createClient()
@@ -26,7 +27,7 @@ export function FloatingActionButton({ userId }: { userId: string }) {
     load()
   }, [userId])
 
-  async function handleSelect(type: 'income' | 'expense') {
+  async function handleSelect(type: 'income' | 'expense' | 'transfer') {
     setOpen(false)
     const [{ data: acc }, { data: cat }] = await Promise.all([
       supabase.from('accounts').select('*').eq('user_id', userId),
@@ -39,13 +40,11 @@ export function FloatingActionButton({ userId }: { userId: string }) {
 
   return (
     <>
-      {/* Overlay para cerrar el speed dial */}
       {open && (
         <div className="fixed inset-0 z-40 md:hidden" onClick={() => setOpen(false)} />
       )}
 
       <div className="fixed bottom-20 right-4 z-50 flex flex-col items-end gap-3 md:hidden">
-        {/* Speed dial opciones */}
         <div className={cn(
           'flex flex-col items-end gap-2 transition-all duration-200',
           open ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'
@@ -71,6 +70,17 @@ export function FloatingActionButton({ userId }: { userId: string }) {
               <ArrowDownCircle className="h-4 w-4 text-white" />
             </div>
           </button>
+
+          {/* Transferir */}
+          <button
+            onClick={() => handleSelect('transfer')}
+            className="flex items-center gap-2 bg-white shadow-lg rounded-full pl-4 pr-4 py-2.5 border border-blue-100"
+          >
+            <span className="text-sm font-semibold text-blue-600">Transferir</span>
+            <div className="bg-blue-500 rounded-full p-1.5">
+              <ArrowLeftRight className="h-4 w-4 text-white" />
+            </div>
+          </button>
         </div>
 
         {/* Botón principal + */}
@@ -88,8 +98,7 @@ export function FloatingActionButton({ userId }: { userId: string }) {
         </button>
       </div>
 
-      {/* Dialog de transacción */}
-      {dialogType && (
+      {(dialogType === 'income' || dialogType === 'expense') && (
         <TransactionDialog
           open={true}
           onClose={() => setDialogType(null)}
@@ -97,6 +106,14 @@ export function FloatingActionButton({ userId }: { userId: string }) {
           categories={categories}
           userId={userId}
           defaultType={dialogType}
+        />
+      )}
+
+      {dialogType === 'transfer' && (
+        <TransferDialog
+          open={true}
+          onClose={() => setDialogType(null)}
+          accounts={accounts}
         />
       )}
     </>
