@@ -137,7 +137,9 @@ export function AccountsList({ accounts, userId }: Props) {
               <div className="space-y-2">
                 <Label>Tipo</Label>
                 <Select value={form.type} onValueChange={v => setForm({ ...form, type: v ?? '' })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-full">
+                    <span className="text-sm">{ACCOUNT_TYPES.find(t => t.value === form.type)?.label ?? 'Seleccionar'}</span>
+                  </SelectTrigger>
                   <SelectContent>{ACCOUNT_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
@@ -150,7 +152,9 @@ export function AccountsList({ accounts, userId }: Props) {
               <div className="space-y-2">
                 <Label>Moneda</Label>
                 <Select value={form.currency} onValueChange={v => setForm({ ...form, currency: v ?? '' })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-full">
+                    <span className="text-sm">{form.currency || 'Seleccionar'}</span>
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ARS">ARS (Peso)</SelectItem>
                     <SelectItem value="USD">USD (Dólar)</SelectItem>
