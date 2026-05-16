@@ -17,14 +17,15 @@ interface Props {
   accounts: Account[]
   categories: Category[]
   userId: string
+  defaultType?: 'income' | 'expense'
 }
 
-export function TransactionDialog({ open, onClose, accounts, categories, userId }: Props) {
+export function TransactionDialog({ open, onClose, accounts, categories, userId, defaultType = 'expense' }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
-    type: 'expense' as 'income' | 'expense',
+    type: defaultType as 'income' | 'expense',
     amount: '',
     description: '',
     date: new Date().toISOString().split('T')[0],
