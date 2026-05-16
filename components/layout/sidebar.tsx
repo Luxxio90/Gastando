@@ -14,6 +14,7 @@ import {
   LogOut,
   Wallet,
   Settings,
+  Bell,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -23,6 +24,7 @@ const navItems = [
   { href: '/accounts', label: 'Cuentas', icon: CreditCard },
   { href: '/budgets', label: 'Presupuestos', icon: PiggyBank },
   { href: '/investments', label: 'Inversiones', icon: TrendingUp },
+  { href: '/avisos', label: 'Avisos', icon: Bell },
   { href: '/settings', label: 'Ajustes', icon: Settings },
 ]
 
