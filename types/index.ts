@@ -49,6 +49,25 @@ export interface Budget {
   spent?: number
 }
 
+export interface BudgetCard {
+  id: string
+  user_id: string
+  name: string
+  month: number
+  year: number
+  color: string
+  card_type: 'income' | 'expense'
+  calc_type: 'manual' | 'category_sum' | 'percentage'
+  manual_amount: number | null
+  sum_category_id: string | null
+  source_card_id: string | null
+  percentage: number | null
+  track_category_id: string | null
+  created_at: string
+  sum_category?: Pick<Category, 'id' | 'name' | 'icon' | 'type'>
+  track_category?: Pick<Category, 'id' | 'name' | 'icon' | 'type'>
+}
+
 export interface Investment {
   id: string
   user_id: string
