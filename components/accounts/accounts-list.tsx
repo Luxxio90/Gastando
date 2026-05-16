@@ -93,11 +93,20 @@ export function AccountsList({ accounts, userId }: Props) {
         ) : accounts.map(a => (
           <Card key={a.id} className="relative overflow-hidden hover:shadow-md transition-shadow">
             <div className="h-1.5" style={{ backgroundColor: a.color }} />
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <CreditCard className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                <CardTitle className="text-sm font-medium truncate">{a.name}</CardTitle>
-              </div>
+            <Link href={`/accounts/${a.id}`}>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <CreditCard className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                  <CardTitle className="text-sm font-medium truncate">{a.name}</CardTitle>
+                </div>
+                <ChevronRight className="h-4 w-4 text-gray-300 flex-shrink-0" />
+              </CardHeader>
+              <CardContent className="pb-4">
+                <p className="text-2xl font-bold">{formatCurrency(a.balance, a.currency)}</p>
+                <p className="text-xs text-gray-400 mt-1">{ACCOUNT_TYPES.find(t => t.value === a.type)?.label}</p>
+              </CardContent>
+            </Link>
+            <div className="absolute top-5 right-2">
               <DropdownMenu>
                 <DropdownMenuTrigger className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
                   <MoreVertical className="h-4 w-4" />
@@ -108,19 +117,7 @@ export function AccountsList({ accounts, userId }: Props) {
                   <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(a.id)}>Eliminar</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </CardHeader>
-            <Link href={`/accounts/${a.id}`}>
-              <CardContent className="pb-4">
-                <p className="text-2xl font-bold">{formatCurrency(a.balance, a.currency)}</p>
-                <div className="flex items-center justify-between mt-1">
-                  <p className="text-xs text-gray-400">{ACCOUNT_TYPES.find(t => t.value === a.type)?.label}</p>
-                  <div className="flex items-center text-xs text-gray-400 gap-1">
-                    <span>Ver movimientos</span>
-                    <ChevronRight className="h-3 w-3" />
-                  </div>
-                </div>
-              </CardContent>
-            </Link>
+            </div>
           </Card>
         ))}
       </div>
