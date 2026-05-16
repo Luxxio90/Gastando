@@ -6,8 +6,12 @@ import { Account, Transaction, Category } from '@/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { ArrowLeft, ArrowRight, ArrowUpCircle, ArrowDownCircle, MoreVertical, Plus } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ArrowUpCircle, ArrowDownCircle, MoreVertical, Plus, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
 import { TransactionDialog } from '@/components/transactions/transaction-dialog'
 import Link from 'next/link'
@@ -19,6 +23,16 @@ interface Props {
   accounts: Account[]
   userId: string
 }
+
+const ACCOUNT_TYPES = [
+  { value: 'cash', label: 'Efectivo' },
+  { value: 'bank', label: 'Cuenta bancaria' },
+  { value: 'credit_card', label: 'Tarjeta de crédito' },
+  { value: 'savings', label: 'Caja de ahorro' },
+  { value: 'other', label: 'Otra' },
+]
+
+const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 
 function computeRunningBalances(transactions: Transaction[], currentBalance: number) {
   const sorted = [...transactions].sort(
@@ -42,6 +56,15 @@ export function AccountDetail({ account, transactions, categories, accounts, use
   const supabase = createClient()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
+  const [editAccountOpen, setEditAccountOpen] = useState(false)
+  const [editLoading, setEditLoading] = useState(false)
+  const [editForm, setEditForm] = useState({
+    name: account.name,
+    type: account.type,
+    balance: account.balance.toString(),
+    currency: account.currency,
+    color: account.color,
+  })
 
   const withBalances = computeRunningBalances(transactions, account.balance)
 
@@ -66,6 +89,29 @@ export function AccountDetail({ account, transactions, categories, accounts, use
     }
   }
 
+  async function handleSaveAccount(e: React.FormEvent) {
+    e.preventDefault()
+    setEditLoading(true)
+    const { error } = await supabase
+      .from('accounts')
+      .update({
+        name: editForm.name,
+        type: editForm.type,
+        balance: parseFloat(editForm.balance) || 0,
+        currency: editForm.currency,
+        color: editForm.color,
+      })
+      .eq('id', account.id)
+    if (error) {
+      toast.error('Error al guardar los cambios')
+    } else {
+      toast.success('Cuenta actualizada')
+      setEditAccountOpen(false)
+      router.refresh()
+    }
+    setEditLoading(false)
+  }
+
   function handleEdit(t: Transaction) {
     setEditingTransaction(t)
     setDialogOpen(true)
@@ -87,8 +133,11 @@ export function AccountDetail({ account, transactions, categories, accounts, use
         </Link>
         <div className="flex-1">
           <h1 className="text-xl font-bold text-gray-900">{account.name}</h1>
-          <p className="text-xs text-gray-400">{account.type === 'cash' ? 'Efectivo' : account.type === 'bank' ? 'Cuenta bancaria' : account.type === 'credit_card' ? 'Tarjeta de crédito' : account.type === 'savings' ? 'Caja de ahorro' : 'Otra'}</p>
+          <p className="text-xs text-gray-400">{ACCOUNT_TYPES.find(t => t.value === account.type)?.label}</p>
         </div>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditForm({ name: account.name, type: account.type, balance: account.balance.toString(), currency: account.currency, color: account.color }); setEditAccountOpen(true) }}>
+          <Pencil className="h-4 w-4 text-gray-500" />
+        </Button>
         <Button onClick={handleNewTransaction} size="sm" className="bg-emerald-600 hover:bg-emerald-700">
           <Plus className="h-4 w-4 mr-1" /> Nuevo
         </Button>
@@ -121,14 +170,12 @@ export function AccountDetail({ account, transactions, categories, accounts, use
             {withBalances.map(t => (
               <div key={t.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                 <div className="flex items-start gap-3">
-                  {/* Ícono tipo */}
                   <div className={`mt-0.5 p-2 rounded-full flex-shrink-0 ${t.type === 'income' ? 'bg-emerald-100' : 'bg-red-100'}`}>
                     {t.type === 'income'
                       ? <ArrowUpCircle className="h-4 w-4 text-emerald-600" />
                       : <ArrowDownCircle className="h-4 w-4 text-red-500" />}
                   </div>
 
-                  {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
@@ -136,24 +183,18 @@ export function AccountDetail({ account, transactions, categories, accounts, use
                         <p className="text-xs text-gray-400">{formatDate(t.date)} · {t.category?.icon} {t.category?.name}</p>
                       </div>
 
-                      {/* 3 puntos */}
                       <DropdownMenu>
                         <DropdownMenuTrigger className="flex-shrink-0 p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
                           <MoreVertical className="h-4 w-4" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEdit(t)}>
-                            Editar
-                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEdit(t)}>Editar</DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteTransaction(t.id)}>
-                            Eliminar
-                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteTransaction(t.id)}>Eliminar</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
 
-                    {/* Saldo anterior → actual */}
                     <div className="flex items-center gap-1.5 mt-2 text-xs">
                       <span className="text-gray-400">{formatCurrency(t._before, account.currency)}</span>
                       <ArrowRight className="h-3 w-3 text-gray-300" />
@@ -172,7 +213,66 @@ export function AccountDetail({ account, transactions, categories, accounts, use
         )}
       </div>
 
-      {/* Dialog de transacción (crear o editar) */}
+      {/* Dialog editar cuenta */}
+      <Dialog open={editAccountOpen} onOpenChange={setEditAccountOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>Editar cuenta</DialogTitle></DialogHeader>
+          <form onSubmit={handleSaveAccount} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nombre</Label>
+              <Input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} required />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Tipo</Label>
+                <Select value={editForm.type} onValueChange={v => setEditForm({ ...editForm, type: v as Account['type'] })}>
+                  <SelectTrigger className="w-full">
+                    <span className="text-sm">{ACCOUNT_TYPES.find(t => t.value === editForm.type)?.label ?? 'Seleccionar'}</span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ACCOUNT_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Balance</Label>
+                <Input type="number" step="0.01" value={editForm.balance} onChange={e => setEditForm({ ...editForm, balance: e.target.value })} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Moneda</Label>
+                <Select value={editForm.currency} onValueChange={v => setEditForm({ ...editForm, currency: v ?? '' })}>
+                  <SelectTrigger className="w-full">
+                    <span className="text-sm">{editForm.currency || 'Seleccionar'}</span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ARS">ARS (Peso)</SelectItem>
+                    <SelectItem value="USD">USD (Dólar)</SelectItem>
+                    <SelectItem value="EUR">EUR (Euro)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Color</Label>
+                <div className="flex gap-2 pt-1">
+                  {COLORS.map(c => (
+                    <button key={c} type="button" className={`h-6 w-6 rounded-full border-2 ${editForm.color === c ? 'border-gray-900' : 'border-transparent'}`} style={{ backgroundColor: c }} onClick={() => setEditForm({ ...editForm, color: c })} />
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button type="button" variant="outline" className="flex-1" onClick={() => setEditAccountOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={editLoading} className="flex-1 bg-emerald-600 hover:bg-emerald-700">
+                {editLoading ? 'Guardando...' : 'Guardar cambios'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de transacción */}
       <TransactionDialog
         open={dialogOpen}
         onClose={() => { setDialogOpen(false); setEditingTransaction(null) }}
