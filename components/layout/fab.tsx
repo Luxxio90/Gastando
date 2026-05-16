@@ -26,8 +26,14 @@ export function FloatingActionButton({ userId }: { userId: string }) {
     load()
   }, [userId])
 
-  function handleSelect(type: 'income' | 'expense') {
+  async function handleSelect(type: 'income' | 'expense') {
     setOpen(false)
+    const [{ data: acc }, { data: cat }] = await Promise.all([
+      supabase.from('accounts').select('*').eq('user_id', userId),
+      supabase.from('categories').select('*').or(`user_id.eq.${userId},is_default.eq.true`).order('name'),
+    ])
+    setAccounts(acc ?? [])
+    setCategories(cat ?? [])
     setDialogType(type)
   }
 
