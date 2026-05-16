@@ -45,7 +45,6 @@ export default async function BudgetsPage({
   const allCards = (cards ?? []) as BudgetCard[]
   const allTransactions = transactions ?? []
 
-  // Group transaction amounts by category and type
   const incomeByCat: Record<string, number> = {}
   const expenseByCat: Record<string, number> = {}
   for (const t of allTransactions) {
@@ -53,10 +52,8 @@ export default async function BudgetsPage({
     else expenseByCat[t.category_id] = (expenseByCat[t.category_id] ?? 0) + t.amount
   }
 
-  // Resolve each card's target amount
+  // Resolve each card's amount
   const resolvedAmounts: Record<string, number> = {}
-
-  // First pass: manual and category_sum
   for (const card of allCards) {
     if (card.calc_type === 'manual') {
       resolvedAmounts[card.id] = card.manual_amount ?? 0
@@ -65,22 +62,9 @@ export default async function BudgetsPage({
       resolvedAmounts[card.id] = card.card_type === 'income'
         ? (incomeByCat[cat] ?? 0)
         : (expenseByCat[cat] ?? 0)
-    }
-  }
-
-  // Second pass: percentage (depends on first pass)
-  for (const card of allCards) {
-    if (card.calc_type === 'percentage' && card.source_card_id != null) {
+    } else if (card.calc_type === 'percentage' && card.source_card_id) {
       const base = resolvedAmounts[card.source_card_id] ?? 0
       resolvedAmounts[card.id] = base * (card.percentage ?? 0) / 100
-    }
-  }
-
-  // Spending per card (for expense cards with tracking category)
-  const spentAmounts: Record<string, number> = {}
-  for (const card of allCards) {
-    if (card.card_type === 'expense' && card.track_category_id) {
-      spentAmounts[card.id] = expenseByCat[card.track_category_id] ?? 0
     }
   }
 
@@ -90,7 +74,8 @@ export default async function BudgetsPage({
         cards={allCards}
         categories={categories ?? []}
         resolvedAmounts={resolvedAmounts}
-        spentAmounts={spentAmounts}
+        incomeByCat={incomeByCat}
+        expenseByCat={expenseByCat}
         userId={user.id}
         month={month}
         year={year}
