@@ -136,7 +136,11 @@ export function TransactionDialog({
             <div className="space-y-2">
               <Label>Cuenta</Label>
               <Select value={form.account_id} onValueChange={v => setForm({ ...form, account_id: v ?? '' })}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                <SelectTrigger className="w-full">
+                  <span className={form.account_id ? 'text-sm' : 'text-sm text-muted-foreground'}>
+                    {accounts.find(a => a.id === form.account_id)?.name ?? 'Seleccionar'}
+                  </span>
+                </SelectTrigger>
                 <SelectContent>
                   {accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
                 </SelectContent>
@@ -147,7 +151,14 @@ export function TransactionDialog({
           <div className="space-y-2">
             <Label>Categoría</Label>
             <Select value={form.category_id} onValueChange={v => setForm({ ...form, category_id: v ?? '' })}>
-              <SelectTrigger><SelectValue placeholder="Seleccionar categoría" /></SelectTrigger>
+              <SelectTrigger className="w-full">
+                <span className={form.category_id ? 'text-sm' : 'text-sm text-muted-foreground'}>
+                  {(() => {
+                    const cat = filteredCategories.find(c => c.id === form.category_id)
+                    return cat ? `${cat.icon} ${cat.name}` : 'Seleccionar categoría'
+                  })()}
+                </span>
+              </SelectTrigger>
               <SelectContent>
                 {filteredCategories.map(c => <SelectItem key={c.id} value={c.id}>{c.icon} {c.name}</SelectItem>)}
               </SelectContent>

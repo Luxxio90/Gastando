@@ -1,10 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowDownCircle, ArrowUpCircle, Wallet, TrendingUp } from 'lucide-react'
+import { ArrowDownCircle, ArrowUpCircle, Wallet, TrendingUp, Settings } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { ExpenseChart } from '@/components/dashboard/expense-chart'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
+import Link from 'next/link'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -35,9 +36,14 @@ export default async function DashboardPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500 text-sm">{now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-500 text-sm">{now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}</p>
+        </div>
+        <Link href="/settings" className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
+          <Settings className="h-5 w-5 text-gray-500" />
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">

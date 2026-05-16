@@ -7,9 +7,16 @@ export default async function SettingsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
+  const { data: categories } = await supabase
+    .from('categories')
+    .select('*')
+    .or(`user_id.eq.${user.id},is_default.eq.true`)
+    .order('type')
+    .order('name')
+
   return (
     <div className="p-6">
-      <SettingsView user={user} />
+      <SettingsView user={user} categories={categories ?? []} />
     </div>
   )
 }
