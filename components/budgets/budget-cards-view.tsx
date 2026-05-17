@@ -122,7 +122,9 @@ export function BudgetCardsView({ cards, categories, resolvedAmounts, incomeByCa
                       <p className="text-[11px] text-gray-400 mt-0.5">
                         {card.calc_type === 'category_sum' && card.sum_category
                           ? `${card.sum_category.icon} ${card.sum_category.name}`
-                          : 'Manual'}
+                          : card.calc_type === 'percentage' && card.source_card_id
+                            ? `${card.percentage}% de ${cards.find(c => c.id === card.source_card_id)?.name ?? '...'}`
+                            : 'Manual'}
                       </p>
                     </div>
                     <div className="text-center">
@@ -176,7 +178,9 @@ export function BudgetCardsView({ cards, categories, resolvedAmounts, incomeByCa
                       <p className="text-[11px] text-gray-400 mt-0.5">
                         {card.calc_type === 'category_sum' && card.sum_category
                           ? `${card.sum_category.icon} ${card.sum_category.name}`
-                          : 'Manual'}
+                          : card.calc_type === 'percentage' && card.source_card_id
+                            ? `${card.percentage}% de ${cards.find(c => c.id === card.source_card_id)?.name ?? '...'}`
+                            : 'Manual'}
                       </p>
                     </div>
                     <div className="text-center">
@@ -234,6 +238,8 @@ export function BudgetCardsView({ cards, categories, resolvedAmounts, incomeByCa
         open={dialogOpen}
         onClose={() => { setDialogOpen(false); setEditingCard(null) }}
         categories={categories}
+        cards={cards}
+        resolvedAmounts={resolvedAmounts}
         userId={userId}
         month={month}
         year={year}
