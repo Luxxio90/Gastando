@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { LogOut, User, Mail, Shield, Plus, Trash2, Pencil } from 'lucide-react'
+import { LogOut, User, Mail, Shield, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 import { Category, ExpenseType } from '@/types'
@@ -191,21 +191,16 @@ export function SettingsView({ user, categories: initialCategories, expenseTypes
         </CardHeader>
         <CardContent className="space-y-0.5">
           {expenseTypes.map(et => (
-            <div key={et.id} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-gray-50">
+            <div key={et.id} onClick={() => openEditEt(et)} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-gray-50 cursor-pointer">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-700">{et.name}</span>
                 {et.is_default && <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">predeterminado</span>}
               </div>
-              <div className="flex items-center gap-1">
-                <button onClick={() => openEditEt(et)} className="p-1.5 text-gray-400 hover:text-gray-700 transition-colors rounded-md hover:bg-gray-100">
-                  <Pencil className="h-3.5 w-3.5" />
+              {!et.is_default && (
+                <button onClick={e => { e.stopPropagation(); handleDeleteEt(et.id) }} className="p-1.5 text-gray-300 hover:text-red-500 transition-colors rounded-md hover:bg-red-50">
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
-                {!et.is_default && (
-                  <button onClick={() => handleDeleteEt(et.id)} className="p-1.5 text-gray-300 hover:text-red-500 transition-colors rounded-md hover:bg-red-50">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
+              )}
             </div>
           ))}
         </CardContent>
@@ -225,7 +220,7 @@ export function SettingsView({ user, categories: initialCategories, expenseTypes
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Gastos</p>
             <div className="space-y-0.5">
               {expenses.map(c => (
-                <div key={c.id} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-gray-50">
+                <div key={c.id} onClick={() => openEditCat(c)} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-gray-50 cursor-pointer">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-base flex-shrink-0">{c.icon}</span>
                     <div className="min-w-0">
@@ -236,12 +231,9 @@ export function SettingsView({ user, categories: initialCategories, expenseTypes
                     </div>
                     {c.is_default && <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full flex-shrink-0">predeterminada</span>}
                   </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button onClick={() => openEditCat(c)} className="p-1.5 text-gray-400 hover:text-gray-700 transition-colors rounded-md hover:bg-gray-100"><Pencil className="h-3.5 w-3.5" /></button>
-                    {!c.is_default && (
-                      <button onClick={() => handleDeleteCat(c.id)} className="p-1.5 text-gray-300 hover:text-red-500 transition-colors rounded-md hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /></button>
-                    )}
-                  </div>
+                  {!c.is_default && (
+                    <button onClick={e => { e.stopPropagation(); handleDeleteCat(c.id) }} className="p-1.5 text-gray-300 hover:text-red-500 transition-colors rounded-md hover:bg-red-50 flex-shrink-0"><Trash2 className="h-3.5 w-3.5" /></button>
+                  )}
                 </div>
               ))}
             </div>
@@ -252,18 +244,15 @@ export function SettingsView({ user, categories: initialCategories, expenseTypes
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Ingresos</p>
             <div className="space-y-0.5">
               {incomes.map(c => (
-                <div key={c.id} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-gray-50">
+                <div key={c.id} onClick={() => openEditCat(c)} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-gray-50 cursor-pointer">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-base flex-shrink-0">{c.icon}</span>
                     <span className="text-sm text-gray-700">{c.name}</span>
                     {c.is_default && <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">predeterminada</span>}
                   </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button onClick={() => openEditCat(c)} className="p-1.5 text-gray-400 hover:text-gray-700 transition-colors rounded-md hover:bg-gray-100"><Pencil className="h-3.5 w-3.5" /></button>
-                    {!c.is_default && (
-                      <button onClick={() => handleDeleteCat(c.id)} className="p-1.5 text-gray-300 hover:text-red-500 transition-colors rounded-md hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /></button>
-                    )}
-                  </div>
+                  {!c.is_default && (
+                    <button onClick={e => { e.stopPropagation(); handleDeleteCat(c.id) }} className="p-1.5 text-gray-300 hover:text-red-500 transition-colors rounded-md hover:bg-red-50 flex-shrink-0"><Trash2 className="h-3.5 w-3.5" /></button>
+                  )}
                 </div>
               ))}
             </div>
