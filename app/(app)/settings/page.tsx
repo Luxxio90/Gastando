@@ -7,16 +7,24 @@ export default async function SettingsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const { data: categories } = await supabase
-    .from('categories')
-    .select('*')
-    .or(`user_id.eq.${user.id},is_default.eq.true`)
-    .order('type')
-    .order('name')
+  const [{ data: categories }, { data: expenseTypes }] = await Promise.all([
+    supabase
+      .from('categories')
+      .select('*, expense_type:expense_types(id,name,is_default)')
+      .or(`user_id.eq.${user.id},is_default.eq.true`)
+      .order('type')
+      .order('name'),
+    supabase
+      .from('expense_types')
+      .select('*')
+      .or(`user_id.eq.${user.id},is_default.eq.true`)
+      .order('is_default', { ascending: false })
+      .order('name'),
+  ])
 
   return (
     <div className="p-6">
-      <SettingsView user={user} categories={categories ?? []} />
+      <SettingsView user={user} categories={categories ?? []} expenseTypes={expenseTypes ?? []} />
     </div>
   )
 }

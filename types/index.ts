@@ -12,6 +12,14 @@ export interface Account {
   created_at: string
 }
 
+export interface ExpenseType {
+  id: string
+  user_id: string | null
+  name: string
+  is_default: boolean
+  created_at: string
+}
+
 export interface Category {
   id: string
   user_id: string | null
@@ -20,6 +28,8 @@ export interface Category {
   color: string
   type: TransactionType
   is_default: boolean
+  expense_type_id: string | null
+  expense_type?: ExpenseType
 }
 
 export interface Transaction {
