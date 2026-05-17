@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Account } from '@/types'
@@ -12,7 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Plus, MoreVertical, CreditCard, ChevronRight } from 'lucide-react'
+import { Plus, MoreVertical, CreditCard, ChevronRight, Settings2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
@@ -34,15 +34,51 @@ interface Props {
   userId: string
 }
 
+const STORAGE_KEY = (userId: string) => `gastando_cards_${userId}`
+
 export function AccountsList({ accounts, userId }: Props) {
   const [mode, setMode] = useState<'create' | 'edit' | null>(null)
   const [editing, setEditing] = useState<Account | null>(null)
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState<FormState>(emptyForm)
+  const [balanceIds, setBalanceIds] = useState<string[] | null>(null)
+  const [balanceConfigOpen, setBalanceConfigOpen] = useState(false)
+  const [draft, setDraft] = useState<string[]>([])
   const router = useRouter()
   const supabase = createClient()
 
-  const totalBalance = accounts.reduce((sum, a) => sum + a.balance, 0)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY(userId))
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        setBalanceIds(parsed.balance ?? null)
+      }
+    } catch {}
+  }, [userId])
+
+  const includedAccounts = balanceIds === null ? accounts : accounts.filter(a => balanceIds.includes(a.id))
+  const totalBalance = includedAccounts.reduce((sum, a) => sum + a.balance, 0)
+
+  function openBalanceConfig() {
+    setDraft(balanceIds ?? accounts.map(a => a.id))
+    setBalanceConfigOpen(true)
+  }
+
+  function toggleDraft(id: string) {
+    setDraft(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
+
+  function applyBalanceConfig() {
+    const newVal = draft.length === accounts.length ? null : draft
+    setBalanceIds(newVal)
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY(userId))
+      const current = raw ? JSON.parse(raw) : {}
+      localStorage.setItem(STORAGE_KEY(userId), JSON.stringify({ ...current, balance: newVal }))
+    } catch {}
+    setBalanceConfigOpen(false)
+  }
 
   function openCreate() { setForm(emptyForm); setEditing(null); setMode('create') }
 
@@ -80,7 +116,15 @@ export function AccountsList({ accounts, userId }: Props) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Cuentas</h1>
-          <p className="text-gray-400 text-sm">Balance total: <span className="font-semibold text-gray-700">{formatCurrency(totalBalance)}</span></p>
+          <div className="flex items-center gap-1 mt-0.5">
+            <p className="text-gray-400 text-sm">Balance total: <span className="font-semibold text-gray-700">{formatCurrency(totalBalance)}</span></p>
+            <button onClick={openBalanceConfig} className="p-0.5 rounded hover:bg-gray-100 text-gray-300 hover:text-gray-600 transition-colors" title="Configurar cuentas">
+              <Settings2 className="h-3.5 w-3.5" />
+            </button>
+            {balanceIds !== null && (
+              <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">{balanceIds.length} de {accounts.length}</span>
+            )}
+          </div>
         </div>
         <Button onClick={openCreate} className="bg-emerald-600 hover:bg-emerald-700">
           <Plus className="h-4 w-4 mr-2" /> Nueva cuenta
@@ -121,6 +165,34 @@ export function AccountsList({ accounts, userId }: Props) {
           </Card>
         ))}
       </div>
+
+      {/* Balance config dialog */}
+      <Dialog open={balanceConfigOpen} onOpenChange={setBalanceConfigOpen}>
+        <DialogContent className="sm:max-w-xs">
+          <DialogHeader><DialogTitle>Configurar — Balance total</DialogTitle></DialogHeader>
+          <p className="text-xs text-gray-500 -mt-2">Seleccioná qué cuentas incluir en el total</p>
+          <div className="space-y-1.5">
+            {accounts.map(a => {
+              const selected = draft.includes(a.id)
+              return (
+                <button key={a.id} type="button" onClick={() => toggleDraft(a.id)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors ${selected ? 'border-emerald-500 bg-emerald-50 text-emerald-900' : 'border-gray-200 text-gray-400 bg-gray-50'}`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: a.color }} />
+                    <span className="font-medium">{a.name}</span>
+                  </div>
+                  <span className="text-xs tabular-nums">{formatCurrency(a.balance, a.currency)}</span>
+                </button>
+              )
+            })}
+          </div>
+          <div className="flex gap-2 pt-1">
+            <Button variant="outline" className="flex-1" onClick={() => setBalanceConfigOpen(false)}>Cancelar</Button>
+            <Button className="flex-1 bg-gray-900 hover:bg-gray-800" onClick={applyBalanceConfig} disabled={draft.length === 0}>Guardar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={mode !== null} onOpenChange={closeDialog}>
         <DialogContent className="sm:max-w-md">
