@@ -16,6 +16,7 @@ export interface ExpenseType {
   id: string
   user_id: string | null
   name: string
+  color: string
   is_default: boolean
   created_at: string
 }

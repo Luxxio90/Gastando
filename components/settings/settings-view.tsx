@@ -24,9 +24,10 @@ interface Props {
 }
 
 const COMMON_ICONS = ['🏠','🍔','🚗','💊','🎬','👕','✈️','📚','💡','🐾','🎮','💰','💼','🎁','🏋️','🛒','☕','🍕','🎵','💅']
+const ET_COLORS = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#6366f1','#8b5cf6','#ec4899','#14b8a6','#6b7280']
 
 type CategoryForm = { name: string; icon: string; type: 'income' | 'expense'; expense_type_id: string }
-type ExpenseTypeForm = { name: string }
+type ExpenseTypeForm = { name: string; color: string }
 
 export function SettingsView({ user, categories: initialCategories, expenseTypes: initialExpenseTypes }: Props) {
   const router = useRouter()
@@ -47,7 +48,7 @@ export function SettingsView({ user, categories: initialCategories, expenseTypes
   // Expense type dialog
   const [etDialogOpen, setEtDialogOpen] = useState(false)
   const [editingEt, setEditingEt] = useState<ExpenseType | null>(null)
-  const [etForm, setEtForm] = useState<ExpenseTypeForm>({ name: '' })
+  const [etForm, setEtForm] = useState<ExpenseTypeForm>({ name: '', color: ET_COLORS[4] })
   const [etLoading, setEtLoading] = useState(false)
 
   async function handleLogout() {
@@ -113,13 +114,13 @@ export function SettingsView({ user, categories: initialCategories, expenseTypes
   // --- Tipos de gasto ---
   function openCreateEt() {
     setEditingEt(null)
-    setEtForm({ name: '' })
+    setEtForm({ name: '', color: ET_COLORS[4] })
     setEtDialogOpen(true)
   }
 
   function openEditEt(et: ExpenseType) {
     setEditingEt(et)
-    setEtForm({ name: et.name })
+    setEtForm({ name: et.name, color: et.color ?? ET_COLORS[4] })
     setEtDialogOpen(true)
   }
 
@@ -129,16 +130,16 @@ export function SettingsView({ user, categories: initialCategories, expenseTypes
     setEtLoading(true)
 
     if (editingEt) {
-      const { error } = await supabase.from('expense_types').update({ name: etForm.name.trim() }).eq('id', editingEt.id)
+      const { error } = await supabase.from('expense_types').update({ name: etForm.name.trim(), color: etForm.color }).eq('id', editingEt.id)
       if (error) { toast.error('Error al guardar') }
       else {
         toast.success('Tipo actualizado')
-        setExpenseTypes(prev => prev.map(e => e.id === editingEt.id ? { ...e, name: etForm.name.trim() } : e))
+        setExpenseTypes(prev => prev.map(e => e.id === editingEt.id ? { ...e, name: etForm.name.trim(), color: etForm.color } : e))
         setEtDialogOpen(false)
       }
     } else {
       const { data, error } = await supabase.from('expense_types')
-        .insert({ user_id: user.id, name: etForm.name.trim(), is_default: false })
+        .insert({ user_id: user.id, name: etForm.name.trim(), color: etForm.color, is_default: false })
         .select().single()
       if (error) { toast.error('Error al crear tipo') }
       else { toast.success('Tipo creado'); setExpenseTypes(prev => [...prev, data]); setEtDialogOpen(false) }
@@ -192,7 +193,8 @@ export function SettingsView({ user, categories: initialCategories, expenseTypes
         <CardContent className="space-y-0.5">
           {expenseTypes.map(et => (
             <div key={et.id} onClick={() => openEditEt(et)} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-gray-50 cursor-pointer">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="h-3 w-3 rounded-full flex-shrink-0" style={{ backgroundColor: et.color ?? '#6b7280' }} />
                 <span className="text-sm text-gray-700">{et.name}</span>
                 {et.is_default && <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">predeterminado</span>}
               </div>
@@ -226,7 +228,10 @@ export function SettingsView({ user, categories: initialCategories, expenseTypes
                     <div className="min-w-0">
                       <span className="text-sm text-gray-700">{c.name}</span>
                       {c.expense_type && (
-                        <span className="ml-2 text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">{c.expense_type.name}</span>
+                        <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                          style={{ backgroundColor: `${c.expense_type.color ?? '#3b82f6'}20`, color: c.expense_type.color ?? '#3b82f6' }}>
+                          {c.expense_type.name}
+                        </span>
                       )}
                     </div>
                     {c.is_default && <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full flex-shrink-0">predeterminada</span>}
@@ -346,11 +351,27 @@ export function SettingsView({ user, categories: initialCategories, expenseTypes
           <form onSubmit={handleSaveEt} className="space-y-4">
             <div className="space-y-2">
               <Label>Nombre</Label>
-              <Input placeholder="Ej: Gasto discrecional, Inversión..." value={etForm.name} onChange={e => setEtForm({ name: e.target.value })} required />
+              <Input placeholder="Ej: Gasto discrecional, Inversión..." value={etForm.name} onChange={e => setEtForm({ ...etForm, name: e.target.value })} required />
             </div>
-            <div className="flex gap-2">
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <div className="flex items-center gap-2 flex-wrap">
+                {ET_COLORS.map(c => (
+                  <button key={c} type="button" onClick={() => setEtForm({ ...etForm, color: c })}
+                    className={cn('h-7 w-7 rounded-full border-2 transition-transform', etForm.color === c ? 'border-gray-900 scale-110' : 'border-transparent hover:scale-105')}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+                <div className="flex items-center gap-1.5 ml-1">
+                  <div className="h-7 w-7 rounded-full border border-gray-200 flex-shrink-0" style={{ backgroundColor: etForm.color }} />
+                  <input type="color" value={etForm.color} onChange={e => setEtForm({ ...etForm, color: e.target.value })}
+                    className="h-7 w-10 rounded cursor-pointer border border-gray-200 p-0.5 bg-white" title="Color personalizado" />
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
               <Button type="button" variant="outline" className="flex-1" onClick={() => setEtDialogOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={etLoading} className="flex-1 bg-emerald-600 hover:bg-emerald-700">
+              <Button type="submit" disabled={etLoading} className="flex-1 text-white" style={{ backgroundColor: etForm.color }}>
                 {etLoading ? 'Guardando...' : editingEt ? 'Guardar' : 'Crear'}
               </Button>
             </div>
