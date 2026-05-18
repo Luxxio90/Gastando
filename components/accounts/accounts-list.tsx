@@ -12,7 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
-import { Plus, MoreVertical, CreditCard, ChevronRight, Settings2, GripVertical } from 'lucide-react'
+import { Plus, MoreVertical, ChevronRight, Settings2, GripVertical } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import {
@@ -72,44 +72,46 @@ function SortableAccountCard({
         {/* color bar */}
         <div className="h-1.5" style={{ backgroundColor: account.color }} />
 
-        <div className="p-3">
-          {/* top row: grip + name + menu */}
-          <div className="flex items-center gap-1 mb-2 min-w-0">
-            <button
-              {...attributes}
-              {...listeners}
-              className="p-0.5 text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing touch-none flex-shrink-0"
-              aria-label="Mover"
-            >
-              <GripVertical className="h-3.5 w-3.5" />
-            </button>
-            <CreditCard className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
-            <span className="text-sm font-medium text-gray-800 truncate flex-1 min-w-0">{account.name}</span>
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                className="p-1 rounded text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition-colors flex-shrink-0"
-                onClick={e => e.preventDefault()}
-              >
-                <MoreVertical className="h-3.5 w-3.5" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onEdit(account)}>Editar</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-red-600" onClick={() => onDelete(account.id)}>Eliminar</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+        {/* Nombre — ancho completo, hasta 2 líneas */}
+        <div className="px-3 pt-2.5 pb-0">
+          <p className="text-sm font-semibold text-gray-800 leading-snug line-clamp-2">{account.name}</p>
+        </div>
 
-          {/* balance + type — tap to navigate */}
-          <Link href={`/accounts/${account.id}`} className="block group">
-            <div className="flex items-end justify-between gap-1">
-              <p className="text-xl font-bold text-gray-900 truncate leading-tight">
-                {formatCurrency(account.balance, account.currency)}
-              </p>
-              <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-gray-500 flex-shrink-0 mb-0.5 transition-colors" />
-            </div>
-            <p className="text-[11px] text-gray-400 mt-0.5 truncate">{typeLabel}</p>
+        {/* Fila: grip · balance (link) · chevron · menú */}
+        <div className="flex items-center gap-1 px-2 pt-1.5 pb-3">
+          <button
+            {...attributes}
+            {...listeners}
+            className="p-0.5 text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing touch-none flex-shrink-0"
+            aria-label="Mover"
+          >
+            <GripVertical className="h-3.5 w-3.5" />
+          </button>
+
+          <Link href={`/accounts/${account.id}`} className="flex-1 min-w-0 group">
+            <p className="text-base font-bold text-gray-900 truncate leading-tight">
+              {formatCurrency(account.balance, account.currency)}
+            </p>
+            <p className="text-[10px] text-gray-400 truncate">{typeLabel}</p>
           </Link>
+
+          <Link href={`/accounts/${account.id}`} className="flex-shrink-0">
+            <ChevronRight className="h-3.5 w-3.5 text-gray-300" />
+          </Link>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className="p-1 rounded text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition-colors flex-shrink-0"
+              onClick={e => e.preventDefault()}
+            >
+              <MoreVertical className="h-3.5 w-3.5" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onEdit(account)}>Editar</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-red-600" onClick={() => onDelete(account.id)}>Eliminar</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </Card>
     </div>
