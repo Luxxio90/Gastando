@@ -6,13 +6,13 @@ import Link from 'next/link'
 import { Account } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
-import { Plus, MoreVertical, ChevronRight, Settings2, GripVertical } from 'lucide-react'
+import { Plus, MoreVertical, CreditCard, ChevronRight, Settings2, GripVertical } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import {
@@ -68,43 +68,34 @@ function SortableAccountCard({
 
   return (
     <div ref={setNodeRef} style={style}>
-      <Card className="overflow-hidden hover:shadow-md transition-shadow">
-        {/* color bar */}
+      <Card className="relative overflow-hidden hover:shadow-md transition-shadow">
         <div className="h-1.5" style={{ backgroundColor: account.color }} />
-
-        {/* Nombre — ancho completo, hasta 2 líneas */}
-        <div className="px-3 pt-2.5 pb-0">
-          <p className="text-sm font-semibold text-gray-800 leading-snug line-clamp-2">{account.name}</p>
-        </div>
-
-        {/* Fila: grip · balance (link) · chevron · menú */}
-        <div className="flex items-center gap-1 px-2 pt-1.5 pb-3">
-          <button
-            {...attributes}
-            {...listeners}
-            className="p-0.5 text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing touch-none flex-shrink-0"
-            aria-label="Mover"
-          >
-            <GripVertical className="h-3.5 w-3.5" />
-          </button>
-
-          <Link href={`/accounts/${account.id}`} className="flex-1 min-w-0 group">
-            <p className="text-base font-bold text-gray-900 truncate leading-tight">
-              {formatCurrency(account.balance, account.currency)}
-            </p>
-            <p className="text-[10px] text-gray-400 truncate">{typeLabel}</p>
-          </Link>
-
-          <Link href={`/accounts/${account.id}`} className="flex-shrink-0">
-            <ChevronRight className="h-3.5 w-3.5 text-gray-300" />
-          </Link>
-
+        <Link href={`/accounts/${account.id}`}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <button
+                {...attributes}
+                {...listeners}
+                className="p-0.5 text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing touch-none flex-shrink-0"
+                aria-label="Mover"
+                onClick={e => e.preventDefault()}
+              >
+                <GripVertical className="h-4 w-4" />
+              </button>
+              <CreditCard className="h-4 w-4 text-gray-500 flex-shrink-0" />
+              <CardTitle className="text-sm font-medium truncate">{account.name}</CardTitle>
+            </div>
+            <ChevronRight className="h-4 w-4 text-gray-300 flex-shrink-0" />
+          </CardHeader>
+          <CardContent className="pb-4">
+            <p className="text-2xl font-bold">{formatCurrency(account.balance, account.currency)}</p>
+            <p className="text-xs text-gray-400 mt-1">{typeLabel}</p>
+          </CardContent>
+        </Link>
+        <div className="absolute top-5 right-8">
           <DropdownMenu>
-            <DropdownMenuTrigger
-              className="p-1 rounded text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition-colors flex-shrink-0"
-              onClick={e => e.preventDefault()}
-            >
-              <MoreVertical className="h-3.5 w-3.5" />
+            <DropdownMenuTrigger className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+              <MoreVertical className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => onEdit(account)}>Editar</DropdownMenuItem>
@@ -273,7 +264,7 @@ export function AccountsList({ accounts, userId }: Props) {
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={order} strategy={rectSortingStrategy}>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               {sortedAccounts.map(a => (
                 <SortableAccountCard
                   key={a.id}
