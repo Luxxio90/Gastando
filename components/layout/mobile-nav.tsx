@@ -9,7 +9,7 @@ const navItems = [
   { href: '/tarjetas', label: 'Tarjetas', icon: Wallet },
   { href: '/accounts', label: 'Cuentas', icon: CreditCard },
   { href: '/dashboard', label: 'Home', icon: LayoutDashboard, center: true },
-  { href: '/budgets', label: 'Presupuesto', icon: PiggyBank },
+  { href: '/budgets', label: 'Distribución', icon: PiggyBank },
   { href: '/avisos', label: 'Avisos', icon: Bell },
 ]
 

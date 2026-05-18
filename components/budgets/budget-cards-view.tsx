@@ -73,7 +73,7 @@ export function BudgetCardsView({ cards, categories, resolvedAmounts, incomeByCa
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Presupuesto</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Distribución</h1>
           <div className="flex items-center gap-1 mt-0.5">
             <button onClick={() => { const p = prevMonth(month, year); navigate(p.month, p.year) }}
               className="p-1 rounded hover:bg-gray-100 text-gray-400 transition-colors">

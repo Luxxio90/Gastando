@@ -79,6 +79,22 @@ export interface BudgetCard {
   track_category?: Pick<Category, 'id' | 'name' | 'icon' | 'type'>
 }
 
+export type FixedExpenseStatus = 'paid' | 'not_applicable' | 'pending'
+
+export interface FixedExpenseItem {
+  id: string
+  user_id: string
+  month: number
+  year: number
+  category_id: string | null
+  description: string | null
+  amount: number
+  status: FixedExpenseStatus
+  responsible: string | null
+  created_at: string
+  category?: Pick<Category, 'id' | 'name' | 'icon' | 'color'>
+}
+
 export interface Investment {
   id: string
   user_id: string
