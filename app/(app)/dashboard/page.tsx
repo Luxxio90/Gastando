@@ -1,10 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Settings } from 'lucide-react'
 import { ExpenseChart } from '@/components/dashboard/expense-chart'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { DashboardCards } from '@/components/dashboard/dashboard-cards'
-import Link from 'next/link'
+import { DrawerMenu } from '@/components/layout/drawer-menu'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -35,9 +34,7 @@ export default async function DashboardPage() {
           <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground text-sm">{now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}</p>
         </div>
-        <Link href="/settings" className="p-2 rounded-xl hover:bg-muted transition-colors">
-          <Settings className="h-5 w-5 text-muted-foreground" />
-        </Link>
+        <DrawerMenu userEmail={user.email} />
       </div>
 
       <DashboardCards
