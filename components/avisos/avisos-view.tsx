@@ -101,7 +101,7 @@ type CardAlert = {
 
 type Alert = FixedAlert | CardAlert
 
-function AlertCard({
+function AlertCardInner({
   alert,
   marking,
   onMarkPaid,
@@ -116,7 +116,7 @@ function AlertCard({
   const amount   = alert.type === 'fixed' ? alert.amount : alert.total
 
   return (
-    <div className="bg-card border border-border rounded-xl overflow-hidden">
+    <>
       {/* Progress bar */}
       <div className="h-1 bg-muted/40">
         <div
@@ -158,8 +158,6 @@ function AlertCard({
                   <p className="text-xs text-muted-foreground truncate">{alert.description}</p>
                 )}
               </div>
-
-              {/* Urgency badge */}
               <span
                 className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0"
                 style={{ color, backgroundColor: color + '18', border: `1px solid ${color}40` }}
@@ -168,17 +166,15 @@ function AlertCard({
               </span>
             </div>
 
-            {/* Amount + action */}
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/50">
               <span className="font-bold text-base tabular-nums text-foreground">
                 {formatCurrency(amount)}
               </span>
-
               {alert.type === 'fixed' ? (
                 <Button
                   size="sm"
                   disabled={marking}
-                  onClick={() => onMarkPaid(alert.id)}
+                  onClick={(e) => { e.stopPropagation(); onMarkPaid(alert.id) }}
                   className="text-xs font-semibold h-7 px-3"
                   style={{ backgroundColor: '#00CB9620', color: '#00CB96', border: '1px solid #00CB9645' }}
                 >
@@ -186,17 +182,29 @@ function AlertCard({
                   {marking ? 'Guardando...' : 'Pagado'}
                 </Button>
               ) : (
-                <a
-                  href="/tarjetas"
-                  className="inline-flex items-center gap-1 text-xs font-semibold h-7 px-3 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
-                >
+                <span className="inline-flex items-center gap-1 text-xs font-semibold h-7 px-3 rounded-md border border-input text-muted-foreground">
                   Ver tarjeta <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                </a>
+                </span>
               )}
             </div>
           </div>
         </div>
       </div>
+    </>
+  )
+}
+
+function AlertCard({ alert, marking, onMarkPaid }: { alert: Alert; marking: boolean; onMarkPaid: (id: string) => void }) {
+  if (alert.type === 'card') {
+    return (
+      <a href="/tarjetas" className="block bg-card border border-border rounded-xl overflow-hidden">
+        <AlertCardInner alert={alert} marking={marking} onMarkPaid={onMarkPaid} />
+      </a>
+    )
+  }
+  return (
+    <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <AlertCardInner alert={alert} marking={marking} onMarkPaid={onMarkPaid} />
     </div>
   )
 }
