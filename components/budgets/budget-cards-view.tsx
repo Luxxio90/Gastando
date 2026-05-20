@@ -37,9 +37,7 @@ export function BudgetCardsView({ cards, categories, resolvedAmounts, incomeByCa
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingCard, setEditingCard] = useState<BudgetCard | null>(null)
 
-  function navigate(m: number, y: number) {
-    router.push(`/budgets?month=${m}&year=${y}`)
-  }
+  function navigate(m: number, y: number) { router.push(`/budgets?month=${m}&year=${y}`) }
 
   async function handleDelete(id: string) {
     const { error } = await supabase.from('budget_cards').delete().eq('id', id)
@@ -47,105 +45,127 @@ export function BudgetCardsView({ cards, categories, resolvedAmounts, incomeByCa
     else { toast.success('Fila eliminada'); router.refresh() }
   }
 
-  function openEdit(card: BudgetCard) {
-    setEditingCard(card)
-    setDialogOpen(true)
-  }
+  function openEdit(card: BudgetCard) { setEditingCard(card); setTimeout(() => setDialogOpen(true), 0) }
+  function openCreate() { setEditingCard(null); setDialogOpen(true) }
 
-  function openCreate() {
-    setEditingCard(null)
-    setDialogOpen(true)
-  }
-
-  const incomeCards = cards.filter(c => c.card_type === 'income')
+  const incomeCards  = cards.filter(c => c.card_type === 'income')
   const expenseCards = cards.filter(c => c.card_type === 'expense')
-  const totalIncome = incomeCards.reduce((s, c) => s + (resolvedAmounts[c.id] ?? 0), 0)
+  const totalIncome  = incomeCards.reduce((s, c) => s + (resolvedAmounts[c.id] ?? 0), 0)
   const totalExpense = expenseCards.reduce((s, c) => s + (resolvedAmounts[c.id] ?? 0), 0)
-  const unassigned = totalIncome - totalExpense
+  const unassigned   = totalIncome - totalExpense
 
   function pct(amount: number) {
-    if (!totalIncome || totalIncome === 0) return null
+    if (!totalIncome) return null
     return ((amount / totalIncome) * 100).toFixed(1)
   }
+
+  function calcLabel(card: BudgetCard) {
+    if (card.calc_type === 'category_sum' && card.sum_category)
+      return `${card.sum_category.icon} ${card.sum_category.name}`
+    if (card.calc_type === 'percentage' && card.source_card_id)
+      return `${card.percentage}% de ${cards.find(c => c.id === card.source_card_id)?.name ?? '...'}`
+    return 'Manual'
+  }
+
+  const INCOME_COLOR  = '#00CB96'
+  const EXPENSE_COLOR = '#7C4DFF'
 
   return (
     <div className="space-y-4 max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Distribución</h1>
+          <h1 className="text-2xl font-bold text-foreground">Distribución</h1>
           <div className="flex items-center gap-1 mt-0.5">
-            <button onClick={() => { const p = prevMonth(month, year); navigate(p.month, p.year) }}
-              className="p-1 rounded hover:bg-gray-100 text-gray-400 transition-colors">
+            <button
+              onClick={() => { const p = prevMonth(month, year); navigate(p.month, p.year) }}
+              className="p-1 rounded hover:bg-muted text-muted-foreground transition-colors"
+            >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="text-sm text-gray-500 font-medium min-w-32 text-center">{MONTHS[month - 1]} {year}</span>
-            <button onClick={() => { const n = nextMonth(month, year); navigate(n.month, n.year) }}
-              className="p-1 rounded hover:bg-gray-100 text-gray-400 transition-colors">
+            <span className="text-sm text-muted-foreground font-medium min-w-32 text-center">
+              {MONTHS[month - 1]} {year}
+            </span>
+            <button
+              onClick={() => { const n = nextMonth(month, year); navigate(n.month, n.year) }}
+              className="p-1 rounded hover:bg-muted text-muted-foreground transition-colors"
+            >
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
         </div>
-        <Button onClick={openCreate} size="sm" className="bg-gray-900 hover:bg-gray-800">
+        <Button
+          onClick={openCreate}
+          size="sm"
+          className="font-semibold"
+          style={{ background: 'linear-gradient(135deg, #7C4DFF 0%, #9C6DFF 100%)', color: '#fff', border: 'none' }}
+        >
           <Plus className="h-4 w-4 mr-1" /> Agregar fila
         </Button>
       </div>
 
       {cards.length === 0 ? (
-        <div className="text-center text-gray-400 py-16 border-2 border-dashed border-gray-200 rounded-xl">
+        <div className="text-center text-muted-foreground py-16 border-2 border-dashed border-border rounded-xl">
           <p className="font-medium">Tabla vacía</p>
           <p className="text-sm mt-1">Agregá una fila de ingreso para comenzar</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-          {/* Columnas header */}
-          <div className="grid grid-cols-[1fr_56px_120px_32px] bg-gray-50 border-b border-gray-200 px-4 py-2.5">
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Categoría</span>
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide text-center">%</span>
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide text-right">Monto</span>
+        <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+          {/* Header columnas */}
+          <div className="grid grid-cols-[1fr_56px_120px_32px] bg-muted/40 border-b border-border px-4 py-2.5">
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Categoría</span>
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest text-center">%</span>
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest text-right">Monto</span>
             <span />
           </div>
 
-          {/* Filas de Ingresos */}
+          {/* Sección Ingresos */}
           {incomeCards.length > 0 && (
             <>
-              <div className="px-4 py-1.5 bg-emerald-50 border-b border-emerald-100">
-                <span className="text-[11px] font-semibold text-emerald-600 uppercase tracking-wide">Ingresos</span>
+              <div className="px-4 py-2 border-b border-border/50" style={{ backgroundColor: INCOME_COLOR + '12' }}>
+                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: INCOME_COLOR }}>
+                  Ingresos
+                </span>
               </div>
               {incomeCards.map(card => {
                 const amount = resolvedAmounts[card.id] ?? 0
                 const p = pct(amount)
                 return (
-                  <div key={card.id} className="grid grid-cols-[1fr_56px_120px_32px] items-center px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                  <div
+                    key={card.id}
+                    className="grid grid-cols-[1fr_56px_120px_32px] items-center px-4 py-3 border-b border-border hover:bg-muted/30 transition-colors cursor-pointer"
+                    onClick={() => openEdit(card)}
+                  >
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-800 truncate">{card.name}</p>
-                      <p className="text-[11px] text-gray-400 mt-0.5">
-                        {card.calc_type === 'category_sum' && card.sum_category
-                          ? `${card.sum_category.icon} ${card.sum_category.name}`
-                          : card.calc_type === 'percentage' && card.source_card_id
-                            ? `${card.percentage}% de ${cards.find(c => c.id === card.source_card_id)?.name ?? '...'}`
-                            : 'Manual'}
-                      </p>
+                      <p className="text-sm font-semibold text-foreground truncate">{card.name}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{calcLabel(card)}</p>
                     </div>
-                    <div className="text-center">
+                    <div className="flex justify-center">
                       {p !== null ? (
-                        <span className="text-xs font-semibold text-emerald-600">{p}%</span>
+                        <span
+                          className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                          style={{ color: INCOME_COLOR, backgroundColor: INCOME_COLOR + '18' }}
+                        >
+                          {p}%
+                        </span>
                       ) : (
-                        <span className="text-xs text-gray-300">—</span>
+                        <span className="text-xs text-muted-foreground/40">—</span>
                       )}
                     </div>
                     <div className="text-right">
-                      <span className="text-sm font-bold text-emerald-700">{formatCurrency(amount)}</span>
+                      <span className="text-sm font-bold tabular-nums" style={{ color: INCOME_COLOR }}>
+                        {formatCurrency(amount)}
+                      </span>
                     </div>
-                    <div className="flex justify-end">
+                    <div className="flex justify-end" onClick={e => e.stopPropagation()}>
                       <DropdownMenu>
-                        <DropdownMenuTrigger className="p-1 rounded text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+                        <DropdownMenuTrigger className="p-1 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted/60 transition-colors">
                           <MoreVertical className="h-3.5 w-3.5" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => openEdit(card)}>Editar</DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(card.id)}>Eliminar</DropdownMenuItem>
+                          <DropdownMenuItem className="text-red-500" onClick={() => handleDelete(card.id)}>Eliminar</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -153,66 +173,91 @@ export function BudgetCardsView({ cards, categories, resolvedAmounts, incomeByCa
                 )
               })}
               {/* Subtotal ingresos */}
-              <div className="grid grid-cols-[1fr_56px_120px_32px] items-center px-4 py-2 bg-emerald-50 border-b border-emerald-100">
-                <span className="text-xs font-semibold text-emerald-700">Total ingresos</span>
-                <span className="text-center text-xs font-bold text-emerald-600">100%</span>
-                <span className="text-right text-sm font-bold text-emerald-700">{formatCurrency(totalIncome)}</span>
+              <div
+                className="grid grid-cols-[1fr_56px_120px_32px] items-center px-4 py-2.5 border-b border-border/50"
+                style={{ backgroundColor: INCOME_COLOR + '10' }}
+              >
+                <span className="text-xs font-bold" style={{ color: INCOME_COLOR }}>Total ingresos</span>
+                <span className="text-center text-[10px] font-bold" style={{ color: INCOME_COLOR }}>100%</span>
+                <span className="text-right text-sm font-bold tabular-nums" style={{ color: INCOME_COLOR }}>{formatCurrency(totalIncome)}</span>
                 <span />
               </div>
             </>
           )}
 
-          {/* Filas de Gastos */}
+          {/* Sección Gastos */}
           {expenseCards.length > 0 && (
             <>
-              <div className="px-4 py-1.5 bg-blue-50 border-b border-blue-100">
-                <span className="text-[11px] font-semibold text-blue-600 uppercase tracking-wide">Distribución de gastos</span>
+              <div className="px-4 py-2 border-b border-border/50" style={{ backgroundColor: EXPENSE_COLOR + '12' }}>
+                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: EXPENSE_COLOR }}>
+                  Distribución de gastos
+                </span>
               </div>
               {expenseCards.map(card => {
                 const amount = resolvedAmounts[card.id] ?? 0
                 const p = pct(amount)
+                const barWidth = totalIncome > 0 ? Math.min(100, (amount / totalIncome) * 100) : 0
                 return (
-                  <div key={card.id} className="grid grid-cols-[1fr_56px_120px_32px] items-center px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-800 truncate">{card.name}</p>
-                      <p className="text-[11px] text-gray-400 mt-0.5">
-                        {card.calc_type === 'category_sum' && card.sum_category
-                          ? `${card.sum_category.icon} ${card.sum_category.name}`
-                          : card.calc_type === 'percentage' && card.source_card_id
-                            ? `${card.percentage}% de ${cards.find(c => c.id === card.source_card_id)?.name ?? '...'}`
-                            : 'Manual'}
-                      </p>
+                  <div
+                    key={card.id}
+                    className="border-b border-border hover:bg-muted/30 transition-colors cursor-pointer"
+                    onClick={() => openEdit(card)}
+                  >
+                    <div className="grid grid-cols-[1fr_56px_120px_32px] items-center px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{card.name}</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{calcLabel(card)}</p>
+                      </div>
+                      <div className="flex justify-center">
+                        {p !== null ? (
+                          <span
+                            className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                            style={{ color: EXPENSE_COLOR, backgroundColor: EXPENSE_COLOR + '18' }}
+                          >
+                            {p}%
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground/40">—</span>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-semibold tabular-nums text-foreground">{formatCurrency(amount)}</span>
+                      </div>
+                      <div className="flex justify-end" onClick={e => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger className="p-1 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted/60 transition-colors">
+                            <MoreVertical className="h-3.5 w-3.5" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEdit(card)}>Editar</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-red-500" onClick={() => handleDelete(card.id)}>Eliminar</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
-                    <div className="text-center">
-                      {p !== null ? (
-                        <span className="text-xs font-semibold text-blue-600">{p}%</span>
-                      ) : (
-                        <span className="text-xs text-gray-300">—</span>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <span className="text-sm font-bold text-gray-800">{formatCurrency(amount)}</span>
-                    </div>
-                    <div className="flex justify-end">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger className="p-1 rounded text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition-colors">
-                          <MoreVertical className="h-3.5 w-3.5" />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEdit(card)}>Editar</DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(card.id)}>Eliminar</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                    {/* Mini barra de porcentaje del ingreso total */}
+                    {barWidth > 0 && (
+                      <div className="h-0.5 mx-4 mb-0 bg-muted/40 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${barWidth}%`, backgroundColor: EXPENSE_COLOR + 'aa' }}
+                        />
+                      </div>
+                    )}
                   </div>
                 )
               })}
               {/* Subtotal gastos */}
-              <div className="grid grid-cols-[1fr_56px_120px_32px] items-center px-4 py-2 bg-blue-50 border-b border-blue-100">
-                <span className="text-xs font-semibold text-blue-700">Total distribuido</span>
-                <span className="text-center text-xs font-bold text-blue-600">{totalIncome > 0 ? `${((totalExpense / totalIncome) * 100).toFixed(1)}%` : '—'}</span>
-                <span className="text-right text-sm font-bold text-blue-700">{formatCurrency(totalExpense)}</span>
+              <div
+                className="grid grid-cols-[1fr_56px_120px_32px] items-center px-4 py-2.5 border-b border-border/50"
+                style={{ backgroundColor: EXPENSE_COLOR + '10' }}
+              >
+                <span className="text-xs font-bold" style={{ color: EXPENSE_COLOR }}>Total distribuido</span>
+                <span className="text-center text-[10px] font-bold" style={{ color: EXPENSE_COLOR }}>
+                  {totalIncome > 0 ? `${((totalExpense / totalIncome) * 100).toFixed(1)}%` : '—'}
+                </span>
+                <span className="text-right text-sm font-bold tabular-nums" style={{ color: EXPENSE_COLOR }}>{formatCurrency(totalExpense)}</span>
                 <span />
               </div>
             </>
@@ -220,12 +265,15 @@ export function BudgetCardsView({ cards, categories, resolvedAmounts, incomeByCa
 
           {/* Sin asignar */}
           {totalIncome > 0 && (
-            <div className="grid grid-cols-[1fr_56px_120px_32px] items-center px-4 py-3 bg-gray-50">
-              <span className="text-sm font-semibold text-gray-600">Sin asignar</span>
-              <span className="text-center text-xs font-semibold text-gray-500">
+            <div className="grid grid-cols-[1fr_56px_120px_32px] items-center px-4 py-3 bg-muted/30">
+              <span className="text-sm font-semibold text-muted-foreground">Sin asignar</span>
+              <span className="text-center text-[10px] font-semibold text-muted-foreground">
                 {totalIncome > 0 ? `${((unassigned / totalIncome) * 100).toFixed(1)}%` : '—'}
               </span>
-              <span className={`text-right text-sm font-bold ${unassigned >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+              <span
+                className="text-right text-sm font-bold tabular-nums"
+                style={{ color: unassigned >= 0 ? INCOME_COLOR : '#FF4D6D' }}
+              >
                 {formatCurrency(unassigned)}
               </span>
               <span />

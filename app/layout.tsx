@@ -11,6 +11,11 @@ const geistSans = Geist({
 export const metadata: Metadata = {
   title: "Gastando",
   description: "Tu app de finanzas personales",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Gastando",
+  },
 };
 
 export default function RootLayout({
@@ -19,7 +24,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${geistSans.variable} h-full antialiased`}>
+    <html lang="es" className={`${geistSans.variable} h-full antialiased dark`}>
+      <head>
+        <meta name="theme-color" content="#0C0B18" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <link rel="manifest" href="/manifest.webmanifest" />
+      </head>
       <body className="min-h-full flex flex-col">
         {children}
         <Toaster richColors />

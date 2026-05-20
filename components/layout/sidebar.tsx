@@ -41,9 +41,9 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="hidden md:flex w-64 min-h-screen bg-gray-900 text-white flex-col">
-      <div className="p-6 flex items-center gap-3 border-b border-gray-700">
-        <div className="bg-emerald-500 p-2 rounded-lg">
+    <aside className="hidden md:flex w-64 min-h-screen bg-card text-foreground flex-col border-r border-border">
+      <div className="p-6 flex items-center gap-3 border-b border-border">
+        <div className="bg-primary p-2 rounded-lg">
           <Wallet className="h-5 w-5 text-white" />
         </div>
         <span className="text-xl font-bold">Gastando</span>
@@ -57,8 +57,8 @@ export function Sidebar() {
             className={cn(
               'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
               pathname === href || pathname.startsWith(href + '/')
-                ? 'bg-emerald-600 text-white'
-                : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             )}
           >
             <Icon className="h-4 w-4" />
@@ -67,10 +67,10 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="p-4 border-t border-gray-700">
+      <div className="p-4 border-t border-border">
         <Button
           variant="ghost"
-          className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
+          className="w-full justify-start text-muted-foreground hover:text-foreground hover:bg-muted"
           onClick={handleLogout}
         >
           <LogOut className="h-4 w-4 mr-3" />

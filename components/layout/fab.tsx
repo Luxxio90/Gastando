@@ -1,12 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, X, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Plus, TrendingUp, TrendingDown, ArrowLeftRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { TransactionDialog } from '@/components/transactions/transaction-dialog'
 import { TransferDialog } from '@/components/transactions/transfer-dialog'
 import { Account, Category } from '@/types'
+
+const ACTIONS = [
+  { type: 'income'   as const, label: 'Ingreso',    color: '#00CB96', Icon: TrendingUp },
+  { type: 'expense'  as const, label: 'Gasto',      color: '#FF4D6D', Icon: TrendingDown },
+  { type: 'transfer' as const, label: 'Transferir', color: '#3BB2F6', Icon: ArrowLeftRight },
+]
 
 export function FloatingActionButton({ userId }: { userId: string }) {
   const [open, setOpen] = useState(false)
@@ -45,56 +50,57 @@ export function FloatingActionButton({ userId }: { userId: string }) {
       )}
 
       <div className="fixed bottom-20 right-4 z-50 flex flex-col items-end gap-3 md:hidden">
-        <div className={cn(
-          'flex flex-col items-end gap-2 transition-all duration-200',
-          open ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'
-        )}>
-          {/* Ingreso */}
-          <button
-            onClick={() => handleSelect('income')}
-            className="flex items-center gap-2 bg-white shadow-lg rounded-full pl-4 pr-4 py-2.5 border border-emerald-100"
-          >
-            <span className="text-sm font-semibold text-emerald-700">Ingreso</span>
-            <div className="bg-emerald-500 rounded-full p-1.5">
-              <ArrowUpCircle className="h-4 w-4 text-white" />
-            </div>
-          </button>
-
-          {/* Gasto */}
-          <button
-            onClick={() => handleSelect('expense')}
-            className="flex items-center gap-2 bg-white shadow-lg rounded-full pl-4 pr-4 py-2.5 border border-red-100"
-          >
-            <span className="text-sm font-semibold text-red-600">Gasto</span>
-            <div className="bg-red-500 rounded-full p-1.5">
-              <ArrowDownCircle className="h-4 w-4 text-white" />
-            </div>
-          </button>
-
-          {/* Transferir */}
-          <button
-            onClick={() => handleSelect('transfer')}
-            className="flex items-center gap-2 bg-white shadow-lg rounded-full pl-4 pr-4 py-2.5 border border-blue-100"
-          >
-            <span className="text-sm font-semibold text-blue-600">Transferir</span>
-            <div className="bg-blue-500 rounded-full p-1.5">
-              <ArrowLeftRight className="h-4 w-4 text-white" />
-            </div>
-          </button>
+        {/* Speed dial */}
+        <div className="flex flex-col items-end gap-2.5">
+          {ACTIONS.map((action, i) => (
+            <button
+              key={action.type}
+              onClick={() => handleSelect(action.type)}
+              className="flex items-center gap-3 pr-1.5 pl-4 py-1.5 rounded-2xl border transition-all duration-200"
+              style={{
+                background: 'hsl(var(--card))',
+                borderColor: action.color + '35',
+                boxShadow: open ? `0 4px 24px ${action.color}25` : 'none',
+                opacity: open ? 1 : 0,
+                transform: open ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.9)',
+                transitionDelay: open
+                  ? `${i * 55}ms`
+                  : `${(ACTIONS.length - 1 - i) * 30}ms`,
+                pointerEvents: open ? 'auto' : 'none',
+              }}
+            >
+              <span className="text-sm font-bold" style={{ color: action.color }}>
+                {action.label}
+              </span>
+              <div
+                className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: `linear-gradient(135deg, ${action.color} 0%, ${action.color}cc 100%)`,
+                  boxShadow: `0 2px 10px ${action.color}50`,
+                }}
+              >
+                <action.Icon className="h-4.5 w-4.5 text-white" strokeWidth={2.5} style={{ width: 18, height: 18 }} />
+              </div>
+            </button>
+          ))}
         </div>
 
-        {/* Botón principal + */}
+        {/* Botón principal */}
         <button
           onClick={() => setOpen(!open)}
-          className={cn(
-            'h-14 w-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-200',
-            open ? 'bg-gray-700 rotate-45' : 'bg-emerald-600 rotate-0'
-          )}
+          className="h-14 w-14 rounded-2xl shadow-xl flex items-center justify-center transition-all duration-300"
+          style={{
+            background: open
+              ? 'hsl(var(--muted))'
+              : 'linear-gradient(135deg, #7C4DFF 0%, #9C6DFF 100%)',
+            boxShadow: open ? 'none' : '0 4px 28px #7C4DFF55',
+            transform: open ? 'rotate(45deg)' : 'rotate(0deg)',
+          }}
         >
-          {open
-            ? <X className="h-6 w-6 text-white" />
-            : <Plus className="h-6 w-6 text-white" />
-          }
+          <Plus
+            strokeWidth={2.5}
+            style={{ width: 24, height: 24, color: open ? 'hsl(var(--foreground))' : '#fff' }}
+          />
         </button>
       </div>
 

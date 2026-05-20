@@ -6,13 +6,14 @@ import Link from 'next/link'
 import { Account } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
-import { Plus, MoreVertical, CreditCard, ChevronRight, Settings2, GripVertical } from 'lucide-react'
+import {
+  Plus, MoreVertical, ChevronRight, Settings2, GripVertical,
+  Wallet, Landmark, CreditCard, PiggyBank, Banknote, Check, Eye, EyeOff,
+} from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import {
@@ -26,130 +27,128 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 
 const ACCOUNT_TYPES = [
-  { value: 'cash', label: 'Efectivo' },
-  { value: 'bank', label: 'Cuenta bancaria' },
-  { value: 'credit_card', label: 'Tarjeta de crédito' },
-  { value: 'savings', label: 'Caja de ahorro' },
-  { value: 'other', label: 'Otra' },
+  { value: 'cash',        label: 'Efectivo',           icon: Wallet },
+  { value: 'bank',        label: 'Cuenta bancaria',    icon: Landmark },
+  { value: 'credit_card', label: 'Tarjeta de crédito', icon: CreditCard },
+  { value: 'savings',     label: 'Caja de ahorro',     icon: PiggyBank },
+  { value: 'other',       label: 'Otra',               icon: Banknote },
 ]
 
-const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
+const COLORS = ['#7C4DFF', '#00CB96', '#3BB2F6', '#FF4D6D', '#F59E0B', '#EC4899', '#10b981', '#f97316']
 
 type FormState = { name: string; type: string; balance: string; currency: string; color: string }
 const emptyForm: FormState = { name: '', type: 'bank', balance: '', currency: 'ARS', color: COLORS[0] }
 
-const CARDS_KEY = (userId: string) => `gastando_cards_${userId}`
-const ORDER_KEY = (userId: string) => `gastando_accounts_order_${userId}`
+const CARDS_KEY  = (uid: string) => `gastando_cards_${uid}`
+const ORDER_KEY  = (uid: string) => `gastando_accounts_order_${uid}`
+const HIDE_KEY   = 'gastando_hide_balances'
 
-interface Props {
-  accounts: Account[]
-  userId: string
+interface Props { accounts: Account[]; userId: string }
+
+function AccountTypeIcon({ type, color }: { type: string; color: string }) {
+  const T = ACCOUNT_TYPES.find(t => t.value === type)?.icon ?? Banknote
+  return (
+    <div className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: color + '22' }}>
+      <T className="h-5 w-5" style={{ color }} />
+    </div>
+  )
 }
 
-// Sortable account card
-function SortableAccountCard({
-  account,
-  onEdit,
-  onDelete,
-}: {
-  account: Account
-  onEdit: (a: Account) => void
-  onDelete: (id: string) => void
-}) {
+function SortableAccountCard({ account, onEdit, onDelete, hidden }: { account: Account; onEdit: (a: Account) => void; onDelete: (id: string) => void; hidden: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: account.id })
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  }
-
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
   const typeLabel = ACCOUNT_TYPES.find(t => t.value === account.type)?.label ?? ''
 
   return (
     <div ref={setNodeRef} style={style}>
-      <Card className="relative overflow-hidden hover:shadow-md transition-shadow">
-        <div className="h-1.5" style={{ backgroundColor: account.color }} />
-        <Link href={`/accounts/${account.id}`}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <button
-                {...attributes}
-                {...listeners}
-                className="p-0.5 text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing touch-none flex-shrink-0"
-                aria-label="Mover"
-                onClick={e => e.preventDefault()}
-              >
-                <GripVertical className="h-4 w-4" />
-              </button>
-              <CreditCard className="h-4 w-4 text-gray-500 flex-shrink-0" />
-              <CardTitle className="text-sm font-medium truncate">{account.name}</CardTitle>
-            </div>
-            <ChevronRight className="h-4 w-4 text-gray-300 flex-shrink-0" />
-          </CardHeader>
-          <CardContent className="pb-4">
-            <p className="text-2xl font-bold">{formatCurrency(account.balance, account.currency)}</p>
-            <p className="text-xs text-gray-400 mt-1">{typeLabel}</p>
-          </CardContent>
+      <div
+        className="relative rounded-xl border border-border overflow-hidden transition-all hover:shadow-lg hover:shadow-black/20"
+        style={{
+          borderLeftColor: account.color,
+          borderLeftWidth: 3,
+          background: `linear-gradient(90deg, ${account.color}12 0%, transparent 35%), hsl(var(--card))`,
+        }}
+      >
+        <Link href={`/accounts/${account.id}`} className="flex items-center gap-3 pl-3 pr-10 py-3.5">
+          <button
+            {...attributes} {...listeners}
+            className="text-muted-foreground/25 hover:text-muted-foreground/60 cursor-grab active:cursor-grabbing touch-none flex-shrink-0 p-0.5"
+            aria-label="Mover"
+            onClick={e => e.preventDefault()}
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+
+          <AccountTypeIcon type={account.type} color={account.color} />
+
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm text-foreground truncate">{account.name}</p>
+            <p className="text-xs text-muted-foreground mt-0.5 truncate">{typeLabel} · {account.currency}</p>
+          </div>
+
+          <div className="text-right flex-shrink-0">
+            <p className="font-bold text-sm tabular-nums text-foreground">{hidden ? '••••••' : formatCurrency(account.balance, account.currency)}</p>
+          </div>
         </Link>
-        <div className="absolute top-5 right-8">
+
+        <div className="absolute top-1/2 -translate-y-1/2 right-3">
           <DropdownMenu>
-            <DropdownMenuTrigger className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+            <DropdownMenuTrigger className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-foreground hover:bg-muted/60 transition-colors">
               <MoreVertical className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => onEdit(account)}>Editar</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-600" onClick={() => onDelete(account.id)}>Eliminar</DropdownMenuItem>
+              <DropdownMenuItem className="text-red-500" onClick={() => onDelete(account.id)}>Eliminar</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </Card>
+      </div>
     </div>
   )
 }
 
 export function AccountsList({ accounts, userId }: Props) {
-  const [order, setOrder] = useState<string[]>([])
-  const [mode, setMode] = useState<'create' | 'edit' | null>(null)
-  const [editing, setEditing] = useState<Account | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [form, setForm] = useState<FormState>(emptyForm)
-  const [balanceIds, setBalanceIds] = useState<string[] | null>(null)
+  const [order, setOrder]                     = useState<string[]>([])
+  const [mode, setMode]                       = useState<'create' | 'edit' | null>(null)
+  const [editing, setEditing]                 = useState<Account | null>(null)
+  const [loading, setLoading]                 = useState(false)
+  const [form, setForm]                       = useState<FormState>(emptyForm)
+  const [balanceIds, setBalanceIds]           = useState<string[] | null>(null)
   const [balanceConfigOpen, setBalanceConfigOpen] = useState(false)
-  const [draft, setDraft] = useState<string[]>([])
-  const router = useRouter()
+  const [draft, setDraft]                     = useState<string[]>([])
+  const [hidden, setHidden]                   = useState(false)
+  const router  = useRouter()
   const supabase = createClient()
 
-  // Load order + balance config from localStorage
   useEffect(() => {
     try {
-      const storedOrder = localStorage.getItem(ORDER_KEY(userId))
-      if (storedOrder) {
-        const parsed: string[] = JSON.parse(storedOrder)
-        // merge: keep stored order for known IDs, append new ones
+      const stored = localStorage.getItem(ORDER_KEY(userId))
+      if (stored) {
+        const parsed: string[] = JSON.parse(stored)
         const known = new Set(accounts.map(a => a.id))
-        const merged = [
-          ...parsed.filter(id => known.has(id)),
-          ...accounts.map(a => a.id).filter(id => !parsed.includes(id)),
-        ]
-        setOrder(merged)
+        setOrder([...parsed.filter(id => known.has(id)), ...accounts.map(a => a.id).filter(id => !parsed.includes(id))])
       } else {
         setOrder(accounts.map(a => a.id))
       }
-    } catch {
-      setOrder(accounts.map(a => a.id))
-    }
+    } catch { setOrder(accounts.map(a => a.id)) }
 
     try {
       const raw = localStorage.getItem(CARDS_KEY(userId))
       if (raw) setBalanceIds(JSON.parse(raw).balance ?? null)
     } catch {}
-  }, [userId, accounts.length]) // re-run when account count changes (new account created)
 
-  const sortedAccounts = order
-    .map(id => accounts.find(a => a.id === id))
-    .filter(Boolean) as Account[]
+    try { setHidden(localStorage.getItem(HIDE_KEY) === 'true') } catch {}
+  }, [userId, accounts.length])
+
+  function toggleHidden() {
+    const next = !hidden
+    setHidden(next)
+    try { localStorage.setItem(HIDE_KEY, String(next)) } catch {}
+  }
+
+  const sortedAccounts = order.map(id => accounts.find(a => a.id === id)).filter(Boolean) as Account[]
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -160,59 +159,40 @@ export function AccountsList({ accounts, userId }: Props) {
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     if (!over || active.id === over.id) return
-    const oldIdx = order.indexOf(active.id as string)
-    const newIdx = order.indexOf(over.id as string)
-    const newOrder = arrayMove(order, oldIdx, newIdx)
+    const newOrder = arrayMove(order, order.indexOf(active.id as string), order.indexOf(over.id as string))
     setOrder(newOrder)
     localStorage.setItem(ORDER_KEY(userId), JSON.stringify(newOrder))
   }
 
-  // Balance total config
   const includedAccounts = balanceIds === null ? accounts : accounts.filter(a => balanceIds.includes(a.id))
   const totalBalance = includedAccounts.reduce((s, a) => s + a.balance, 0)
 
-  function openBalanceConfig() {
-    setDraft(balanceIds ?? accounts.map(a => a.id))
-    setBalanceConfigOpen(true)
-  }
-
+  function openBalanceConfig() { setDraft(balanceIds ?? accounts.map(a => a.id)); setBalanceConfigOpen(true) }
   function applyBalanceConfig() {
-    const newVal = draft.length === accounts.length ? null : draft
-    setBalanceIds(newVal)
+    const val = draft.length === accounts.length ? null : draft
+    setBalanceIds(val)
     try {
       const raw = localStorage.getItem(CARDS_KEY(userId))
-      const current = raw ? JSON.parse(raw) : {}
-      localStorage.setItem(CARDS_KEY(userId), JSON.stringify({ ...current, balance: newVal }))
+      localStorage.setItem(CARDS_KEY(userId), JSON.stringify({ ...(raw ? JSON.parse(raw) : {}), balance: val }))
     } catch {}
     setBalanceConfigOpen(false)
   }
 
-  // Account CRUD
   function openCreate() { setForm(emptyForm); setEditing(null); setMode('create') }
-
   function openEdit(account: Account) {
     setForm({ name: account.name, type: account.type, balance: account.balance.toString(), currency: account.currency, color: account.color })
-    setEditing(account)
-    setMode('edit')
+    setEditing(account); setMode('edit')
   }
-
   function closeDialog() { setMode(null); setEditing(null); setForm(emptyForm) }
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault(); setLoading(true)
     if (mode === 'create') {
-      const { error } = await supabase.from('accounts').insert({
-        user_id: userId, name: form.name, type: form.type,
-        balance: parseFloat(form.balance) || 0, currency: form.currency, color: form.color,
-      })
+      const { error } = await supabase.from('accounts').insert({ user_id: userId, name: form.name, type: form.type, balance: parseFloat(form.balance) || 0, currency: form.currency, color: form.color })
       if (error) toast.error('Error al crear la cuenta')
       else { toast.success('Cuenta creada'); closeDialog(); router.refresh() }
     } else if (mode === 'edit' && editing) {
-      const { error } = await supabase.from('accounts').update({
-        name: form.name, type: form.type,
-        balance: parseFloat(form.balance) || 0, currency: form.currency, color: form.color,
-      }).eq('id', editing.id)
+      const { error } = await supabase.from('accounts').update({ name: form.name, type: form.type, balance: parseFloat(form.balance) || 0, currency: form.currency, color: form.color }).eq('id', editing.id)
       if (error) toast.error('Error al guardar los cambios')
       else { toast.success('Cuenta actualizada'); closeDialog(); router.refresh() }
     }
@@ -222,11 +202,7 @@ export function AccountsList({ accounts, userId }: Props) {
   async function handleDelete(id: string) {
     const { error } = await supabase.from('accounts').delete().eq('id', id)
     if (error) toast.error('No se puede eliminar (tiene transacciones asociadas)')
-    else {
-      toast.success('Cuenta eliminada')
-      setOrder(prev => prev.filter(x => x !== id))
-      router.refresh()
-    }
+    else { toast.success('Cuenta eliminada'); setOrder(prev => prev.filter(x => x !== id)); router.refresh() }
   }
 
   return (
@@ -234,44 +210,56 @@ export function AccountsList({ accounts, userId }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Cuentas</h1>
-          <div className="flex items-center gap-1 mt-0.5">
-            <p className="text-gray-400 text-sm">
-              Balance total: <span className="font-semibold text-gray-700">{formatCurrency(totalBalance)}</span>
+          <h1 className="text-2xl font-bold text-foreground">Cuentas</h1>
+          <div className="flex items-center gap-2.5 mt-0.5">
+            <p className="text-sm text-muted-foreground">
+              Balance total:{' '}
+              <span className="font-bold text-foreground tabular-nums">{hidden ? '••••••' : formatCurrency(totalBalance)}</span>
             </p>
-            <button onClick={openBalanceConfig}
-              className="p-0.5 rounded hover:bg-gray-100 text-gray-300 hover:text-gray-600 transition-colors"
-              title="Configurar cuentas">
-              <Settings2 className="h-3.5 w-3.5" />
+            <button
+              onClick={toggleHidden}
+              className="p-1 rounded hover:bg-muted text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+              title={hidden ? 'Mostrar saldos' : 'Ocultar saldos'}
+            >
+              {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+            <button
+              onClick={openBalanceConfig}
+              className="p-1 rounded hover:bg-muted text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+            >
+              <Settings2 className="h-4 w-4" />
             </button>
             {balanceIds !== null && (
-              <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">
-                {balanceIds.length} de {accounts.length}
+              <span
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                style={{ backgroundColor: '#3BB2F620', color: '#3BB2F6' }}
+              >
+                {balanceIds.length}/{accounts.length}
               </span>
             )}
           </div>
         </div>
-        <Button onClick={openCreate} className="bg-emerald-600 hover:bg-emerald-700">
-          <Plus className="h-4 w-4 mr-2" /> Nueva cuenta
+        <Button
+          onClick={openCreate}
+          size="sm"
+          className="font-semibold"
+          style={{ background: 'linear-gradient(135deg, #7C4DFF 0%, #9C6DFF 100%)', color: '#fff', border: 'none' }}
+        >
+          <Plus className="h-3.5 w-3.5 mr-1" /> Nueva cuenta
         </Button>
       </div>
 
-      {/* Grid de cuentas */}
+      {/* Lista de cuentas */}
       {accounts.length === 0 ? (
-        <div className="text-center text-gray-400 py-12 border-2 border-dashed border-gray-200 rounded-xl">
+        <div className="text-center text-muted-foreground py-12 border-2 border-dashed border-border rounded-xl text-sm">
           No tenés cuentas aún. ¡Creá una!
         </div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={order} strategy={rectSortingStrategy}>
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 gap-2.5">
               {sortedAccounts.map(a => (
-                <SortableAccountCard
-                  key={a.id}
-                  account={a}
-                  onEdit={openEdit}
-                  onDelete={handleDelete}
-                />
+                <SortableAccountCard key={a.id} account={a} onEdit={openEdit} onDelete={handleDelete} hidden={hidden} />
               ))}
             </div>
           </SortableContext>
@@ -280,61 +268,114 @@ export function AccountsList({ accounts, userId }: Props) {
 
       {/* Balance config dialog */}
       <Dialog open={balanceConfigOpen} onOpenChange={setBalanceConfigOpen}>
-        <DialogContent className="sm:max-w-xs">
-          <DialogHeader><DialogTitle>Configurar — Balance total</DialogTitle></DialogHeader>
-          <p className="text-xs text-gray-500 -mt-2">Seleccioná qué cuentas incluir en el total</p>
-          <div className="space-y-1.5">
+        <DialogContent className="sm:max-w-xs p-0 gap-0 border-border">
+          <div className="px-5 pt-5 pb-4 border-b border-border" style={{ background: 'linear-gradient(135deg, #3BB2F618 0%, transparent 100%)' }}>
+            <DialogTitle className="text-base font-semibold">Configurar balance total</DialogTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">Seleccioná qué cuentas incluir</p>
+          </div>
+          <div className="p-4 space-y-2">
             {accounts.map(a => {
               const selected = draft.includes(a.id)
               return (
-                <button key={a.id} type="button" onClick={() => setDraft(prev => prev.includes(a.id) ? prev.filter(x => x !== a.id) : [...prev, a.id])}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors ${selected ? 'border-emerald-500 bg-emerald-50 text-emerald-900' : 'border-gray-200 text-gray-400 bg-gray-50'}`}
+                <button
+                  key={a.id} type="button"
+                  onClick={() => setDraft(prev => prev.includes(a.id) ? prev.filter(x => x !== a.id) : [...prev, a.id])}
+                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-sm transition-all"
+                  style={selected
+                    ? { borderColor: a.color + '60', backgroundColor: a.color + '12', color: 'hsl(var(--foreground))' }
+                    : { borderColor: 'hsl(var(--border))', backgroundColor: 'transparent', color: 'hsl(var(--muted-foreground))' }
+                  }
                 >
                   <div className="flex items-center gap-2.5">
                     <div className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: a.color }} />
                     <span className="font-medium">{a.name}</span>
                   </div>
-                  <span className="text-xs tabular-nums">{formatCurrency(a.balance, a.currency)}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs tabular-nums">{formatCurrency(a.balance, a.currency)}</span>
+                    {selected && <Check className="h-3.5 w-3.5 flex-shrink-0" style={{ color: a.color }} />}
+                  </div>
                 </button>
               )
             })}
           </div>
-          <div className="flex gap-2 pt-1">
+          <div className="flex gap-2 px-4 pb-4">
             <Button variant="outline" className="flex-1" onClick={() => setBalanceConfigOpen(false)}>Cancelar</Button>
-            <Button className="flex-1 bg-gray-900 hover:bg-gray-800" onClick={applyBalanceConfig} disabled={draft.length === 0}>Guardar</Button>
+            <Button
+              className="flex-1 font-semibold"
+              style={{ background: 'linear-gradient(135deg, #7C4DFF 0%, #9C6DFF 100%)', color: '#fff', border: 'none' }}
+              onClick={applyBalanceConfig}
+              disabled={draft.length === 0}
+            >
+              Guardar
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Create / Edit account dialog */}
       <Dialog open={mode !== null} onOpenChange={closeDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>{mode === 'edit' ? 'Editar cuenta' : 'Nueva cuenta'}</DialogTitle></DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nombre</Label>
-              <Input placeholder="Ej: Banco Galicia, Efectivo..." value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
+        <DialogContent className="sm:max-w-md p-0 gap-0 border-border">
+          {/* Header */}
+          <div
+            className="px-5 pt-5 pb-4 border-b border-border"
+            style={{ background: 'linear-gradient(135deg, #7C4DFF18 0%, #3BB2F608 100%)' }}
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#7C4DFF20' }}>
+                <Landmark className="h-4 w-4" style={{ color: '#7C4DFF' }} />
+              </div>
+              <DialogTitle className="text-base font-semibold">
+                {mode === 'edit' ? 'Editar cuenta' : 'Nueva cuenta'}
+              </DialogTitle>
             </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="p-5 space-y-5">
+            {/* Nombre */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Nombre</label>
+              <Input
+                placeholder="Ej: Banco Galicia, Efectivo..."
+                value={form.name}
+                onChange={e => setForm({ ...form, name: e.target.value })}
+                required
+                className="bg-muted/40 border-border/60"
+              />
+            </div>
+
+            {/* Tipo + Balance */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Tipo</Label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Tipo</label>
                 <Select value={form.type} onValueChange={v => setForm({ ...form, type: v ?? '' })}>
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full bg-muted/40 border-border/60">
                     <span className="text-sm">{ACCOUNT_TYPES.find(t => t.value === form.type)?.label ?? 'Seleccionar'}</span>
                   </SelectTrigger>
-                  <SelectContent>{ACCOUNT_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+                  <SelectContent>
+                    {ACCOUNT_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                  </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Balance inicial</Label>
-                <Input type="number" step="0.01" placeholder="0.00" value={form.balance} onChange={e => setForm({ ...form, balance: e.target.value })} />
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Balance</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                  <Input
+                    type="number" step="0.01" placeholder="0.00"
+                    value={form.balance}
+                    onChange={e => setForm({ ...form, balance: e.target.value })}
+                    className="pl-6 bg-muted/40 border-border/60 font-semibold"
+                  />
+                </div>
               </div>
             </div>
+
+            {/* Moneda + Color */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Moneda</Label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Moneda</label>
                 <Select value={form.currency} onValueChange={v => setForm({ ...form, currency: v ?? '' })}>
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full bg-muted/40 border-border/60">
                     <span className="text-sm">{form.currency || 'Seleccionar'}</span>
                   </SelectTrigger>
                   <SelectContent>
@@ -344,22 +385,31 @@ export function AccountsList({ accounts, userId }: Props) {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Color</Label>
-                <div className="flex gap-2 pt-1">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Color</label>
+                <div className="flex flex-wrap gap-2 pt-1">
                   {COLORS.map(c => (
-                    <button key={c} type="button"
-                      className={`h-6 w-6 rounded-full border-2 ${form.color === c ? 'border-gray-900' : 'border-transparent'}`}
-                      style={{ backgroundColor: c }}
+                    <button
+                      key={c} type="button"
                       onClick={() => setForm({ ...form, color: c })}
-                    />
+                      className="h-6 w-6 rounded-full flex items-center justify-center transition-transform hover:scale-110"
+                      style={{ backgroundColor: c, boxShadow: form.color === c ? `0 0 0 2px hsl(var(--background)), 0 0 0 4px ${c}` : 'none' }}
+                    >
+                      {form.color === c && <Check className="h-3 w-3 text-white" />}
+                    </button>
                   ))}
                 </div>
               </div>
             </div>
-            <div className="flex gap-2 pt-2">
+
+            {/* Botones */}
+            <div className="flex gap-2 pt-1">
               <Button type="button" variant="outline" className="flex-1" onClick={closeDialog}>Cancelar</Button>
-              <Button type="submit" disabled={loading} className="flex-1 bg-emerald-600 hover:bg-emerald-700">
+              <Button
+                type="submit" disabled={loading}
+                className="flex-1 font-semibold"
+                style={{ background: 'linear-gradient(135deg, #7C4DFF 0%, #9C6DFF 100%)', color: '#fff', border: 'none' }}
+              >
                 {loading ? 'Guardando...' : mode === 'edit' ? 'Guardar cambios' : 'Crear cuenta'}
               </Button>
             </div>

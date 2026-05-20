@@ -1,17 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
 import { Account } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { ArrowRight } from 'lucide-react'
+import { ArrowLeftRight, ArrowDown } from 'lucide-react'
+
+const TRANSFER_COLOR = '#3BB2F6'
 
 interface Props {
   open: boolean
@@ -26,26 +26,24 @@ export function TransferDialog({ open, onClose, accounts, userId }: Props) {
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({ from_id: '', to_id: '', amount: '', description: 'Transferencia' })
 
-  const fromAccount = accounts.find(a => a.id === form.from_id)
-  const toAccount = accounts.find(a => a.id === form.to_id)
-  const amount = parseFloat(form.amount) || 0
+  const fromAccount  = accounts.find(a => a.id === form.from_id)
+  const toAccount    = accounts.find(a => a.id === form.to_id)
+  const amount       = parseFloat(form.amount) || 0
+  const afterBalance = fromAccount ? fromAccount.balance - amount : 0
+  const insufficient = !!fromAccount && amount > 0 && amount > fromAccount.balance
 
   async function getOrCreateCategory(type: 'income' | 'expense'): Promise<string | null> {
     const { data } = await supabase
-      .from('categories')
-      .select('id')
-      .eq('name', 'Transferencia')
-      .eq('type', type)
-      .or(`user_id.eq.${userId},is_default.eq.true`)
-      .limit(1)
+      .from('categories').select('id')
+      .eq('name', 'Transferencia').eq('type', type)
+      .or(`user_id.eq.${userId},is_default.eq.true`).limit(1)
 
     if (data && data.length > 0) return data[0].id
 
     const { data: created, error } = await supabase
       .from('categories')
       .insert({ user_id: userId, name: 'Transferencia', icon: '🔄', color: '#6366f1', type, is_default: false, expense_type_id: null })
-      .select('id')
-      .single()
+      .select('id').single()
 
     if (error) return null
     return created?.id ?? null
@@ -54,9 +52,9 @@ export function TransferDialog({ open, onClose, accounts, userId }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.from_id || !form.to_id) { toast.error('Seleccioná ambas cuentas'); return }
-    if (form.from_id === form.to_id) { toast.error('Las cuentas deben ser distintas'); return }
-    if (amount <= 0) { toast.error('El monto debe ser mayor a 0'); return }
-    if (fromAccount && amount > fromAccount.balance) { toast.error('Saldo insuficiente en la cuenta origen'); return }
+    if (form.from_id === form.to_id)  { toast.error('Las cuentas deben ser distintas'); return }
+    if (amount <= 0)                  { toast.error('El monto debe ser mayor a 0'); return }
+    if (insufficient)                 { toast.error('Saldo insuficiente en la cuenta origen'); return }
 
     setLoading(true)
     try {
@@ -75,7 +73,7 @@ export function TransferDialog({ open, onClose, accounts, userId }: Props) {
       if (!expenseCatId || !incomeCatId) { toast.error('Error al preparar categorías'); return }
 
       const today = new Date().toISOString().split('T')[0]
-      const desc = form.description.trim() || 'Transferencia'
+      const desc  = form.description.trim() || 'Transferencia'
 
       const [r1, r2, r3, r4] = await Promise.all([
         supabase.from('transactions').insert({
@@ -103,86 +101,178 @@ export function TransferDialog({ open, onClose, accounts, userId }: Props) {
     }
   }
 
+  const toAccounts = accounts.filter(a => a.id !== form.from_id)
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-sm bg-blue-50">
-        <DialogHeader>
-          <DialogTitle>Transferir entre cuentas</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-
-          {/* Cuenta origen */}
-          <div className="space-y-2">
-            <Label>Cuenta origen</Label>
-            <Select value={form.from_id} onValueChange={v => setForm({ ...form, from_id: v ?? '', to_id: form.to_id === v ? '' : form.to_id })}>
-              <SelectTrigger className="w-full bg-white">
-                <span className={form.from_id ? 'text-sm' : 'text-sm text-muted-foreground'}>
-                  {fromAccount ? `${fromAccount.name} · ${formatCurrency(fromAccount.balance, fromAccount.currency)}` : 'Seleccionar'}
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                {accounts.map(a => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.name} · {formatCurrency(a.balance, a.currency)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      <DialogContent className="sm:max-w-sm max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0 border-border">
+        {/* Header */}
+        <div
+          className="px-5 pt-5 pb-4 border-b border-border flex-shrink-0"
+          style={{ background: `linear-gradient(135deg, ${TRANSFER_COLOR}18 0%, transparent 100%)` }}
+        >
+          <div className="flex items-center gap-2.5">
+            <div
+              className="h-8 w-8 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: TRANSFER_COLOR + '20' }}
+            >
+              <ArrowLeftRight className="h-4 w-4" style={{ color: TRANSFER_COLOR }} />
+            </div>
+            <DialogTitle className="text-base font-semibold text-foreground">
+              Transferir entre cuentas
+            </DialogTitle>
           </div>
+        </div>
 
-          {/* Flecha indicadora */}
-          <div className="flex justify-center">
-            <div className="bg-blue-100 rounded-full p-2">
-              <ArrowRight className="h-4 w-4 text-blue-500" />
+        <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 p-5 space-y-5">
+
+          {/* Monto prominente */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Monto</label>
+            <div className="relative">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xl font-bold text-muted-foreground/60">$</span>
+              <Input
+                type="number" min="0.01" step="0.01" placeholder="0.00"
+                value={form.amount}
+                onChange={e => setForm({ ...form, amount: e.target.value })}
+                required
+                className="pl-8 h-14 text-2xl font-bold bg-muted/40 border-border/60 tracking-tight"
+                style={{ color: TRANSFER_COLOR }}
+              />
             </div>
           </div>
 
-          {/* Cuenta destino */}
-          <div className="space-y-2">
-            <Label>Cuenta destino</Label>
-            <Select value={form.to_id} onValueChange={v => setForm({ ...form, to_id: v ?? '' })}>
-              <SelectTrigger className="w-full bg-white">
-                <span className={form.to_id ? 'text-sm' : 'text-sm text-muted-foreground'}>
-                  {toAccount ? `${toAccount.name} · ${formatCurrency(toAccount.balance, toAccount.currency)}` : 'Seleccionar'}
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                {accounts.filter(a => a.id !== form.from_id).map(a => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.name} · {formatCurrency(a.balance, a.currency)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Desde */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Desde</label>
+            <div className="space-y-1.5">
+              {accounts.map(a => {
+                const active = form.from_id === a.id
+                return (
+                  <button
+                    key={a.id} type="button"
+                    onClick={() => setForm({ ...form, from_id: a.id, to_id: form.to_id === a.id ? '' : form.to_id })}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-sm transition-all text-left"
+                    style={active
+                      ? { backgroundColor: a.color + '18', borderColor: a.color + '55' }
+                      : { backgroundColor: 'transparent', borderColor: 'hsl(var(--border))' }
+                    }
+                  >
+                    <div className="w-1 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: a.color }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-foreground truncate text-sm">{a.name}</p>
+                      <p className="text-[11px] text-muted-foreground tabular-nums">
+                        {formatCurrency(a.balance, a.currency)}
+                      </p>
+                    </div>
+                    {active && (
+                      <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: a.color }} />
+                    )}
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
-          {/* Monto */}
-          <div className="space-y-2">
-            <Label>Monto</Label>
-            <Input type="number" min="0.01" step="0.01" placeholder="0.00" value={form.amount}
-              onChange={e => setForm({ ...form, amount: e.target.value })} required className="bg-white" />
-            {fromAccount && amount > 0 && (
-              <p className="text-xs text-gray-400">
-                Saldo después: <span className={amount > fromAccount.balance ? 'text-red-500 font-semibold' : 'text-gray-600 font-semibold'}>
-                  {formatCurrency(fromAccount.balance - amount, fromAccount.currency)}
-                </span>
+          {/* Preview saldo post-transferencia */}
+          {fromAccount && amount > 0 && (
+            <div
+              className="px-3 py-2.5 rounded-xl text-xs flex items-center justify-between"
+              style={{
+                backgroundColor: insufficient ? '#FF4D6D15' : TRANSFER_COLOR + '12',
+                border: `1px solid ${insufficient ? '#FF4D6D35' : TRANSFER_COLOR + '30'}`,
+              }}
+            >
+              <span className="text-muted-foreground">Saldo después de transferir</span>
+              <span
+                className="font-bold tabular-nums"
+                style={{ color: insufficient ? '#FF4D6D' : 'hsl(var(--foreground))' }}
+              >
+                {formatCurrency(afterBalance, fromAccount.currency)}
+              </span>
+            </div>
+          )}
+
+          {/* Separador con flecha */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-border/60" />
+            <div
+              className="h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ backgroundColor: TRANSFER_COLOR + '15', border: `1px solid ${TRANSFER_COLOR}30` }}
+            >
+              <ArrowDown className="h-4 w-4" style={{ color: TRANSFER_COLOR }} />
+            </div>
+            <div className="flex-1 h-px bg-border/60" />
+          </div>
+
+          {/* Hacia */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Hacia</label>
+            {toAccounts.length === 0 ? (
+              <p className="text-xs text-muted-foreground bg-muted/40 border border-border p-2.5 rounded-lg">
+                Seleccioná primero la cuenta de origen.
               </p>
+            ) : (
+              <div className="space-y-1.5">
+                {toAccounts.map(a => {
+                  const active = form.to_id === a.id
+                  return (
+                    <button
+                      key={a.id} type="button"
+                      onClick={() => setForm({ ...form, to_id: a.id })}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-sm transition-all text-left"
+                      style={active
+                        ? { backgroundColor: a.color + '18', borderColor: a.color + '55' }
+                        : { backgroundColor: 'transparent', borderColor: 'hsl(var(--border))' }
+                      }
+                    >
+                      <div className="w-1 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: a.color }} />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-foreground truncate text-sm">{a.name}</p>
+                        <p className="text-[11px] text-muted-foreground tabular-nums">
+                          {formatCurrency(a.balance, a.currency)}
+                        </p>
+                      </div>
+                      {active && (
+                        <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: a.color }} />
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
             )}
           </div>
 
           {/* Descripción */}
-          <div className="space-y-2">
-            <Label>Descripción <span className="text-gray-400 font-normal text-xs">(opcional)</span></Label>
-            <Input placeholder="Transferencia" value={form.description}
-              onChange={e => setForm({ ...form, description: e.target.value })} className="bg-white" />
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+              Descripción <span className="normal-case font-normal text-muted-foreground/60">(opcional)</span>
+            </label>
+            <Input
+              placeholder="Transferencia"
+              value={form.description}
+              onChange={e => setForm({ ...form, description: e.target.value })}
+              className="bg-muted/40 border-border/60"
+            />
           </div>
 
-          <div className="flex gap-2 pt-2">
-            <Button type="button" variant="outline" className="flex-1 bg-white" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" disabled={loading} className="flex-1 bg-blue-600 hover:bg-blue-700">
+          <div className="flex gap-2 pt-1">
+            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button
+              type="submit" disabled={loading || insufficient}
+              className="flex-1 font-semibold"
+              style={{
+                background: `linear-gradient(135deg, ${TRANSFER_COLOR} 0%, #60C8FF 100%)`,
+                color: '#fff',
+                border: 'none',
+              }}
+            >
               {loading ? 'Transfiriendo...' : 'Transferir'}
             </Button>
           </div>
+
         </form>
       </DialogContent>
     </Dialog>

@@ -41,7 +41,7 @@ export function TransactionList({ transactions, accounts, categories, userId, in
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Transacciones</h1>
+        <h1 className="text-2xl font-bold text-foreground">Transacciones</h1>
         <Button onClick={() => setOpen(true)} className="bg-emerald-600 hover:bg-emerald-700">
           <Plus className="h-4 w-4 mr-2" /> Nueva transacción
         </Button>
@@ -68,15 +68,15 @@ export function TransactionList({ transactions, accounts, categories, userId, in
           ) : (
             <div className="divide-y">
               {filtered.map(t => (
-                <div key={t.id} className="flex items-center gap-4 px-4 py-3 hover:bg-gray-50">
-                  <div className={`p-2 rounded-full ${t.type === 'income' ? 'bg-emerald-100' : 'bg-red-100'}`}>
+                <div key={t.id} className="flex items-center gap-4 px-4 py-3 hover:bg-muted/50">
+                  <div className={`p-2 rounded-full ${t.type === 'income' ? 'bg-emerald-950/50' : 'bg-red-950/50'}`}>
                     {t.type === 'income'
                       ? <ArrowUpCircle className="h-4 w-4 text-emerald-600" />
                       : <ArrowDownCircle className="h-4 w-4 text-red-500" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{t.description}</p>
-                    <p className="text-xs text-gray-400">{formatDate(t.date)} · {t.account?.name} · {t.category?.name}</p>
+                    <p className="text-xs text-muted-foreground">{formatDate(t.date)} · {t.account?.name} · {t.category?.name}</p>
                   </div>
                   <span className={`text-sm font-bold ${t.type === 'income' ? 'text-emerald-600' : 'text-red-500'}`}>
                     {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { ArrowDownCircle, ArrowUpCircle, Wallet, TrendingUp, Settings2 } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, Wallet, TrendingUp, Settings2, Eye, EyeOff } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import type { Account, Investment } from '@/types'
@@ -13,6 +13,7 @@ type CardKey = 'balance' | 'income' | 'expenses'
 type AccountConfig = Record<CardKey, string[] | null>
 
 const STORAGE_KEY = (userId: string) => `gastando_cards_${userId}`
+const HIDE_KEY = 'gastando_hide_balances'
 
 function loadConfig(userId: string): AccountConfig {
   try {
@@ -56,10 +57,20 @@ export function DashboardCards({ accounts, transactions, investments, userId }: 
   const [config, setConfig] = useState<AccountConfig>({ balance: null, income: null, expenses: null })
   const [configuring, setConfiguring] = useState<CardKey | null>(null)
   const [draft, setDraft] = useState<string[]>([])
+  const [hidden, setHidden] = useState(false)
 
   useEffect(() => {
     setConfig(loadConfig(userId))
+    try { setHidden(localStorage.getItem(HIDE_KEY) === 'true') } catch {}
   }, [userId])
+
+  function toggleHidden() {
+    const next = !hidden
+    setHidden(next)
+    try { localStorage.setItem(HIDE_KEY, String(next)) } catch {}
+  }
+
+  const mask = '••••••'
 
   function ids(key: CardKey): Set<string> | null {
     return config[key] === null ? null : new Set(config[key]!)
@@ -86,6 +97,10 @@ export function DashboardCards({ accounts, transactions, investments, userId }: 
     return cfg === null ? `${accounts.length} cuenta(s)` : `${cfg.length} de ${accounts.length} cuenta(s)`
   }
 
+  const expensesPct = monthIncome > 0
+    ? `${Math.round((monthExpenses / monthIncome) * 100)}% del total`
+    : subLabel('expenses')
+
   function openConfig(key: CardKey) {
     setDraft(config[key] ?? accounts.map(a => a.id))
     setConfiguring(key)
@@ -106,83 +121,95 @@ export function DashboardCards({ accounts, transactions, investments, userId }: 
 
   const GearBtn = ({ k }: { k: CardKey }) => (
     <button onClick={() => openConfig(k)}
-      className="p-1 rounded hover:bg-gray-100 text-gray-300 hover:text-gray-600 transition-colors flex-shrink-0"
+      className="p-1 rounded hover:bg-muted text-muted-foreground/30 hover:text-muted-foreground transition-colors flex-shrink-0"
       title="Configurar cuentas">
-      <Settings2 className="h-3.5 w-3.5" />
+      <Settings2 className="h-4 w-4" />
     </button>
   )
 
   return (
     <>
       <div className="space-y-3">
-        {/* Fila 1 — Saldo total (ancho completo) */}
+        {/* Fila 1 — Saldo total */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Saldo total</CardTitle>
-            <div className="flex items-center gap-1">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Saldo total</CardTitle>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={toggleHidden}
+                className="p-1 rounded hover:bg-muted text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                title={hidden ? 'Mostrar saldos' : 'Ocultar saldos'}
+              >
+                {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
               <GearBtn k="balance" />
-              <Wallet className="h-4 w-4 text-emerald-600" />
+              <div className="h-7 w-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#7C4DFF20' }}>
+                <Wallet className="h-4 w-4" style={{ color: '#7C4DFF' }} />
+              </div>
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold tracking-tight">{formatCurrency(totalBalance)}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{subLabel('balance')}</p>
+            <p className="text-3xl font-bold tracking-tight">{hidden ? mask : formatCurrency(totalBalance)}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{subLabel('balance')}</p>
           </CardContent>
         </Card>
 
         {/* Fila 2 — Ingresos + Gastos en 2 columnas */}
         <div className="grid grid-cols-2 gap-3">
-          {/* Ingresos */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-1 px-4 pt-4">
-              <CardTitle className="text-xs font-medium text-gray-500 leading-tight">Ingresos del mes</CardTitle>
+              <CardTitle className="text-xs font-medium text-muted-foreground leading-tight">Ingresos del mes</CardTitle>
               <div className="flex items-center gap-0.5 flex-shrink-0">
                 <GearBtn k="income" />
-                <ArrowUpCircle className="h-3.5 w-3.5 text-emerald-600" />
+                <div className="h-6 w-6 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#00CB9620' }}>
+                  <ArrowUpRight className="h-3 w-3" style={{ color: '#00CB96' }} />
+                </div>
               </div>
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              <p className="text-xl font-bold text-emerald-600 leading-tight truncate">{formatCurrency(monthIncome)}</p>
-              <p className="text-[10px] text-gray-400 mt-0.5 truncate">{subLabel('income')}</p>
+              <p className="text-xl font-bold leading-tight truncate" style={{ color: '#00CB96' }}>{hidden ? mask : formatCurrency(monthIncome)}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{subLabel('income')}</p>
             </CardContent>
           </Card>
 
-          {/* Gastos */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-1 px-4 pt-4">
-              <CardTitle className="text-xs font-medium text-gray-500 leading-tight">Gastos del mes</CardTitle>
+              <CardTitle className="text-xs font-medium text-muted-foreground leading-tight">Gastos del mes</CardTitle>
               <div className="flex items-center gap-0.5 flex-shrink-0">
                 <GearBtn k="expenses" />
-                <ArrowDownCircle className="h-3.5 w-3.5 text-red-500" />
+                <div className="h-6 w-6 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FF4D6D20' }}>
+                  <ArrowDownLeft className="h-3 w-3" style={{ color: '#FF4D6D' }} />
+                </div>
               </div>
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              <p className="text-xl font-bold text-red-500 leading-tight truncate">{formatCurrency(monthExpenses)}</p>
-              <p className="text-[10px] text-gray-400 mt-0.5 truncate">{subLabel('expenses')}</p>
+              <p className="text-xl font-bold leading-tight truncate" style={{ color: '#FF4D6D' }}>{hidden ? mask : formatCurrency(monthExpenses)}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{expensesPct}</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Fila 3 — Inversiones (ancho completo) */}
+        {/* Fila 3 — Inversiones */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Inversiones</CardTitle>
-            <TrendingUp className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Inversiones</CardTitle>
+            <div className="h-7 w-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#3BB2F620' }}>
+              <TrendingUp className="h-3.5 w-3.5" style={{ color: '#3BB2F6' }} />
+            </div>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-blue-600 tracking-tight">{formatCurrency(totalInvested)}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{investments.length} activo(s)</p>
+            <p className="text-3xl font-bold tracking-tight" style={{ color: '#3BB2F6' }}>{hidden ? mask : formatCurrency(totalInvested)}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{investments.length} activo(s)</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Selector de cuentas */}
       <Dialog open={configuring !== null} onOpenChange={() => setConfiguring(null)}>
         <DialogContent className="sm:max-w-xs">
           <DialogHeader>
             <DialogTitle>Configurar — {configuring ? CARD_TITLES[configuring] : ''}</DialogTitle>
           </DialogHeader>
-          <p className="text-xs text-gray-500 -mt-2">Seleccioná qué cuentas incluir</p>
+          <p className="text-xs text-muted-foreground -mt-2">Seleccioná qué cuentas incluir</p>
           <div className="space-y-1.5">
             {accounts.map(a => {
               const selected = draft.includes(a.id)
@@ -190,7 +217,7 @@ export function DashboardCards({ accounts, transactions, investments, userId }: 
                 <button key={a.id} type="button" onClick={() => toggleAccount(a.id)}
                   className={cn(
                     'w-full flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors',
-                    selected ? 'border-emerald-500 bg-emerald-50 text-emerald-900' : 'border-gray-200 text-gray-400 bg-gray-50'
+                    selected ? 'border-primary/50 bg-primary/10 text-primary' : 'border-border text-muted-foreground bg-muted/30'
                   )}>
                   <div className="flex items-center gap-2.5">
                     <div className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: a.color }} />
@@ -203,7 +230,7 @@ export function DashboardCards({ accounts, transactions, investments, userId }: 
           </div>
           <div className="flex gap-2 pt-1">
             <Button variant="outline" className="flex-1" onClick={() => setConfiguring(null)}>Cancelar</Button>
-            <Button className="flex-1 bg-gray-900 hover:bg-gray-800" onClick={applyConfig} disabled={draft.length === 0}>
+            <Button className="flex-1" onClick={applyConfig} disabled={draft.length === 0}>
               Guardar
             </Button>
           </div>

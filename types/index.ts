@@ -81,18 +81,76 @@ export interface BudgetCard {
 
 export type FixedExpenseStatus = 'paid' | 'not_applicable' | 'pending'
 
+export interface FixedExpenseGroup {
+  id: string
+  user_id: string
+  month: number
+  year: number
+  name: string
+  color: string
+  order: number
+  created_at: string
+}
+
 export interface FixedExpenseItem {
   id: string
   user_id: string
   month: number
   year: number
+  group_id: string | null
   category_id: string | null
   description: string | null
   amount: number
   status: FixedExpenseStatus
   responsible: string | null
+  due_day: number | null
   created_at: string
   category?: Pick<Category, 'id' | 'name' | 'icon' | 'color'>
+}
+
+export interface Responsible {
+  id: string
+  user_id: string
+  name: string
+  color: string
+  created_at: string
+}
+
+export type CreditCardNetwork = 'visa' | 'mastercard' | 'nacion' | 'provincia' | 'modo' | 'cabal' | 'naranja' | 'amex' | 'other'
+export type CreditCardStatus = 'paid' | 'pending'
+
+export interface CreditCard {
+  id: string
+  user_id: string
+  name: string
+  network: CreditCardNetwork
+  created_at: string
+}
+
+export interface CreditCardMonth {
+  id: string
+  card_id: string
+  user_id: string
+  month: number
+  year: number
+  due_date: string | null
+  status: CreditCardStatus
+  paid_at: string | null
+  account_id: string | null
+  paid_amount: number | null
+  created_at: string
+  card?: CreditCard
+}
+
+export interface CreditCardItem {
+  id: string
+  card_month_id: string
+  user_id: string
+  description: string
+  installment_current: number | null
+  installment_total: number | null
+  amount: number
+  created_at: string
 }
 
 export interface Investment {
