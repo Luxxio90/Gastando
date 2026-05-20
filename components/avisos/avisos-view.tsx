@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/lib/utils'
@@ -111,7 +111,6 @@ function AlertCard({
   marking: boolean
   onMarkPaid: (id: string) => void
 }) {
-  const router   = useRouter()
   const color    = urgencyColor(alert.daysLeft)
   const label    = urgencyLabel(alert.daysLeft)
   const progress = progressPercent(alert.daysLeft)
@@ -188,14 +187,12 @@ function AlertCard({
                   {marking ? 'Guardando...' : 'Pagado'}
                 </Button>
               ) : (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-xs font-semibold h-7 px-3"
-                  onClick={() => router.push('/tarjetas')}
+                <Link
+                  href="/tarjetas"
+                  className="inline-flex items-center gap-1 text-xs font-semibold h-7 px-3 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
                 >
                   Ver tarjeta <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                </Button>
+                </Link>
               )}
             </div>
           </div>
