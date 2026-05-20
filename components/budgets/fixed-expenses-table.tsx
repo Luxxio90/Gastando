@@ -416,16 +416,18 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
                   className="bg-card rounded-xl border border-border overflow-hidden shadow-sm"
                   style={{ borderLeft: `3px solid ${group.color}` }}
                 >
-                  {/* Group header — click to collapse */}
+                  {/* Group header — click left side to collapse */}
                   <div
-                    className="flex items-center justify-between px-4 py-3 cursor-pointer select-none"
+                    className="flex items-center justify-between px-4 py-3"
                     style={{
                       background: `linear-gradient(90deg, ${group.color}12 0%, transparent 60%)`,
                       borderBottom: collapsed ? 'none' : undefined,
                     }}
-                    onClick={() => toggleCollapse(group.id)}
                   >
-                    <div className="flex items-center gap-2.5">
+                    <div
+                      className="flex items-center gap-2.5 flex-1 cursor-pointer select-none min-w-0 mr-2"
+                      onClick={() => toggleCollapse(group.id)}
+                    >
                       <ChevronDown
                         className="h-3.5 w-3.5 text-muted-foreground/60 transition-transform duration-200 flex-shrink-0"
                         style={{ transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}
@@ -436,7 +438,7 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
                         {groupItems.length}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2.5" onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center gap-2.5 flex-shrink-0">
                       {total > 0 && (
                         <span className="text-xs font-bold tabular-nums" style={{ color: group.color }}>
                           {formatCurrency(total)}
