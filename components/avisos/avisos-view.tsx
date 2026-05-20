@@ -186,12 +186,12 @@ function AlertCard({
                   {marking ? 'Guardando...' : 'Pagado'}
                 </Button>
               ) : (
-                <button
-                  onClick={() => { window.location.href = '/tarjetas' }}
+                <a
+                  href="/tarjetas"
                   className="inline-flex items-center gap-1 text-xs font-semibold h-7 px-3 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
                 >
                   Ver tarjeta <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                </button>
+                </a>
               )}
             </div>
           </div>
