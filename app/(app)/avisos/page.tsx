@@ -14,7 +14,7 @@ export default async function AvisosPage() {
   // Fetch pending fixed expenses with a due_day set (current month)
   const { data: rawFixed } = await supabase
     .from('fixed_expense_items')
-    .select('*, category:categories(id,name,icon,color)')
+    .select('*, category:categories(id,name,icon,color), group:fixed_expense_groups(id,name,color)')
     .eq('user_id', user.id)
     .eq('month', month)
     .eq('year', year)

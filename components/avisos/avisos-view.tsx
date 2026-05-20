@@ -16,6 +16,7 @@ type RawFixed = {
   amount: number
   description: string | null
   category?: { id: string; name: string; icon: string; color: string } | null
+  group?: { id: string; name: string; color: string } | null
 }
 
 type RawCard = {
@@ -84,6 +85,8 @@ type FixedAlert = {
   icon: string
   iconColor: string
   description: string | null
+  groupName: string | null
+  groupColor: string | null
   amount: number
   dueDay: number
   daysLeft: number
@@ -154,8 +157,23 @@ function AlertCardInner({
                     ? `Gasto fijo · vence el día ${alert.dueDay}`
                     : `Tarjeta · vence el ${formatDueDate(alert.dueDate)}`}
                 </p>
-                {alert.type === 'fixed' && alert.description && (
-                  <p className="text-xs text-muted-foreground truncate">{alert.description}</p>
+                {alert.type === 'fixed' && (
+                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                    {alert.groupName && (
+                      <span
+                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                        style={{
+                          backgroundColor: (alert.groupColor ?? '#7C4DFF') + '20',
+                          color: alert.groupColor ?? '#7C4DFF',
+                        }}
+                      >
+                        {alert.groupName}
+                      </span>
+                    )}
+                    {alert.description && (
+                      <span className="text-[11px] text-muted-foreground truncate">{alert.description}</span>
+                    )}
+                  </div>
                 )}
               </div>
               <span
@@ -245,15 +263,17 @@ export function AvisosView({ fixedExpenses, cardMonths, userId }: Props) {
   const fixedAlerts: Alert[] = fixedExpenses
     .filter(item => !paid.has(item.id))
     .map(item => ({
-      type:      'fixed',
-      id:        item.id,
-      name:      item.category?.name ?? 'Sin categoría',
-      icon:      item.category?.icon ?? '📋',
-      iconColor: item.category?.color ?? '#7C4DFF',
+      type:       'fixed',
+      id:         item.id,
+      name:       item.category?.name ?? 'Sin categoría',
+      icon:       item.category?.icon ?? '📋',
+      iconColor:  item.category?.color ?? '#7C4DFF',
       description: item.description,
-      amount:    item.amount,
-      dueDay:    item.due_day,
-      daysLeft:  item.due_day - todayDay,
+      groupName:  item.group?.name ?? null,
+      groupColor: item.group?.color ?? null,
+      amount:     item.amount,
+      dueDay:     item.due_day,
+      daysLeft:   item.due_day - todayDay,
     }))
 
   const cardAlerts: Alert[] = cardMonths.map(cm => {
