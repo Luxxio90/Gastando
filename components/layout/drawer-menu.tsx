@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Menu, X, BarChart2, Settings, ChevronRight } from 'lucide-react'
+import { Menu, X, BarChart2, Settings, ChevronRight, ArrowLeftRight } from 'lucide-react'
 
 interface Props {
   userEmail?: string | null
@@ -15,6 +15,13 @@ const MENU_ITEMS = [
     label: 'Estadísticas',
     description: 'Gastos por categoría y tendencias',
     color: '#3BB2F6',
+  },
+  {
+    href: '/transactions',
+    icon: ArrowLeftRight,
+    label: 'Transacciones',
+    description: 'Historial de ingresos y gastos',
+    color: '#00CB96',
   },
   {
     href: '/settings',
