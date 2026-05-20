@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/lib/utils'
@@ -187,12 +186,12 @@ function AlertCard({
                   {marking ? 'Guardando...' : 'Pagado'}
                 </Button>
               ) : (
-                <Link
-                  href="/tarjetas"
+                <button
+                  onClick={() => { window.location.href = '/tarjetas' }}
                   className="inline-flex items-center gap-1 text-xs font-semibold h-7 px-3 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
                 >
                   Ver tarjeta <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                </Link>
+                </button>
               )}
             </div>
           </div>
