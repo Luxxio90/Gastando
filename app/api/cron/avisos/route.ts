@@ -5,10 +5,14 @@ import { createClient } from '@/lib/supabase/server'
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
+  const vapidPublicKey  = 'BOJzMll7HVPQ1SV8cQnQnnlSnIgNJfuTtBc6MFCqstBERv8370NOP0RH9cN2lRWT9bq1nzCEoWEsLwxfcD8ZL-s'
+  const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY!
+  if (!vapidPrivateKey) return NextResponse.json({ error: 'VAPID_PRIVATE_KEY not set' }, { status: 500 })
+
   webpush.setVapidDetails(
     `mailto:${process.env.VAPID_EMAIL ?? 'gastando@app.com'}`,
-    process.env.VAPID_PUBLIC_KEY!,
-    process.env.VAPID_PRIVATE_KEY!,
+    vapidPublicKey,
+    vapidPrivateKey,
   )
 
   const secret = req.headers.get('authorization')?.replace('Bearer ', '')
