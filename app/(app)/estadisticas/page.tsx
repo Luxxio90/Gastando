@@ -24,19 +24,24 @@ export default async function EstadisticasPage({
   while (trendMonth <= 0) { trendMonth += 12; trendYear-- }
   const trendStart = new Date(trendYear, trendMonth - 1, 1).toISOString()
 
-  const [{ data: transactions }, { data: trendTransactions }] = await Promise.all([
+  const [{ data: transactions }, { data: trendTransactions }, { data: accounts }] = await Promise.all([
     supabase
       .from('transactions')
-      .select('type, amount, category:categories(name, icon, color)')
+      .select('type, amount, account_id, category:categories(name, icon, color)')
       .eq('user_id', user.id)
       .gte('date', firstDay)
       .lte('date', lastDay),
     supabase
       .from('transactions')
-      .select('type, amount, date')
+      .select('type, amount, date, account_id')
       .eq('user_id', user.id)
       .gte('date', trendStart)
       .lte('date', lastDay),
+    supabase
+      .from('accounts')
+      .select('id, name, color, icon')
+      .eq('user_id', user.id)
+      .order('name'),
   ])
 
   return (
@@ -50,6 +55,7 @@ export default async function EstadisticasPage({
         year={year}
         transactions={(transactions ?? []) as any[]}
         trendTransactions={(trendTransactions ?? []) as any[]}
+        accounts={(accounts ?? []) as any[]}
       />
     </div>
   )

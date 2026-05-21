@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip,
@@ -11,18 +12,21 @@ import { formatCurrency } from '@/lib/utils'
 const MONTH_NAMES_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 const MONTH_NAMES_LONG  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
-type RawTx = { type: 'income' | 'expense'; amount: number; date: string }
+type RawTx = { type: 'income' | 'expense'; amount: number; date: string; account_id: string }
 type RawTxCat = {
   type: 'income' | 'expense'
   amount: number
+  account_id: string
   category?: { name: string; icon: string; color: string } | null
 }
+type RawAccount = { id: string; name: string; color: string; icon?: string }
 
 interface Props {
   month: number
   year: number
   transactions: RawTxCat[]
   trendTransactions: RawTx[]
+  accounts: RawAccount[]
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -54,8 +58,9 @@ function CustomTooltip({ active, payload, label }: any) {
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 
-export function EstadisticasView({ month, year, transactions, trendTransactions }: Props) {
+export function EstadisticasView({ month, year, transactions, trendTransactions, accounts }: Props) {
   const router = useRouter()
+  const [selectedIds, setSelectedIds] = useState<Set<string> | null>(null) // null = todas
 
   function navigate(dir: -1 | 1) {
     let m = month + dir, y = year
@@ -64,16 +69,35 @@ export function EstadisticasView({ month, year, transactions, trendTransactions 
     router.push(`/estadisticas?month=${m}&year=${y}`)
   }
 
+  function toggleAccount(id: string) {
+    setSelectedIds(prev => {
+      if (prev === null) return new Set([id])
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+        return next.size === 0 ? null : next
+      }
+      next.add(id)
+      return next.size === accounts.length ? null : next
+    })
+  }
+
+  function selectAll() { setSelectedIds(null) }
+
+  // ── Filter transactions by selected accounts ───────────────────────────────
+  const filteredTx      = selectedIds === null ? transactions      : transactions.filter(t => selectedIds.has(t.account_id))
+  const filteredTrend   = selectedIds === null ? trendTransactions : trendTransactions.filter(t => selectedIds.has(t.account_id))
+
   // ── Summary ────────────────────────────────────────────────────────────────
-  const income   = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-  const expense  = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+  const income   = filteredTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+  const expense  = filteredTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
   const balance  = income - expense
   const savingsPct = income > 0 ? Math.round((balance / income) * 100) : 0
 
   // ── Category breakdown ────────────────────────────────────────────────────
   const catMap: Record<string, { name: string; icon: string; color: string; value: number }> = {}
-  for (const t of transactions.filter(t => t.type === 'expense')) {
-    const key  = t.category?.name ?? 'Sin categoría'
+  for (const t of filteredTx.filter(t => t.type === 'expense')) {
+    const key   = t.category?.name  ?? 'Sin categoría'
     const icon  = t.category?.icon  ?? '📋'
     const color = t.category?.color ?? '#7C4DFF'
     if (!catMap[key]) catMap[key] = { name: key, icon, color, value: 0 }
@@ -84,47 +108,93 @@ export function EstadisticasView({ month, year, transactions, trendTransactions 
   // ── 6-month trend ─────────────────────────────────────────────────────────
   const periods = getLast6Months(month, year)
   const trendData = periods.map(({ month: m, year: y }) => {
-    const txs = trendTransactions.filter(t => {
+    const txs = filteredTrend.filter(t => {
       const d = new Date(t.date)
       return d.getFullYear() === y && d.getMonth() + 1 === m
     })
     return {
-      name: MONTH_NAMES_SHORT[m - 1],
-      income:  txs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
+      name:    MONTH_NAMES_SHORT[m - 1],
+      income:  txs.filter(t => t.type === 'income').reduce((s, t)  => s + t.amount, 0),
       expense: txs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
     }
   })
 
   const summaryCards = [
-    { label: 'Ingresos',  value: income,  color: '#00CB96', Icon: TrendingUp },
-    { label: 'Gastos',    value: expense,  color: '#FF4D6D', Icon: TrendingDown },
-    { label: 'Balance',   value: balance,  color: '#3BB2F6', Icon: Wallet },
-    { label: 'Ahorro',    value: null,     color: '#7C4DFF', Icon: PiggyBank, pct: savingsPct },
+    { label: 'Ingresos', value: income,  color: '#00CB96', Icon: TrendingUp },
+    { label: 'Gastos',   value: expense,  color: '#FF4D6D', Icon: TrendingDown },
+    { label: 'Balance',  value: balance,  color: '#3BB2F6', Icon: Wallet },
+    { label: 'Ahorro',   value: null,     color: '#7C4DFF', Icon: PiggyBank, pct: savingsPct },
   ]
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
 
-      {/* Month selector */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-        <span className="font-semibold text-sm text-foreground capitalize">
-          {MONTH_NAMES_LONG[month - 1]} {year}
-        </span>
-        <button
-          onClick={() => navigate(1)}
-          className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground"
-        >
-          <ChevronRight className="h-5 w-5" />
-        </button>
+      {/* ── Filtros ──────────────────────────────────────────────────────────── */}
+      <div className="bg-card rounded-xl border border-border p-4 space-y-3">
+
+        {/* Month selector */}
+        <div>
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">Período</p>
+          <div className="flex items-center justify-between bg-muted/40 rounded-xl px-2 py-1.5">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="font-semibold text-sm text-foreground capitalize">
+              {MONTH_NAMES_LONG[month - 1]} {year}
+            </span>
+            <button
+              onClick={() => navigate(1)}
+              className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Account filter */}
+        {accounts.length > 1 && (
+          <div>
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">Cuentas</p>
+            <div className="flex flex-wrap gap-1.5">
+              {/* Todas chip */}
+              <button
+                onClick={selectAll}
+                className="px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
+                style={selectedIds === null
+                  ? { background: '#7C4DFF20', borderColor: '#7C4DFF60', color: '#7C4DFF' }
+                  : { background: 'transparent', borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }
+                }
+              >
+                Todas
+              </button>
+
+              {accounts.map(acc => {
+                const active = selectedIds !== null && selectedIds.has(acc.id)
+                const color  = acc.color || '#7C4DFF'
+                return (
+                  <button
+                    key={acc.id}
+                    onClick={() => toggleAccount(acc.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
+                    style={active
+                      ? { background: color + '20', borderColor: color + '60', color }
+                      : { background: 'transparent', borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }
+                    }
+                  >
+                    <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: active ? color : 'hsl(var(--muted-foreground))' }} />
+                    {acc.name}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Summary cards */}
+      {/* ── Summary cards ────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3">
         {summaryCards.map(({ label, value, color, Icon, pct }) => (
           <div
@@ -143,7 +213,7 @@ export function EstadisticasView({ month, year, transactions, trendTransactions 
                 {pct}%
               </p>
             ) : (
-              <p className="text-lg font-bold text-foreground tabular-nums" style={{ color: value! < 0 ? '#FF4D6D' : undefined }}>
+              <p className="text-lg font-bold tabular-nums" style={{ color: (value ?? 0) < 0 ? '#FF4D6D' : 'hsl(var(--foreground))' }}>
                 {formatCurrency(value!)}
               </p>
             )}
@@ -151,7 +221,7 @@ export function EstadisticasView({ month, year, transactions, trendTransactions 
         ))}
       </div>
 
-      {/* Expense by category */}
+      {/* ── Expense by category ───────────────────────────────────────────────── */}
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="px-4 py-3 border-b border-border/60"
           style={{ background: 'linear-gradient(90deg, #FF4D6D10 0%, transparent 60%)' }}>
@@ -160,7 +230,7 @@ export function EstadisticasView({ month, year, transactions, trendTransactions 
         </div>
 
         {catData.length === 0 ? (
-          <div className="py-10 text-center text-sm text-muted-foreground">Sin gastos este mes</div>
+          <div className="py-10 text-center text-sm text-muted-foreground">Sin gastos en el período seleccionado</div>
         ) : (
           <div className="p-4 space-y-4">
             {/* Donut */}
@@ -198,7 +268,7 @@ export function EstadisticasView({ month, year, transactions, trendTransactions 
 
               {/* Top 4 */}
               <div className="flex-1 space-y-2 min-w-0">
-                {catData.slice(0, 4).map((cat) => {
+                {catData.slice(0, 4).map(cat => {
                   const pct = expense > 0 ? Math.round((cat.value / expense) * 100) : 0
                   return (
                     <div key={cat.name} className="flex items-center gap-2">
@@ -218,10 +288,10 @@ export function EstadisticasView({ month, year, transactions, trendTransactions 
               </div>
             </div>
 
-            {/* Full list */}
+            {/* Full list (when more than 4) */}
             {catData.length > 4 && (
-              <div className="border-t border-border/50 pt-3 space-y-0">
-                {catData.map((cat) => {
+              <div className="border-t border-border/50 pt-3">
+                {catData.map(cat => {
                   const pct = expense > 0 ? Math.round((cat.value / expense) * 100) : 0
                   return (
                     <div key={cat.name}
@@ -238,7 +308,7 @@ export function EstadisticasView({ month, year, transactions, trendTransactions 
                           </span>
                         </div>
                         <div className="h-1 bg-muted/50 rounded-full mt-1.5 overflow-hidden">
-                          <div className="h-full rounded-full transition-all"
+                          <div className="h-full rounded-full"
                             style={{ width: `${pct}%`, backgroundColor: cat.color }} />
                         </div>
                       </div>
@@ -255,7 +325,7 @@ export function EstadisticasView({ month, year, transactions, trendTransactions 
         )}
       </div>
 
-      {/* 6-month trend */}
+      {/* ── 6-month trend ────────────────────────────────────────────────────── */}
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="px-4 py-3 border-b border-border/60"
           style={{ background: 'linear-gradient(90deg, #3BB2F610 0%, transparent 60%)' }}>
