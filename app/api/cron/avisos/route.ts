@@ -2,15 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import webpush from 'web-push'
 import { createClient } from '@/lib/supabase/server'
 
-webpush.setVapidDetails(
-  `mailto:${process.env.VAPID_EMAIL ?? 'gastando@app.com'}`,
-  process.env.VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!,
-)
-
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
+  webpush.setVapidDetails(
+    `mailto:${process.env.VAPID_EMAIL ?? 'gastando@app.com'}`,
+    process.env.VAPID_PUBLIC_KEY!,
+    process.env.VAPID_PRIVATE_KEY!,
+  )
+
   const secret = req.headers.get('authorization')?.replace('Bearer ', '')
   if (secret !== process.env.CRON_SECRET)
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
