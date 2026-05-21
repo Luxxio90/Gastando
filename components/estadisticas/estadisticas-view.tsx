@@ -6,8 +6,8 @@ import {
   BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip,
   PieChart, Pie, Cell, Label,
 } from 'recharts'
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Wallet, PiggyBank } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
+import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Wallet, PiggyBank, X } from 'lucide-react'
+import { formatCurrency, formatDate } from '@/lib/utils'
 
 const MONTH_NAMES_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 const MONTH_NAMES_LONG  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
@@ -17,9 +17,11 @@ type RawTxCat = {
   type: 'income' | 'expense'
   amount: number
   account_id: string
+  description?: string | null
+  date?: string | null
   category?: { name: string; icon: string; color: string } | null
 }
-type RawAccount = { id: string; name: string; color: string; icon?: string }
+type RawAccount = { id: string; name: string; color: string; type?: string }
 
 interface Props {
   month: number
@@ -61,11 +63,13 @@ function CustomTooltip({ active, payload, label }: any) {
 export function EstadisticasView({ month, year, transactions, trendTransactions, accounts }: Props) {
   const router = useRouter()
   const [selectedIds, setSelectedIds] = useState<Set<string> | null>(null) // null = todas
+  const [selectedCat, setSelectedCat] = useState<string | null>(null)
 
   function navigate(dir: -1 | 1) {
     let m = month + dir, y = year
     if (m < 1) { m = 12; y-- }
     if (m > 12) { m = 1; y++ }
+    setSelectedCat(null)
     router.push(`/estadisticas?month=${m}&year=${y}`)
   }
 
@@ -84,14 +88,18 @@ export function EstadisticasView({ month, year, transactions, trendTransactions,
 
   function selectAll() { setSelectedIds(null) }
 
+  function toggleCat(name: string) {
+    setSelectedCat(prev => prev === name ? null : name)
+  }
+
   // ── Filter transactions by selected accounts ───────────────────────────────
-  const filteredTx      = selectedIds === null ? transactions      : transactions.filter(t => selectedIds.has(t.account_id))
-  const filteredTrend   = selectedIds === null ? trendTransactions : trendTransactions.filter(t => selectedIds.has(t.account_id))
+  const filteredTx    = selectedIds === null ? transactions      : transactions.filter(t => selectedIds.has(t.account_id))
+  const filteredTrend = selectedIds === null ? trendTransactions : trendTransactions.filter(t => selectedIds.has(t.account_id))
 
   // ── Summary ────────────────────────────────────────────────────────────────
-  const income   = filteredTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-  const expense  = filteredTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
-  const balance  = income - expense
+  const income     = filteredTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+  const expense    = filteredTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+  const balance    = income - expense
   const savingsPct = income > 0 ? Math.round((balance / income) * 100) : 0
 
   // ── Category breakdown ────────────────────────────────────────────────────
@@ -104,6 +112,14 @@ export function EstadisticasView({ month, year, transactions, trendTransactions,
     catMap[key].value += t.amount
   }
   const catData = Object.values(catMap).sort((a, b) => b.value - a.value)
+
+  // ── Category drill-down ───────────────────────────────────────────────────
+  const catTxs = selectedCat
+    ? filteredTx
+        .filter(t => t.type === 'expense' && (t.category?.name ?? 'Sin categoría') === selectedCat)
+        .sort((a, b) => new Date(b.date ?? '').getTime() - new Date(a.date ?? '').getTime())
+    : []
+  const catDetail = selectedCat ? catMap[selectedCat] : null
 
   // ── 6-month trend ─────────────────────────────────────────────────────────
   const periods = getLast6Months(month, year)
@@ -159,7 +175,6 @@ export function EstadisticasView({ month, year, transactions, trendTransactions,
           <div>
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">Cuentas</p>
             <div className="flex flex-wrap gap-1.5">
-              {/* Todas chip */}
               <button
                 onClick={selectAll}
                 className="px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
@@ -226,7 +241,7 @@ export function EstadisticasView({ month, year, transactions, trendTransactions,
         <div className="px-4 py-3 border-b border-border/60"
           style={{ background: 'linear-gradient(90deg, #FF4D6D10 0%, transparent 60%)' }}>
           <p className="font-bold text-sm text-foreground">Gastos por categoría</p>
-          <p className="text-[10px] text-muted-foreground mt-0.5">{MONTH_NAMES_LONG[month - 1]} {year}</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">{MONTH_NAMES_LONG[month - 1]} {year} · toca una categoría para ver detalle</p>
         </div>
 
         {catData.length === 0 ? (
@@ -238,10 +253,21 @@ export function EstadisticasView({ month, year, transactions, trendTransactions,
               <div className="flex-shrink-0 w-[130px] h-[130px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={catData} cx="50%" cy="50%" innerRadius={42} outerRadius={60}
-                      dataKey="value" strokeWidth={0}>
+                    <Pie
+                      data={catData}
+                      cx="50%" cy="50%"
+                      innerRadius={42} outerRadius={60}
+                      dataKey="value"
+                      strokeWidth={0}
+                      onClick={(entry) => entry.name && toggleCat(entry.name as string)}
+                      style={{ cursor: 'pointer' }}
+                    >
                       {catData.map((entry, i) => (
-                        <Cell key={i} fill={entry.color} />
+                        <Cell
+                          key={i}
+                          fill={entry.color}
+                          opacity={selectedCat === null || selectedCat === entry.name ? 1 : 0.35}
+                        />
                       ))}
                       <Label
                         content={({ viewBox }) => {
@@ -269,9 +295,15 @@ export function EstadisticasView({ month, year, transactions, trendTransactions,
               {/* Top 4 */}
               <div className="flex-1 space-y-2 min-w-0">
                 {catData.slice(0, 4).map(cat => {
-                  const pct = expense > 0 ? Math.round((cat.value / expense) * 100) : 0
+                  const pct    = expense > 0 ? Math.round((cat.value / expense) * 100) : 0
+                  const active = selectedCat === cat.name
                   return (
-                    <div key={cat.name} className="flex items-center gap-2">
+                    <button
+                      key={cat.name}
+                      onClick={() => toggleCat(cat.name)}
+                      className="flex items-center gap-2 w-full text-left rounded-lg px-1.5 py-0.5 transition-colors"
+                      style={active ? { backgroundColor: cat.color + '15' } : {}}
+                    >
                       <span className="text-sm leading-none flex-shrink-0">{cat.icon}</span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1">
@@ -282,43 +314,102 @@ export function EstadisticasView({ month, year, transactions, trendTransactions,
                           <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: cat.color }} />
                         </div>
                       </div>
-                    </div>
+                    </button>
                   )
                 })}
               </div>
             </div>
 
-            {/* Full list (when more than 4) */}
-            {catData.length > 4 && (
-              <div className="border-t border-border/50 pt-3">
-                {catData.map(cat => {
-                  const pct = expense > 0 ? Math.round((cat.value / expense) * 100) : 0
-                  return (
-                    <div key={cat.name}
-                      className="flex items-center gap-3 py-2.5 border-b border-border/30 last:border-b-0">
-                      <div className="h-8 w-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
-                        style={{ backgroundColor: cat.color + '20' }}>
-                        {cat.icon}
+            {/* Full list */}
+            <div className="border-t border-border/50 pt-3 space-y-0.5">
+              {catData.map(cat => {
+                const pct    = expense > 0 ? Math.round((cat.value / expense) * 100) : 0
+                const active = selectedCat === cat.name
+                return (
+                  <button
+                    key={cat.name}
+                    onClick={() => toggleCat(cat.name)}
+                    className="flex items-center gap-3 py-2.5 px-2 rounded-xl transition-colors w-full text-left"
+                    style={active ? { backgroundColor: cat.color + '15' } : {}}
+                  >
+                    <div
+                      className="h-8 w-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
+                      style={{ backgroundColor: cat.color + '20' }}
+                    >
+                      {cat.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-foreground truncate">{cat.name}</span>
+                        <span className="text-xs font-bold text-foreground tabular-nums flex-shrink-0">
+                          {formatCurrency(cat.value)}
+                        </span>
                       </div>
+                      <div className="h-1 bg-muted/50 rounded-full mt-1.5 overflow-hidden">
+                        <div className="h-full rounded-full"
+                          style={{ width: `${pct}%`, backgroundColor: cat.color }} />
+                      </div>
+                    </div>
+                    <span
+                      className="text-[10px] font-bold w-8 text-right flex-shrink-0"
+                      style={{ color: cat.color }}
+                    >
+                      {pct}%
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* ── Category drill-down panel ──────────────────────────────────── */}
+            {selectedCat && catDetail && (
+              <div
+                className="rounded-xl border overflow-hidden"
+                style={{ borderColor: catDetail.color + '50', backgroundColor: catDetail.color + '08' }}
+              >
+                {/* Header */}
+                <div
+                  className="flex items-center justify-between px-4 py-3 border-b"
+                  style={{ borderColor: catDetail.color + '30' }}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">{catDetail.icon}</span>
+                    <div>
+                      <p className="text-sm font-bold text-foreground">{catDetail.name}</p>
+                      <p className="text-[10px] text-muted-foreground">{catTxs.length} transacciones</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-bold tabular-nums" style={{ color: catDetail.color }}>
+                      {formatCurrency(catDetail.value)}
+                    </span>
+                    <button
+                      onClick={() => setSelectedCat(null)}
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Transaction list */}
+                <div className="divide-y" style={{ borderColor: catDetail.color + '20' }}>
+                  {catTxs.map((t, i) => (
+                    <div key={i} className="flex items-center gap-3 px-4 py-3">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-semibold text-foreground truncate">{cat.name}</span>
-                          <span className="text-xs font-bold text-foreground tabular-nums flex-shrink-0">
-                            {formatCurrency(cat.value)}
-                          </span>
-                        </div>
-                        <div className="h-1 bg-muted/50 rounded-full mt-1.5 overflow-hidden">
-                          <div className="h-full rounded-full"
-                            style={{ width: `${pct}%`, backgroundColor: cat.color }} />
-                        </div>
+                        <p className="text-sm font-medium text-foreground truncate">
+                          {t.description || 'Sin descripción'}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          {t.date ? formatDate(t.date) : ''}
+                        </p>
                       </div>
-                      <span className="text-[10px] font-bold w-8 text-right flex-shrink-0"
-                        style={{ color: cat.color }}>
-                        {pct}%
+                      <span className="text-sm font-bold tabular-nums text-red-500 flex-shrink-0">
+                        -{formatCurrency(t.amount)}
                       </span>
                     </div>
-                  )
-                })}
+                  ))}
+                </div>
               </div>
             )}
           </div>

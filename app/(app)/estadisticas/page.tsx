@@ -27,7 +27,7 @@ export default async function EstadisticasPage({
   const [{ data: transactions }, { data: trendTransactions }, { data: accounts }] = await Promise.all([
     supabase
       .from('transactions')
-      .select('type, amount, account_id, category:categories(name, icon, color)')
+      .select('type, amount, account_id, description, date, category:categories(name, icon, color)')
       .eq('user_id', user.id)
       .gte('date', firstDay)
       .lte('date', lastDay),
@@ -39,7 +39,7 @@ export default async function EstadisticasPage({
       .lte('date', lastDay),
     supabase
       .from('accounts')
-      .select('id, name, color, icon')
+      .select('id, name, color, type')
       .eq('user_id', user.id)
       .order('name'),
   ])
