@@ -11,6 +11,9 @@ export default async function AvisosPage() {
   const month = now.getMonth() + 1
   const year = now.getFullYear()
 
+  const { data: accounts } = await supabase
+    .from('accounts').select('*').eq('user_id', user.id).order('name')
+
   // Fetch pending fixed expenses with a due_day set (current month)
   const { data: rawFixed } = await supabase
     .from('fixed_expense_items')
@@ -57,6 +60,7 @@ export default async function AvisosPage() {
         fixedExpenses={(rawFixed ?? []) as any[]}
         cardMonths={cardMonths as any[]}
         userId={user.id}
+        accounts={(accounts ?? []) as any[]}
       />
     </div>
   )

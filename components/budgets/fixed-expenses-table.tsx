@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Plus, CalendarDays, TrendingDown, MoreVertical, Layers, Check, ChevronDown, Download } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
-import type { Category, FixedExpenseGroup, FixedExpenseItem, FixedExpenseStatus, Responsible } from '@/types'
+import type { Account, Category, FixedExpenseGroup, FixedExpenseItem, FixedExpenseStatus, Responsible } from '@/types'
 
 const GROUP_COLORS = ['#7C4DFF', '#00CB96', '#3BB2F6', '#FF4D6D', '#F59E0B', '#EC4899', '#10b981', '#f97316']
 
@@ -29,6 +29,7 @@ interface Props {
   items: FixedExpenseItem[]
   fixedCategories: Category[]
   responsibles: Responsible[]
+  accounts: Account[]
   userId: string
   month: number
   year: number
@@ -41,10 +42,11 @@ type ItemForm = {
   status: FixedExpenseStatus
   responsible: string
   due_day: string
+  account_id: string
 }
 
 const emptyItemForm: ItemForm = {
-  category_id: '', description: '', amount: '', status: 'pending', responsible: '', due_day: '',
+  category_id: '', description: '', amount: '', status: 'pending', responsible: '', due_day: '', account_id: '',
 }
 
 const STATUS_OPTS: { value: FixedExpenseStatus; label: string; color: string; bg: string; border: string }[] = [
@@ -56,7 +58,7 @@ const STATUS_OPTS: { value: FixedExpenseStatus; label: string; color: string; bg
 function statusColor(s: FixedExpenseStatus) { return STATUS_OPTS.find(o => o.value === s)?.color ?? '#888' }
 function statusLabel(s: FixedExpenseStatus) { return STATUS_OPTS.find(o => o.value === s)?.label ?? s }
 
-export function FixedExpensesTable({ groups: initialGroups, items: initialItems, fixedCategories, responsibles, userId, month, year }: Props) {
+export function FixedExpensesTable({ groups: initialGroups, items: initialItems, fixedCategories, responsibles, accounts, userId, month, year }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [localGroups, setLocalGroups] = useState<FixedExpenseGroup[]>(initialGroups)
@@ -219,6 +221,7 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
       status: item.status,
       responsible: item.responsible ?? '',
       due_day: item.due_day?.toString() ?? '',
+      account_id: '',
     })
     setItemDialogOpen(true)
   }
@@ -233,12 +236,13 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
   async function handleItemSubmit(e: React.FormEvent) {
     e.preventDefault()
     setItemLoading(true)
+    const amount = parseFloat(itemForm.amount) || 0
     const payload = {
       user_id: userId, month, year,
       group_id: activeGroupId,
       category_id: itemForm.category_id || null,
       description: itemForm.description.trim() || null,
-      amount: parseFloat(itemForm.amount) || 0,
+      amount,
       status: itemForm.status,
       responsible: itemForm.responsible.trim() || null,
       due_day: itemForm.due_day ? parseInt(itemForm.due_day) : null,
@@ -252,7 +256,25 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
     if (error) {
       toast.error('Error al guardar')
     } else {
-      toast.success(editingItem ? 'Gasto actualizado' : 'Gasto agregado')
+      // Create transaction if marking as paid with an account selected
+      const isNewlyPaid = itemForm.status === 'paid' && (!editingItem || editingItem.status !== 'paid')
+      if (isNewlyPaid && itemForm.account_id && amount > 0) {
+        const { data: acc } = await supabase.from('accounts').select('balance').eq('id', itemForm.account_id).single()
+        const desc = itemForm.description.trim() || (saved as any)?.category?.name || 'Gasto fijo'
+        const today = new Date().toISOString().split('T')[0]
+        await Promise.all([
+          supabase.from('transactions').insert({
+            user_id: userId, account_id: itemForm.account_id,
+            category_id: itemForm.category_id || null,
+            type: 'expense', amount, description: desc, date: today, notes: null,
+          }),
+          acc ? supabase.from('accounts').update({ balance: acc.balance - amount }).eq('id', itemForm.account_id) : null,
+        ])
+        toast.success('Gasto registrado y pago asentado en la cuenta')
+      } else {
+        toast.success(editingItem ? 'Gasto actualizado' : 'Gasto agregado')
+      }
+
       if (editingItem) {
         setLocalItems(prev => prev.map(i => i.id === editingItem.id ? saved as FixedExpenseItem : i))
       } else {
@@ -720,6 +742,38 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
                 })}
               </div>
             </div>
+
+            {/* Cuenta de pago — solo cuando status = paid */}
+            {itemForm.status === 'paid' && accounts.length > 0 && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+                  Cuenta de pago <span className="normal-case font-normal text-muted-foreground/60">(opcional — genera gasto)</span>
+                </label>
+                <div className="space-y-1.5">
+                  {accounts.map(a => {
+                    const active = itemForm.account_id === a.id
+                    return (
+                      <button
+                        key={a.id} type="button"
+                        onClick={() => setItemForm({ ...itemForm, account_id: active ? '' : a.id })}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-sm transition-all text-left"
+                        style={active
+                          ? { backgroundColor: a.color + '18', borderColor: a.color + '55' }
+                          : { backgroundColor: 'transparent', borderColor: 'hsl(var(--border))' }
+                        }
+                      >
+                        <div className="w-1 h-7 rounded-full flex-shrink-0" style={{ backgroundColor: a.color }} />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-foreground truncate text-sm">{a.name}</p>
+                          <p className="text-[11px] text-muted-foreground tabular-nums">{formatCurrency(a.balance, a.currency)}</p>
+                        </div>
+                        {active && <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: a.color }} />}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Encargado */}
             {responsibles.length > 0 && (

@@ -31,6 +31,7 @@ export default async function BudgetsPage({
     { data: expenseTypes },
     { data: responsibles },
     { data: existingGroups },
+    { data: accounts },
   ] = await Promise.all([
     supabase
       .from('budget_cards')
@@ -60,6 +61,7 @@ export default async function BudgetsPage({
       .from('fixed_expense_groups')
       .select('*')
       .eq('user_id', user.id).eq('month', month).eq('year', year).order('order'),
+    supabase.from('accounts').select('*').eq('user_id', user.id).order('name'),
   ])
 
   let allCards      = (cards      ?? []) as BudgetCard[]
@@ -217,6 +219,7 @@ export default async function BudgetsPage({
         items={allFixedItems}
         fixedCategories={fixedCategories}
         responsibles={(responsibles ?? []) as Responsible[]}
+        accounts={(accounts ?? []) as any[]}
         userId={user.id}
         month={month}
         year={year}

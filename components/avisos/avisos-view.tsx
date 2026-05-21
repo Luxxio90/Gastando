@@ -6,7 +6,8 @@ import { toast } from 'sonner'
 import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Check, CreditCard, ChevronRight, Bell, PartyPopper } from 'lucide-react'
-import type { CreditCardNetwork } from '@/types'
+import type { Account, CreditCardNetwork } from '@/types'
+import { PayFixedExpenseDialog, type PendingPayItem } from '@/components/budgets/pay-fixed-expense-dialog'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -15,6 +16,7 @@ type RawFixed = {
   due_day: number
   amount: number
   description: string | null
+  category_id?: string | null
   category?: { id: string; name: string; icon: string; color: string } | null
   group?: { id: string; name: string; color: string } | null
 }
@@ -30,6 +32,7 @@ interface Props {
   fixedExpenses: RawFixed[]
   cardMonths: RawCard[]
   userId: string
+  accounts: Account[]
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -107,11 +110,11 @@ type Alert = FixedAlert | CardAlert
 function AlertCardInner({
   alert,
   marking,
-  onMarkPaid,
+  onPay,
 }: {
   alert: Alert
   marking: boolean
-  onMarkPaid: (id: string) => void
+  onPay: (alert: FixedAlert) => void
 }) {
   const color    = urgencyColor(alert.daysLeft)
   const label    = urgencyLabel(alert.daysLeft)
@@ -192,12 +195,12 @@ function AlertCardInner({
                 <Button
                   size="sm"
                   disabled={marking}
-                  onClick={(e) => { e.stopPropagation(); onMarkPaid(alert.id) }}
+                  onClick={(e) => { e.stopPropagation(); onPay(alert as FixedAlert) }}
                   className="text-xs font-semibold h-7 px-3"
                   style={{ backgroundColor: '#00CB9620', color: '#00CB96', border: '1px solid #00CB9645' }}
                 >
                   <Check className="h-3 w-3 mr-1" />
-                  {marking ? 'Guardando...' : 'Pagado'}
+                  {marking ? 'Guardando...' : 'Pagar'}
                 </Button>
               ) : (
                 <span className="inline-flex items-center gap-1 text-xs font-semibold h-7 px-3 rounded-md border border-input text-muted-foreground">
@@ -212,17 +215,17 @@ function AlertCardInner({
   )
 }
 
-function AlertCard({ alert, marking, onMarkPaid }: { alert: Alert; marking: boolean; onMarkPaid: (id: string) => void }) {
+function AlertCard({ alert, marking, onPay }: { alert: Alert; marking: boolean; onPay: (alert: FixedAlert) => void }) {
   if (alert.type === 'card') {
     return (
       <a href="/tarjetas" className="block bg-card border border-border rounded-xl overflow-hidden">
-        <AlertCardInner alert={alert} marking={marking} onMarkPaid={onMarkPaid} />
+        <AlertCardInner alert={alert} marking={marking} onPay={onPay} />
       </a>
     )
   }
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
-      <AlertCardInner alert={alert} marking={marking} onMarkPaid={onMarkPaid} />
+      <AlertCardInner alert={alert} marking={marking} onPay={onPay} />
     </div>
   )
 }
@@ -250,10 +253,10 @@ function EmptyState() {
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 
-export function AvisosView({ fixedExpenses, cardMonths, userId }: Props) {
-  const supabase = createClient()
-  const [paid, setPaid]       = useState<Set<string>>(new Set())
-  const [marking, setMarking] = useState<Set<string>>(new Set())
+export function AvisosView({ fixedExpenses, cardMonths, userId, accounts }: Props) {
+  const [paid, setPaid]           = useState<Set<string>>(new Set())
+  const [marking, setMarking]     = useState<Set<string>>(new Set())
+  const [pendingPay, setPendingPay] = useState<PendingPayItem | null>(null)
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -297,20 +300,17 @@ export function AvisosView({ fixedExpenses, cardMonths, userId }: Props) {
     (s, a) => s + (a.type === 'fixed' ? a.amount : a.total), 0
   )
 
-  async function handleMarkPaid(id: string) {
-    setMarking(prev => new Set([...prev, id]))
-    const { error } = await supabase
-      .from('fixed_expense_items')
-      .update({ status: 'paid' })
-      .eq('id', id)
-
-    if (error) {
-      toast.error('Error al marcar como pagado')
-    } else {
-      toast.success('Gasto marcado como pagado')
-      setPaid(prev => new Set([...prev, id]))
-    }
-    setMarking(prev => { const s = new Set(prev); s.delete(id); return s })
+  function openPayDialog(alert: FixedAlert) {
+    const raw = fixedExpenses.find(f => f.id === alert.id)
+    setPendingPay({
+      id: alert.id,
+      amount: alert.amount,
+      description: alert.description,
+      category_id: raw?.category_id ?? raw?.category?.id ?? null,
+      category: raw?.category
+        ? { name: raw.category.name, icon: raw.category.icon, color: raw.category.color }
+        : null,
+    })
   }
 
   if (allAlerts.length === 0) return <EmptyState />
@@ -346,9 +346,18 @@ export function AvisosView({ fixedExpenses, cardMonths, userId }: Props) {
           key={alert.id}
           alert={alert}
           marking={marking.has(alert.id)}
-          onMarkPaid={handleMarkPaid}
+          onPay={openPayDialog}
         />
       ))}
+
+      <PayFixedExpenseDialog
+        open={!!pendingPay}
+        onClose={() => setPendingPay(null)}
+        item={pendingPay}
+        accounts={accounts}
+        userId={userId}
+        onPaid={(id) => setPaid(prev => new Set([...prev, id]))}
+      />
     </div>
   )
 }
