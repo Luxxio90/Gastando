@@ -155,7 +155,7 @@ export function EstadisticasView({ month, year, transactions, trendTransactions,
         </div>
 
         {/* Account filter */}
-        {accounts.length > 1 && (
+        {accounts.length > 0 && (
           <div>
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">Cuentas</p>
             <div className="flex flex-wrap gap-1.5">
