@@ -19,7 +19,7 @@ export default async function TransactionsPage({ searchParams }: Props) {
       .select('*, category:categories(*), account:accounts(*)')
       .eq('user_id', user.id)
       .order('date', { ascending: false })
-      .limit(100),
+      .range(0, 29),
     supabase.from('accounts').select('*').eq('user_id', user.id),
     supabase.from('categories').select('*').or(`user_id.eq.${user.id},is_default.eq.true`).order('name'),
   ])

@@ -7,12 +7,13 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Plus, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Plus, MoreVertical, Pencil, Trash2, Search, X } from 'lucide-react'
 import { TransactionDialog } from './transaction-dialog'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 
+const PAGE_SIZE   = 30
 const TRANSFER_COLOR = '#3BB2F6'
 
 interface Props {
@@ -29,10 +30,40 @@ export function TransactionList({ transactions, accounts, categories, userId, in
   const [filter, setFilter]               = useState<'all' | 'income' | 'expense'>(initialFilter)
   const [deleting, setDeleting]           = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<Transaction | null>(null)
+  const [search, setSearch]               = useState('')
+  const [allLoaded, setAllLoaded]         = useState<Transaction[]>(transactions)
+  const [hasMore, setHasMore]             = useState(transactions.length === PAGE_SIZE)
+  const [loadingMore, setLoadingMore]     = useState(false)
+
   const router   = useRouter()
   const supabase = createClient()
 
-  const filtered = filter === 'all' ? transactions : transactions.filter(t => t.type === filter)
+  const q = search.trim().toLowerCase()
+  const filtered = allLoaded.filter(t => {
+    if (filter !== 'all' && t.type !== filter) return false
+    if (!q) return true
+    return (
+      t.description?.toLowerCase().includes(q) ||
+      (t.category as any)?.name?.toLowerCase().includes(q) ||
+      (t.account as any)?.name?.toLowerCase().includes(q)
+    )
+  })
+
+  async function loadMore() {
+    setLoadingMore(true)
+    const { data } = await supabase
+      .from('transactions')
+      .select('*, category:categories(*), account:accounts(*)')
+      .eq('user_id', userId)
+      .order('date', { ascending: false })
+      .range(allLoaded.length, allLoaded.length + PAGE_SIZE - 1)
+
+    if (data) {
+      setAllLoaded(prev => [...prev, ...data as any[]])
+      setHasMore(data.length === PAGE_SIZE)
+    }
+    setLoadingMore(false)
+  }
 
   function openCreate() {
     setEditing(null)
@@ -49,7 +80,6 @@ export function TransactionList({ transactions, accounts, categories, userId, in
     setPendingDelete(null)
 
     if (t.transfer_group_id) {
-      // Find the paired transfer transaction
       const { data: pair } = await supabase
         .from('transactions')
         .select('id, account_id, type, amount')
@@ -57,7 +87,6 @@ export function TransactionList({ transactions, accounts, categories, userId, in
         .neq('id', t.id)
         .single()
 
-      // Revert self account
       const revertSelf = t.type === 'income' ? -t.amount : t.amount
       const { data: accSelf } = await supabase.from('accounts').select('balance').eq('id', t.account_id).single()
       if (accSelf) await supabase.from('accounts').update({ balance: accSelf.balance + revertSelf }).eq('id', t.account_id)
@@ -71,9 +100,12 @@ export function TransactionList({ transactions, accounts, categories, userId, in
 
       const { error } = await supabase.from('transactions').delete().eq('id', t.id)
       if (error) toast.error('Error al eliminar')
-      else { toast.success('Transferencia eliminada'); router.refresh() }
+      else {
+        setAllLoaded(prev => prev.filter(x => x.transfer_group_id !== t.transfer_group_id))
+        toast.success('Transferencia eliminada')
+        router.refresh()
+      }
     } else {
-      // Regular transaction
       const { data: acc } = await supabase.from('accounts').select('balance').eq('id', t.account_id).single()
       if (acc) {
         const revert = t.type === 'income' ? -t.amount : t.amount
@@ -81,7 +113,11 @@ export function TransactionList({ transactions, accounts, categories, userId, in
       }
       const { error } = await supabase.from('transactions').delete().eq('id', t.id)
       if (error) toast.error('Error al eliminar')
-      else { toast.success('Transacción eliminada'); router.refresh() }
+      else {
+        setAllLoaded(prev => prev.filter(x => x.id !== t.id))
+        toast.success('Transacción eliminada')
+        router.refresh()
+      }
     }
 
     setDeleting(null)
@@ -106,6 +142,26 @@ export function TransactionList({ transactions, accounts, categories, userId, in
         </Button>
       </div>
 
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Buscar por descripción, categoría o cuenta..."
+          className="w-full h-10 pl-9 pr-9 rounded-xl border border-border bg-muted/30 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#7C4DFF]/40 focus:border-[#7C4DFF]/60 transition-all"
+        />
+        {search && (
+          <button
+            onClick={() => setSearch('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
       {/* Filter chips */}
       <div className="flex gap-2">
         {FILTERS.map(({ key, label }) => (
@@ -126,15 +182,17 @@ export function TransactionList({ transactions, accounts, categories, userId, in
       <Card>
         <CardContent className="p-0">
           {filtered.length === 0 ? (
-            <div className="text-center text-muted-foreground py-12 text-sm">No hay transacciones</div>
+            <div className="text-center text-muted-foreground py-12 text-sm">
+              {q ? `Sin resultados para "${search}"` : 'No hay transacciones'}
+            </div>
           ) : (
             <div className="divide-y divide-border/50">
               {filtered.map(t => {
                 const isTransfer = !!t.transfer_group_id
                 return (
                   <div key={t.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">
-                    {/* Icon */}
-                    <div className={`h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0`}
+                    <div
+                      className="h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0"
                       style={{ backgroundColor: isTransfer
                         ? TRANSFER_COLOR + '18'
                         : t.type === 'income' ? '#00CB9618' : '#FF4D6D18'
@@ -148,18 +206,16 @@ export function TransactionList({ transactions, accounts, categories, userId, in
                       }
                     </div>
 
-                    {/* Info */}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{t.description}</p>
                       <p className="text-[11px] text-muted-foreground mt-0.5">
                         {formatDate(t.date)}
-                        {t.account?.name  ? ` · ${t.account.name}`   : ''}
-                        {!isTransfer && t.category?.name ? ` · ${t.category.name}` : ''}
+                        {(t.account as any)?.name  ? ` · ${(t.account as any).name}`   : ''}
+                        {!isTransfer && (t.category as any)?.name ? ` · ${(t.category as any).name}` : ''}
                         {isTransfer && <span style={{ color: TRANSFER_COLOR }}> · Transferencia</span>}
                       </p>
                     </div>
 
-                    {/* Amount */}
                     <span
                       className="text-sm font-bold tabular-nums flex-shrink-0"
                       style={{ color: isTransfer
@@ -170,7 +226,6 @@ export function TransactionList({ transactions, accounts, categories, userId, in
                       {isTransfer ? '' : t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
                     </span>
 
-                    {/* 3-dots menu */}
                     <DropdownMenu>
                       <DropdownMenuTrigger className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-foreground hover:bg-muted/60 transition-colors flex-shrink-0">
                         <MoreVertical className="h-4 w-4" />
@@ -201,6 +256,17 @@ export function TransactionList({ transactions, accounts, categories, userId, in
           )}
         </CardContent>
       </Card>
+
+      {/* Load more */}
+      {hasMore && !q && (
+        <button
+          onClick={loadMore}
+          disabled={loadingMore}
+          className="w-full py-3 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-all disabled:opacity-50"
+        >
+          {loadingMore ? 'Cargando...' : 'Cargar más transacciones'}
+        </button>
+      )}
 
       {/* Confirmation dialog */}
       <Dialog open={!!pendingDelete} onOpenChange={() => setPendingDelete(null)}>
