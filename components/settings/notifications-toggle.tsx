@@ -33,11 +33,12 @@ export function NotificationsToggle() {
   async function enable() {
     setWorking(true)
     try {
-      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-      if (!vapidKey) {
+      const keyRes = await fetch('/api/vapid-public-key')
+      if (!keyRes.ok) {
         toast.error('Clave VAPID no configurada — contactá al administrador')
         return
       }
+      const { key: vapidKey } = await keyRes.json()
 
       const permission = await Notification.requestPermission()
       if (permission !== 'granted') {
