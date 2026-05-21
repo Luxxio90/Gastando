@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { LogOut, User, Mail, Shield, Plus, MoreVertical } from 'lucide-react'
 import { toast } from 'sonner'
+import { NotificationsToggle } from './notifications-toggle'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 import { Category, ExpenseType, Responsible } from '@/types'
 import { cn } from '@/lib/utils'
@@ -212,6 +213,14 @@ export function SettingsView({ user, categories: initialCategories, expenseTypes
   return (
     <div className="max-w-lg space-y-6">
       <h1 className="text-2xl font-bold text-foreground">Ajustes</h1>
+
+      {/* Notificaciones */}
+      <Card>
+        <CardHeader><CardTitle className="text-base">Notificaciones</CardTitle></CardHeader>
+        <CardContent>
+          <NotificationsToggle />
+        </CardContent>
+      </Card>
 
       {/* Mi cuenta */}
       <Card>

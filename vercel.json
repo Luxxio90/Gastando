@@ -7,5 +7,11 @@
         { "key": "Service-Worker-Allowed", "value": "/" }
       ]
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/avisos",
+      "schedule": "0 9 * * *"
+    }
   ]
 }
