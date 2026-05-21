@@ -259,17 +259,13 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
       // Create transaction if marking as paid with an account selected
       const isNewlyPaid = itemForm.status === 'paid' && (!editingItem || editingItem.status !== 'paid')
       if (isNewlyPaid && itemForm.account_id && amount > 0) {
-        const { data: acc } = await supabase.from('accounts').select('balance').eq('id', itemForm.account_id).single()
         const desc = itemForm.description.trim() || (saved as any)?.category?.name || 'Gasto fijo'
         const today = new Date().toISOString().split('T')[0]
-        await Promise.all([
-          supabase.from('transactions').insert({
-            user_id: userId, account_id: itemForm.account_id,
-            category_id: itemForm.category_id || null,
-            type: 'expense', amount, description: desc, date: today, notes: null,
-          }),
-          acc ? supabase.from('accounts').update({ balance: acc.balance - amount }).eq('id', itemForm.account_id) : null,
-        ])
+        await supabase.from('transactions').insert({
+          user_id: userId, account_id: itemForm.account_id,
+          category_id: itemForm.category_id || null,
+          type: 'expense', amount, description: desc, date: today, notes: null,
+        })
         toast.success('Gasto registrado y pago asentado en la cuenta')
       } else {
         toast.success(editingItem ? 'Gasto actualizado' : 'Gasto agregado')

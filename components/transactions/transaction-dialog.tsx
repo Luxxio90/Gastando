@@ -64,11 +64,6 @@ export function TransactionDialog({
   const activeColor = form.type === 'income' ? INCOME_COLOR : EXPENSE_COLOR
   const isEditing   = !!editingTransaction
 
-  async function updateBalance(accountId: string, delta: number) {
-    const { data: acc } = await supabase.from('accounts').select('balance').eq('id', accountId).single()
-    if (acc) await supabase.from('accounts').update({ balance: acc.balance + delta }).eq('id', accountId)
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.account_id)  { toast.error('Seleccioná una cuenta');    return }
@@ -90,33 +85,12 @@ export function TransactionDialog({
 
     if (isEditing) {
       const { error } = await supabase.from('transactions').update(payload).eq('id', editingTransaction!.id)
-      if (error) {
-        toast.error('Error al guardar: ' + error.message)
-      } else {
-        const oldDelta = editingTransaction!.type === 'income' ? -editingTransaction!.amount : editingTransaction!.amount
-        if (editingTransaction!.account_id === form.account_id) {
-          const newDelta = form.type === 'income' ? amount : -amount
-          await updateBalance(form.account_id, oldDelta + newDelta)
-        } else {
-          await updateBalance(editingTransaction!.account_id, oldDelta)
-          const newDelta = form.type === 'income' ? amount : -amount
-          await updateBalance(form.account_id, newDelta)
-        }
-        toast.success('Transacción actualizada')
-        onClose()
-        router.refresh()
-      }
+      if (error) toast.error('Error al guardar: ' + error.message)
+      else { toast.success('Transacción actualizada'); onClose(); router.refresh() }
     } else {
       const { error } = await supabase.from('transactions').insert(payload)
-      if (error) {
-        toast.error('Error al guardar: ' + error.message)
-      } else {
-        const delta = form.type === 'income' ? amount : -amount
-        await updateBalance(form.account_id, delta)
-        toast.success('Transacción registrada')
-        onClose()
-        router.refresh()
-      }
+      if (error) toast.error('Error al guardar: ' + error.message)
+      else { toast.success('Transacción registrada'); onClose(); router.refresh() }
     }
 
     setLoading(false)

@@ -38,10 +38,7 @@ export function PayFixedExpenseDialog({ open, onClose, item, accounts, userId, o
       const today = new Date().toISOString().split('T')[0]
       const desc  = item.description || item.category?.name || 'Gasto fijo'
 
-      const { data: acc } = await supabase
-        .from('accounts').select('balance').eq('id', accountId).single()
-
-      const [r1, r2, r3] = await Promise.all([
+      const [r1, r2] = await Promise.all([
         supabase.from('transactions').insert({
           user_id: userId,
           account_id: accountId,
@@ -52,13 +49,10 @@ export function PayFixedExpenseDialog({ open, onClose, item, accounts, userId, o
           date: today,
           notes: null,
         }),
-        acc
-          ? supabase.from('accounts').update({ balance: acc.balance - item.amount }).eq('id', accountId)
-          : Promise.resolve({ error: null }),
         supabase.from('fixed_expense_items').update({ status: 'paid' }).eq('id', item.id),
       ])
 
-      if (r1.error || r3.error) {
+      if (r1.error || r2.error) {
         toast.error('Error al registrar el pago')
       } else {
         toast.success('Pago registrado')

@@ -82,21 +82,12 @@ export function TransactionList({ transactions, accounts, categories, userId, in
     if (t.transfer_group_id) {
       const { data: pair } = await supabase
         .from('transactions')
-        .select('id, account_id, type, amount')
+        .select('id')
         .eq('transfer_group_id', t.transfer_group_id)
         .neq('id', t.id)
         .single()
 
-      const revertSelf = t.type === 'income' ? -t.amount : t.amount
-      const { data: accSelf } = await supabase.from('accounts').select('balance').eq('id', t.account_id).single()
-      if (accSelf) await supabase.from('accounts').update({ balance: accSelf.balance + revertSelf }).eq('id', t.account_id)
-
-      if (pair) {
-        const revertPair = pair.type === 'income' ? -pair.amount : pair.amount
-        const { data: accPair } = await supabase.from('accounts').select('balance').eq('id', pair.account_id).single()
-        if (accPair) await supabase.from('accounts').update({ balance: accPair.balance + revertPair }).eq('id', pair.account_id)
-        await supabase.from('transactions').delete().eq('id', pair.id)
-      }
+      if (pair) await supabase.from('transactions').delete().eq('id', pair.id)
 
       const { error } = await supabase.from('transactions').delete().eq('id', t.id)
       if (error) toast.error('Error al eliminar')
@@ -106,11 +97,6 @@ export function TransactionList({ transactions, accounts, categories, userId, in
         router.refresh()
       }
     } else {
-      const { data: acc } = await supabase.from('accounts').select('balance').eq('id', t.account_id).single()
-      if (acc) {
-        const revert = t.type === 'income' ? -t.amount : t.amount
-        await supabase.from('accounts').update({ balance: acc.balance + revert }).eq('id', t.account_id)
-      }
       const { error } = await supabase.from('transactions').delete().eq('id', t.id)
       if (error) toast.error('Error al eliminar')
       else {

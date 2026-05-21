@@ -58,13 +58,6 @@ export function TransferDialog({ open, onClose, accounts, userId }: Props) {
 
     setLoading(true)
     try {
-      const [{ data: srcAcc }, { data: dstAcc }] = await Promise.all([
-        supabase.from('accounts').select('balance').eq('id', form.from_id).single(),
-        supabase.from('accounts').select('balance').eq('id', form.to_id).single(),
-      ])
-
-      if (!srcAcc || !dstAcc) { toast.error('Error al obtener saldos'); return }
-
       const [expenseCatId, incomeCatId] = await Promise.all([
         getOrCreateCategory('expense'),
         getOrCreateCategory('income'),
@@ -76,22 +69,20 @@ export function TransferDialog({ open, onClose, accounts, userId }: Props) {
       const desc           = form.description.trim() || 'Transferencia'
       const transferGroupId = crypto.randomUUID()
 
-      const [r1, r2, r3, r4] = await Promise.all([
+      const [r1, r2] = await Promise.all([
         supabase.from('transactions').insert({
           user_id: userId, account_id: form.from_id, category_id: expenseCatId,
-          type: 'expense', amount, description: `${desc} → ${toAccount?.name}`, date: today, notes: null,
+          type: 'expense', amount, description: `${desc} a ${toAccount?.name}`, date: today, notes: null,
           transfer_group_id: transferGroupId,
         }),
         supabase.from('transactions').insert({
           user_id: userId, account_id: form.to_id, category_id: incomeCatId,
-          type: 'income', amount, description: `${desc} ← ${fromAccount?.name}`, date: today, notes: null,
+          type: 'income', amount, description: `${desc} desde ${fromAccount?.name}`, date: today, notes: null,
           transfer_group_id: transferGroupId,
         }),
-        supabase.from('accounts').update({ balance: srcAcc.balance - amount }).eq('id', form.from_id),
-        supabase.from('accounts').update({ balance: dstAcc.balance + amount }).eq('id', form.to_id),
       ])
 
-      if (r1.error || r2.error || r3.error || r4.error) {
+      if (r1.error || r2.error) {
         toast.error('Error al realizar la transferencia')
       } else {
         toast.success(`${formatCurrency(amount)} transferido a ${toAccount?.name}`)
