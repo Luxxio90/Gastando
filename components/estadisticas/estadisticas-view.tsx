@@ -12,13 +12,14 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 const MONTH_NAMES_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 const MONTH_NAMES_LONG  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
-type RawTx = { type: 'income' | 'expense'; amount: number; date: string; account_id: string }
+type RawTx = { type: 'income' | 'expense'; amount: number; date: string; account_id: string; transfer_group_id?: string | null }
 type RawTxCat = {
   type: 'income' | 'expense'
   amount: number
   account_id: string
   description?: string | null
   date?: string | null
+  transfer_group_id?: string | null
   category?: { name: string; icon: string; color: string } | null
 }
 type RawAccount = { id: string; name: string; color: string; type?: string }
@@ -92,9 +93,11 @@ export function EstadisticasView({ month, year, transactions, trendTransactions,
     setSelectedCat(prev => prev === name ? null : name)
   }
 
-  // ── Filter transactions by selected accounts ───────────────────────────────
-  const filteredTx    = selectedIds === null ? transactions      : transactions.filter(t => selectedIds.has(t.account_id))
-  const filteredTrend = selectedIds === null ? trendTransactions : trendTransactions.filter(t => selectedIds.has(t.account_id))
+  // ── Filter out transfers, then filter by selected accounts ───────────────
+  const noTransfers   = transactions.filter(t => !t.transfer_group_id)
+  const noTrndTransf  = trendTransactions.filter(t => !t.transfer_group_id)
+  const filteredTx    = selectedIds === null ? noTransfers  : noTransfers.filter(t => selectedIds.has(t.account_id))
+  const filteredTrend = selectedIds === null ? noTrndTransf : noTrndTransf.filter(t => selectedIds.has(t.account_id))
 
   // ── Summary ────────────────────────────────────────────────────────────────
   const income     = filteredTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)

@@ -5,12 +5,15 @@ import { Transaction, Account, Category } from '@/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { ArrowDownCircle, ArrowUpCircle, Plus, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Plus, MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import { TransactionDialog } from './transaction-dialog'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+
+const TRANSFER_COLOR = '#3BB2F6'
 
 interface Props {
   transactions: Transaction[]
@@ -21,11 +24,12 @@ interface Props {
 }
 
 export function TransactionList({ transactions, accounts, categories, userId, initialFilter = 'all' }: Props) {
-  const [dialogOpen, setDialogOpen]   = useState(false)
-  const [editing, setEditing]         = useState<Transaction | null>(null)
-  const [filter, setFilter]           = useState<'all' | 'income' | 'expense'>(initialFilter)
-  const [deleting, setDeleting]       = useState<string | null>(null)
-  const router  = useRouter()
+  const [dialogOpen, setDialogOpen]       = useState(false)
+  const [editing, setEditing]             = useState<Transaction | null>(null)
+  const [filter, setFilter]               = useState<'all' | 'income' | 'expense'>(initialFilter)
+  const [deleting, setDeleting]           = useState<string | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<Transaction | null>(null)
+  const router   = useRouter()
   const supabase = createClient()
 
   const filtered = filter === 'all' ? transactions : transactions.filter(t => t.type === filter)
@@ -42,19 +46,44 @@ export function TransactionList({ transactions, accounts, categories, userId, in
 
   async function handleDelete(t: Transaction) {
     setDeleting(t.id)
-    // Revert balance effect
-    const { data: acc } = await supabase.from('accounts').select('balance').eq('id', t.account_id).single()
-    if (acc) {
-      const revert = t.type === 'income' ? -t.amount : t.amount
-      await supabase.from('accounts').update({ balance: acc.balance + revert }).eq('id', t.account_id)
-    }
-    const { error } = await supabase.from('transactions').delete().eq('id', t.id)
-    if (error) {
-      toast.error('Error al eliminar')
+    setPendingDelete(null)
+
+    if (t.transfer_group_id) {
+      // Find the paired transfer transaction
+      const { data: pair } = await supabase
+        .from('transactions')
+        .select('id, account_id, type, amount')
+        .eq('transfer_group_id', t.transfer_group_id)
+        .neq('id', t.id)
+        .single()
+
+      // Revert self account
+      const revertSelf = t.type === 'income' ? -t.amount : t.amount
+      const { data: accSelf } = await supabase.from('accounts').select('balance').eq('id', t.account_id).single()
+      if (accSelf) await supabase.from('accounts').update({ balance: accSelf.balance + revertSelf }).eq('id', t.account_id)
+
+      if (pair) {
+        const revertPair = pair.type === 'income' ? -pair.amount : pair.amount
+        const { data: accPair } = await supabase.from('accounts').select('balance').eq('id', pair.account_id).single()
+        if (accPair) await supabase.from('accounts').update({ balance: accPair.balance + revertPair }).eq('id', pair.account_id)
+        await supabase.from('transactions').delete().eq('id', pair.id)
+      }
+
+      const { error } = await supabase.from('transactions').delete().eq('id', t.id)
+      if (error) toast.error('Error al eliminar')
+      else { toast.success('Transferencia eliminada'); router.refresh() }
     } else {
-      toast.success('Transacción eliminada')
-      router.refresh()
+      // Regular transaction
+      const { data: acc } = await supabase.from('accounts').select('balance').eq('id', t.account_id).single()
+      if (acc) {
+        const revert = t.type === 'income' ? -t.amount : t.amount
+        await supabase.from('accounts').update({ balance: acc.balance + revert }).eq('id', t.account_id)
+      }
+      const { error } = await supabase.from('transactions').delete().eq('id', t.id)
+      if (error) toast.error('Error al eliminar')
+      else { toast.success('Transacción eliminada'); router.refresh() }
     }
+
     setDeleting(null)
   }
 
@@ -100,60 +129,124 @@ export function TransactionList({ transactions, accounts, categories, userId, in
             <div className="text-center text-muted-foreground py-12 text-sm">No hay transacciones</div>
           ) : (
             <div className="divide-y divide-border/50">
-              {filtered.map(t => (
-                <div key={t.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">
-                  {/* Icon */}
-                  <div className={`h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                    t.type === 'income' ? 'bg-emerald-500/10' : 'bg-red-500/10'
-                  }`}>
-                    {t.type === 'income'
-                      ? <ArrowUpCircle className="h-4 w-4 text-emerald-500" />
-                      : <ArrowDownCircle className="h-4 w-4 text-red-500" />}
+              {filtered.map(t => {
+                const isTransfer = !!t.transfer_group_id
+                return (
+                  <div key={t.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">
+                    {/* Icon */}
+                    <div className={`h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0`}
+                      style={{ backgroundColor: isTransfer
+                        ? TRANSFER_COLOR + '18'
+                        : t.type === 'income' ? '#00CB9618' : '#FF4D6D18'
+                      }}
+                    >
+                      {isTransfer
+                        ? <ArrowLeftRight className="h-4 w-4" style={{ color: TRANSFER_COLOR }} />
+                        : t.type === 'income'
+                          ? <ArrowUpCircle className="h-4 w-4 text-emerald-500" />
+                          : <ArrowDownCircle className="h-4 w-4 text-red-500" />
+                      }
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{t.description}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        {formatDate(t.date)}
+                        {t.account?.name  ? ` · ${t.account.name}`   : ''}
+                        {!isTransfer && t.category?.name ? ` · ${t.category.name}` : ''}
+                        {isTransfer && <span style={{ color: TRANSFER_COLOR }}> · Transferencia</span>}
+                      </p>
+                    </div>
+
+                    {/* Amount */}
+                    <span
+                      className="text-sm font-bold tabular-nums flex-shrink-0"
+                      style={{ color: isTransfer
+                        ? TRANSFER_COLOR
+                        : t.type === 'income' ? '#00CB96' : '#FF4D6D'
+                      }}
+                    >
+                      {isTransfer ? '' : t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
+                    </span>
+
+                    {/* 3-dots menu */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-foreground hover:bg-muted/60 transition-colors flex-shrink-0">
+                        <MoreVertical className="h-4 w-4" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {!isTransfer && (
+                          <>
+                            <DropdownMenuItem onClick={() => openEdit(t)}>
+                              <Pencil className="h-3.5 w-3.5 mr-2" /> Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                          </>
+                        )}
+                        <DropdownMenuItem
+                          className="text-red-500"
+                          disabled={deleting === t.id}
+                          onClick={() => setPendingDelete(t)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 mr-2" />
+                          {deleting === t.id ? 'Eliminando...' : 'Eliminar'}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{t.description}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      {formatDate(t.date)}
-                      {t.account?.name  ? ` · ${t.account.name}`   : ''}
-                      {t.category?.name ? ` · ${t.category.name}`  : ''}
-                    </p>
-                  </div>
-
-                  {/* Amount */}
-                  <span className={`text-sm font-bold tabular-nums flex-shrink-0 ${
-                    t.type === 'income' ? 'text-emerald-500' : 'text-red-500'
-                  }`}>
-                    {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
-                  </span>
-
-                  {/* 3-dots menu */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-foreground hover:bg-muted/60 transition-colors flex-shrink-0">
-                      <MoreVertical className="h-4 w-4" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => openEdit(t)}>
-                        <Pencil className="h-3.5 w-3.5 mr-2" /> Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-red-500"
-                        disabled={deleting === t.id}
-                        onClick={() => handleDelete(t)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 mr-2" />
-                        {deleting === t.id ? 'Eliminando...' : 'Eliminar'}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Confirmation dialog */}
+      <Dialog open={!!pendingDelete} onOpenChange={() => setPendingDelete(null)}>
+        <DialogContent className="sm:max-w-xs p-0 gap-0 border-border overflow-hidden">
+          <div className="px-5 pt-5 pb-4 border-b border-border"
+            style={{ background: 'linear-gradient(135deg, #FF4D6D12 0%, transparent 100%)' }}>
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FF4D6D20' }}>
+                <Trash2 className="h-4 w-4" style={{ color: '#FF4D6D' }} />
+              </div>
+              <DialogTitle className="text-base font-semibold text-foreground">
+                {pendingDelete?.transfer_group_id ? 'Eliminar transferencia' : 'Eliminar transacción'}
+              </DialogTitle>
+            </div>
+          </div>
+          <div className="px-5 py-4 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {pendingDelete?.transfer_group_id
+                ? 'Se eliminarán ambas partes de la transferencia y se revertirán los saldos de las dos cuentas.'
+                : 'Se eliminará la transacción y se revertirá el saldo de la cuenta.'
+              }
+            </p>
+            {pendingDelete && (
+              <div className="bg-muted/40 rounded-xl px-3 py-2.5 flex items-center justify-between">
+                <span className="text-sm font-medium text-foreground truncate">{pendingDelete.description}</span>
+                <span className="text-sm font-bold tabular-nums text-red-500 flex-shrink-0 ml-2">
+                  -{formatCurrency(pendingDelete.amount)}
+                </span>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setPendingDelete(null)}>
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1 font-semibold"
+                disabled={deleting === pendingDelete?.id}
+                onClick={() => pendingDelete && handleDelete(pendingDelete)}
+                style={{ backgroundColor: '#FF4D6D', color: '#fff', border: 'none' }}
+              >
+                {deleting === pendingDelete?.id ? 'Eliminando...' : 'Eliminar'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <TransactionDialog
         open={dialogOpen}

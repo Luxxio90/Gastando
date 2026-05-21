@@ -72,17 +72,20 @@ export function TransferDialog({ open, onClose, accounts, userId }: Props) {
 
       if (!expenseCatId || !incomeCatId) { toast.error('Error al preparar categorías'); return }
 
-      const today = new Date().toISOString().split('T')[0]
-      const desc  = form.description.trim() || 'Transferencia'
+      const today          = new Date().toISOString().split('T')[0]
+      const desc           = form.description.trim() || 'Transferencia'
+      const transferGroupId = crypto.randomUUID()
 
       const [r1, r2, r3, r4] = await Promise.all([
         supabase.from('transactions').insert({
           user_id: userId, account_id: form.from_id, category_id: expenseCatId,
           type: 'expense', amount, description: `${desc} → ${toAccount?.name}`, date: today, notes: null,
+          transfer_group_id: transferGroupId,
         }),
         supabase.from('transactions').insert({
           user_id: userId, account_id: form.to_id, category_id: incomeCatId,
           type: 'income', amount, description: `${desc} ← ${fromAccount?.name}`, date: today, notes: null,
+          transfer_group_id: transferGroupId,
         }),
         supabase.from('accounts').update({ balance: srcAcc.balance - amount }).eq('id', form.from_id),
         supabase.from('accounts').update({ balance: dstAcc.balance + amount }).eq('id', form.to_id),

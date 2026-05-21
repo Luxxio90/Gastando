@@ -43,6 +43,7 @@ export interface Transaction {
   description: string
   date: string
   notes: string | null
+  transfer_group_id: string | null
   created_at: string
   account?: Account
   category?: Category
