@@ -33,28 +33,41 @@ export function NotificationsToggle() {
   async function enable() {
     setWorking(true)
     try {
+      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+      if (!vapidKey) {
+        toast.error('Clave VAPID no configurada — contactá al administrador')
+        return
+      }
+
       const permission = await Notification.requestPermission()
       if (permission !== 'granted') {
         setStatus('denied')
         toast.error('Permiso de notificaciones denegado')
         return
       }
+
       const reg = await navigator.serviceWorker.ready
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
+        applicationServerKey: urlBase64ToUint8Array(vapidKey),
       })
-      const { endpoint, keys } = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } }
+      const json = sub.toJSON() as { endpoint: string; keys?: { p256dh: string; auth: string } }
+      if (!json.keys?.p256dh || !json.keys?.auth) throw new Error('Suscripción inválida')
+
       const res = await fetch('/api/push', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ endpoint, p256dh: keys.p256dh, auth: keys.auth }),
+        body: JSON.stringify({ endpoint: json.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth }),
       })
-      if (!res.ok) throw new Error('Error al guardar suscripción')
+      if (!res.ok) {
+        const body = await res.text()
+        throw new Error(`API error ${res.status}: ${body}`)
+      }
       setStatus('enabled')
       toast.success('Notificaciones activadas')
     } catch (err) {
-      toast.error('No se pudo activar las notificaciones')
+      const msg = err instanceof Error ? err.message : String(err)
+      toast.error(`No se pudo activar: ${msg}`)
     } finally {
       setWorking(false)
     }
