@@ -44,7 +44,7 @@ export default async function BudgetsPage({
       .or(`user_id.eq.${user.id},is_default.eq.true`).order('type').order('name'),
     supabase
       .from('transactions')
-      .select('category_id, amount, type')
+      .select('category_id, amount, type, account_id, transfer_group_id')
       .eq('user_id', user.id).gte('date', firstDay).lte('date', lastDay),
     supabase
       .from('fixed_expense_items')
@@ -201,6 +201,30 @@ export default async function BudgetsPage({
     }
   }
 
+  // ── Tracking: actual spending by account ────────────────────────────────────
+  const trackingCards = allCards.filter(c => c.track_account_id)
+  const actualByCard: Record<string, number> = {}
+  for (const card of trackingCards) {
+    actualByCard[card.id] = allTransactions
+      .filter(t => t.account_id === card.track_account_id && t.type === 'expense' && !t.transfer_group_id)
+      .reduce((s, t) => s + t.amount, 0)
+  }
+
+  // Update exceeded_at if status changed
+  const now = new Date().toISOString()
+  await Promise.all(
+    trackingCards
+      .filter(card => {
+        const exceeded = (actualByCard[card.id] ?? 0) > (resolvedAmounts[card.id] ?? 0)
+        return (exceeded && !card.exceeded_at) || (!exceeded && !!card.exceeded_at)
+      })
+      .map(card => {
+        const exceeded = (actualByCard[card.id] ?? 0) > (resolvedAmounts[card.id] ?? 0)
+        card.exceeded_at = exceeded ? now : null
+        return supabase.from('budget_cards').update({ exceeded_at: card.exceeded_at }).eq('id', card.id)
+      })
+  )
+
   const fixedTypeId      = expenseTypes?.find(et => et.name === 'Gasto fijo')?.id
   const fixedCategories  = (categories ?? []).filter(c => c.type === 'expense' && c.expense_type_id === fixedTypeId)
 
@@ -210,8 +234,10 @@ export default async function BudgetsPage({
         cards={allCards}
         categories={categories ?? []}
         resolvedAmounts={resolvedAmounts}
+        actualByCard={actualByCard}
         incomeByCat={incomeByCat}
         expenseByCat={expenseByCat}
+        accounts={(accounts ?? []) as any[]}
         userId={user.id}
         month={month}
         year={year}

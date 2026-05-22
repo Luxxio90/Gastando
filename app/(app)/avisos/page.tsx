@@ -51,6 +51,16 @@ export default async function AvisosPage() {
 
   const cardMonths = (rawMonths ?? []).map((m: any) => ({ ...m, total: cardTotals[m.id] ?? 0 }))
 
+  // Fetch exceeded budget cards for current month
+  const { data: rawExceeded } = await supabase
+    .from('budget_cards')
+    .select('id, name, exceeded_at, track_account_id')
+    .eq('user_id', user.id)
+    .eq('month', month)
+    .eq('year', year)
+    .not('exceeded_at', 'is', null)
+    .not('track_account_id', 'is', null)
+
   const monthLabel = now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
 
   return (
@@ -62,6 +72,7 @@ export default async function AvisosPage() {
       <AvisosView
         fixedExpenses={(rawFixed ?? []) as any[]}
         cardMonths={cardMonths as any[]}
+        exceededBudgets={(rawExceeded ?? []) as any[]}
         userId={user.id}
         accounts={(accounts ?? []) as any[]}
       />

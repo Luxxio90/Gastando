@@ -75,6 +75,8 @@ export interface BudgetCard {
   source_card_id: string | null
   percentage: number | null
   track_category_id: string | null
+  track_account_id: string | null
+  exceeded_at: string | null
   created_at: string
   sum_category?: Pick<Category, 'id' | 'name' | 'icon' | 'type'>
   track_category?: Pick<Category, 'id' | 'name' | 'icon' | 'type'>

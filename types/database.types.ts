@@ -405,6 +405,7 @@ export type Database = {
           card_type: string
           color: string
           created_at: string | null
+          exceeded_at: string | null
           id: string
           manual_amount: number | null
           month: number
@@ -412,6 +413,7 @@ export type Database = {
           percentage: number | null
           source_card_id: string | null
           sum_category_id: string | null
+          track_account_id: string | null
           track_category_id: string | null
           user_id: string
           year: number
@@ -421,6 +423,7 @@ export type Database = {
           card_type: string
           color?: string
           created_at?: string | null
+          exceeded_at?: string | null
           id?: string
           manual_amount?: number | null
           month: number
@@ -428,6 +431,7 @@ export type Database = {
           percentage?: number | null
           source_card_id?: string | null
           sum_category_id?: string | null
+          track_account_id?: string | null
           track_category_id?: string | null
           user_id: string
           year: number
@@ -437,6 +441,7 @@ export type Database = {
           card_type?: string
           color?: string
           created_at?: string | null
+          exceeded_at?: string | null
           id?: string
           manual_amount?: number | null
           month?: number
@@ -444,6 +449,7 @@ export type Database = {
           percentage?: number | null
           source_card_id?: string | null
           sum_category_id?: string | null
+          track_account_id?: string | null
           track_category_id?: string | null
           user_id?: string
           year?: number

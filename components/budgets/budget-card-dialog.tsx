@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
-import { BudgetCard, Category } from '@/types'
+import { BudgetCard, Category, Account } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -24,11 +24,13 @@ type CardForm = {
   sum_category_id: string
   source_card_id: string
   percentage: string
+  track_account_id: string
 }
 
 const emptyForm: CardForm = {
   name: '', card_type: 'expense', calc_type: 'manual',
   manual_amount: '', sum_category_id: '', source_card_id: '', percentage: '',
+  track_account_id: '',
 }
 
 interface Props {
@@ -37,6 +39,7 @@ interface Props {
   categories: Category[]
   cards: BudgetCard[]
   resolvedAmounts: Record<string, number>
+  accounts: Account[]
   userId: string
   month: number
   year: number
@@ -49,7 +52,7 @@ const INCOME_COLOR  = '#00CB96'
 const EXPENSE_COLOR = '#7C4DFF'
 
 export function BudgetCardDialog({
-  open, onClose, categories, cards, resolvedAmounts,
+  open, onClose, categories, cards, resolvedAmounts, accounts,
   userId, month, year, editing, incomeByCat, expenseByCat,
 }: Props) {
   const router = useRouter()
@@ -67,6 +70,7 @@ export function BudgetCardDialog({
         sum_category_id: editing.sum_category_id ?? '',
         source_card_id: editing.source_card_id ?? '',
         percentage: editing.percentage?.toString() ?? '',
+        track_account_id: editing.track_account_id ?? '',
       })
     } else {
       setForm(emptyForm)
@@ -126,6 +130,8 @@ export function BudgetCardDialog({
       source_card_id: form.calc_type === 'percentage' ? form.source_card_id || null : null,
       percentage: form.calc_type === 'percentage' ? pctValue : null,
       track_category_id: null,
+      track_account_id: form.track_account_id || null,
+      exceeded_at: form.track_account_id ? (editing?.exceeded_at ?? null) : null,
     }
 
     const { error } = editing
@@ -346,6 +352,36 @@ export function BudgetCardDialog({
               </div>
             )}
           </div>
+
+          {/* Cuenta de seguimiento */}
+          {accounts.length > 0 && (
+            <div className="space-y-1.5 border-t border-border/50 pt-4">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+                Seguimiento de cuenta <span className="normal-case font-normal">(opcional)</span>
+              </label>
+              <p className="text-[11px] text-muted-foreground">
+                Registrá cuánto se gastó de una cuenta contra este presupuesto.
+              </p>
+              <Select
+                value={form.track_account_id}
+                onValueChange={v => setForm({ ...form, track_account_id: v === '__none__' ? '' : v })}
+              >
+                <SelectTrigger className="w-full bg-muted/40 border-border/60">
+                  <span className={form.track_account_id ? 'text-sm' : 'text-sm text-muted-foreground'}>
+                    {form.track_account_id
+                      ? (accounts.find(a => a.id === form.track_account_id)?.name ?? 'Cuenta')
+                      : 'Sin seguimiento'}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Sin seguimiento</SelectItem>
+                  {accounts.map(a => (
+                    <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="flex gap-2 pt-1">
             <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancelar</Button>

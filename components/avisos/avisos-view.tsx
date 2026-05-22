@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { Check, CreditCard, ChevronRight, Bell, PartyPopper } from 'lucide-react'
+import { Check, CreditCard, ChevronRight, Bell, PartyPopper, AlertTriangle } from 'lucide-react'
 import type { Account, CreditCardNetwork } from '@/types'
 import { PayFixedExpenseDialog, type PendingPayItem } from '@/components/budgets/pay-fixed-expense-dialog'
 
@@ -28,9 +28,17 @@ type RawCard = {
   total: number
 }
 
+type ExceededBudget = {
+  id: string
+  name: string
+  exceeded_at: string
+  track_account_id: string
+}
+
 interface Props {
   fixedExpenses: RawFixed[]
   cardMonths: RawCard[]
+  exceededBudgets: ExceededBudget[]
   userId: string
   accounts: Account[]
 }
@@ -253,7 +261,7 @@ function EmptyState() {
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 
-export function AvisosView({ fixedExpenses, cardMonths, userId, accounts }: Props) {
+export function AvisosView({ fixedExpenses, cardMonths, exceededBudgets, userId, accounts }: Props) {
   const [paid, setPaid]           = useState<Set<string>>(new Set())
   const [marking, setMarking]     = useState<Set<string>>(new Set())
   const [pendingPay, setPendingPay] = useState<PendingPayItem | null>(null)
@@ -313,10 +321,59 @@ export function AvisosView({ fixedExpenses, cardMonths, userId, accounts }: Prop
     })
   }
 
-  if (allAlerts.length === 0) return <EmptyState />
+  if (allAlerts.length === 0 && exceededBudgets.length === 0) return <EmptyState />
 
   return (
     <div className="space-y-3">
+      {/* Presupuestos superados */}
+      {exceededBudgets.length > 0 && (
+        <div className="space-y-2">
+          {exceededBudgets.map(b => {
+            const account = accounts.find(a => a.id === b.track_account_id)
+            const exceededDate = new Date(b.exceeded_at).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })
+            return (
+              <a key={b.id} href="/budgets" className="block">
+                <div
+                  className="bg-card rounded-xl border overflow-hidden"
+                  style={{ borderColor: '#FF4D6D40' }}
+                >
+                  <div className="h-1" style={{ backgroundColor: '#FF4D6D' }} />
+                  <div className="p-4 flex items-start gap-3">
+                    <div
+                      className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: '#FF4D6D18' }}
+                    >
+                      <AlertTriangle className="h-5 w-5" style={{ color: '#FF4D6D' }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="font-semibold text-sm text-foreground">{b.name}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {account?.name ?? 'Cuenta'} · superado el {exceededDate}
+                          </p>
+                        </div>
+                        <span
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0"
+                          style={{ color: '#FF4D6D', backgroundColor: '#FF4D6D18', border: '1px solid #FF4D6D40' }}
+                        >
+                          Superado
+                        </span>
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-border/50 flex justify-end">
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground">
+                          Ver distribución <ChevronRight className="h-3.5 w-3.5" />
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </a>
+            )
+          })}
+        </div>
+      )}
+
       {/* Summary */}
       <div
         className="rounded-xl border border-border p-4 flex items-center justify-between"

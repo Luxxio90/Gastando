@@ -2,11 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { BudgetCard, Category } from '@/types'
+import { BudgetCard, Category, Account } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Plus, ChevronLeft, ChevronRight, MoreVertical } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, MoreVertical, AlertTriangle, Target } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { BudgetCardDialog } from './budget-card-dialog'
@@ -15,8 +15,10 @@ interface Props {
   cards: BudgetCard[]
   categories: Category[]
   resolvedAmounts: Record<string, number>
+  actualByCard: Record<string, number>
   incomeByCat: Record<string, number>
   expenseByCat: Record<string, number>
+  accounts: Account[]
   userId: string
   month: number
   year: number
@@ -31,7 +33,7 @@ function nextMonth(month: number, year: number) {
   return month === 12 ? { month: 1, year: year + 1 } : { month: month + 1, year }
 }
 
-export function BudgetCardsView({ cards, categories, resolvedAmounts, incomeByCat, expenseByCat, userId, month, year }: Props) {
+export function BudgetCardsView({ cards, categories, resolvedAmounts, actualByCard, incomeByCat, expenseByCat, accounts, userId, month, year }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -282,12 +284,88 @@ export function BudgetCardsView({ cards, categories, resolvedAmounts, incomeByCa
         </div>
       )}
 
+      {/* Sección de seguimiento */}
+      {cards.filter(c => c.track_account_id).length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+            <Target className="h-3.5 w-3.5" />
+            Seguimiento
+          </h2>
+          {cards.filter(c => c.track_account_id).map(card => {
+            const budget  = resolvedAmounts[card.id] ?? 0
+            const actual  = actualByCard[card.id] ?? 0
+            const remaining = budget - actual
+            const pctUsed = budget > 0 ? Math.min(100, (actual / budget) * 100) : 0
+            const exceeded = actual > budget
+            const account = accounts.find(a => a.id === card.track_account_id)
+            const color = exceeded ? '#FF4D6D' : pctUsed >= 80 ? '#F59E0B' : '#00CB96'
+
+            return (
+              <div
+                key={card.id}
+                className="bg-card rounded-xl border overflow-hidden"
+                style={{ borderColor: exceeded ? '#FF4D6D40' : 'hsl(var(--border))' }}
+              >
+                {/* Barra de progreso */}
+                <div className="h-1 bg-muted/40">
+                  <div
+                    className="h-full transition-all duration-500"
+                    style={{ width: `${pctUsed}%`, backgroundColor: color }}
+                  />
+                </div>
+
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        {exceeded && <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" style={{ color: '#FF4D6D' }} />}
+                        <p className="font-semibold text-sm text-foreground">{card.name}</p>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{account?.name ?? '—'}</p>
+                      {exceeded && card.exceeded_at && (
+                        <p className="text-[11px] mt-0.5 font-semibold" style={{ color: '#FF4D6D' }}>
+                          Superado el {new Date(card.exceeded_at).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })}
+                        </p>
+                      )}
+                    </div>
+                    <span
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0"
+                      style={{ color, backgroundColor: color + '18', border: `1px solid ${color}40` }}
+                    >
+                      {pctUsed.toFixed(0)}%
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground text-xs">Presupuesto</span>
+                      <span className="font-semibold tabular-nums text-foreground">{formatCurrency(budget)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground text-xs">Gastado</span>
+                      <span className="font-semibold tabular-nums" style={{ color }}>{formatCurrency(actual)}</span>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border/50 pt-1.5 mt-1.5">
+                      <span className="text-xs font-semibold text-foreground">{exceeded ? 'Te pasaste' : 'Restante'}</span>
+                      <span className="font-bold tabular-nums text-base" style={{ color }}>
+                        {exceeded ? '+' : ''}{formatCurrency(Math.abs(remaining))}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
       <BudgetCardDialog
         open={dialogOpen}
         onClose={() => { setDialogOpen(false); setEditingCard(null) }}
         categories={categories}
         cards={cards}
         resolvedAmounts={resolvedAmounts}
+        accounts={accounts}
         userId={userId}
         month={month}
         year={year}
