@@ -8,7 +8,7 @@ import { Account, Category, Transaction } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { TrendingUp, TrendingDown } from 'lucide-react'
+import { TrendingUp, TrendingDown, Repeat } from 'lucide-react'
 
 const INCOME_COLOR  = '#00CB96'
 const EXPENSE_COLOR = '#FF4D6D'
@@ -43,6 +43,8 @@ export function TransactionDialog({
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState(emptyForm(defaultType, defaultAccountId))
+  const [recurring, setRecurring] = useState(false)
+  const [recurringDay, setRecurringDay] = useState('1')
 
   useEffect(() => {
     if (editingTransaction) {
@@ -57,6 +59,8 @@ export function TransactionDialog({
       })
     } else {
       setForm(emptyForm(defaultType, defaultAccountId))
+      setRecurring(false)
+      setRecurringDay('1')
     }
   }, [editingTransaction, defaultType, defaultAccountId, open])
 
@@ -72,6 +76,29 @@ export function TransactionDialog({
     setLoading(true)
     const amount = parseFloat(form.amount)
 
+    let recurringId: string | null = null
+
+    // Si es nueva y tiene recurrencia activada, crear la plantilla primero
+    if (!isEditing && recurring) {
+      const { data: rt, error: rtError } = await supabase
+        .from('recurring_transactions')
+        .insert({
+          user_id: userId,
+          type: form.type,
+          amount,
+          description: form.description,
+          category_id: form.category_id,
+          account_id: form.account_id,
+          day_of_month: Math.min(Math.max(parseInt(recurringDay) || 1, 1), 28),
+          notes: form.notes || null,
+        })
+        .select()
+        .single()
+
+      if (rtError) { toast.error('Error al crear recurrente: ' + rtError.message); setLoading(false); return }
+      recurringId = rt.id
+    }
+
     const payload = {
       user_id: userId,
       type: form.type,
@@ -81,6 +108,7 @@ export function TransactionDialog({
       account_id: form.account_id,
       category_id: form.category_id,
       notes: form.notes || null,
+      recurring_transaction_id: recurringId,
     }
 
     if (isEditing) {
@@ -90,7 +118,7 @@ export function TransactionDialog({
     } else {
       const { error } = await supabase.from('transactions').insert(payload)
       if (error) toast.error('Error al guardar: ' + error.message)
-      else { toast.success('Transacción registrada'); onClose(); router.refresh() }
+      else { toast.success(recurring ? 'Transacción registrada y recurrente creada' : 'Transacción registrada'); onClose(); router.refresh() }
     }
 
     setLoading(false)
@@ -259,6 +287,52 @@ export function TransactionDialog({
               className="bg-muted/40 border-border/60"
             />
           </div>
+
+          {/* Repetir mensualmente (solo al crear) */}
+          {!isEditing && (
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setRecurring(!recurring)}
+                className="w-full flex items-center justify-between px-3 py-3 rounded-xl border transition-all"
+                style={recurring
+                  ? { backgroundColor: '#7C4DFF10', borderColor: '#7C4DFF50' }
+                  : { backgroundColor: 'transparent', borderColor: 'hsl(var(--border))' }
+                }
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="h-7 w-7 rounded-lg flex items-center justify-center"
+                    style={{ backgroundColor: recurring ? '#7C4DFF20' : 'hsl(var(--muted))' }}>
+                    <Repeat className="h-3.5 w-3.5" style={{ color: recurring ? '#7C4DFF' : 'hsl(var(--muted-foreground))' }} />
+                  </div>
+                  <span className="text-sm font-medium text-foreground">Repetir mensualmente</span>
+                </div>
+                <div
+                  className="relative h-5 w-9 rounded-full transition-colors flex-shrink-0"
+                  style={{ backgroundColor: recurring ? '#7C4DFF' : 'hsl(var(--muted))' }}
+                >
+                  <span
+                    className="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform"
+                    style={{ transform: recurring ? 'translateX(16px)' : 'translateX(2px)' }}
+                  />
+                </div>
+              </button>
+
+              {recurring && (
+                <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-muted/40 border border-border/60">
+                  <span className="text-sm text-muted-foreground flex-1">Día del mes</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={28}
+                    value={recurringDay}
+                    onChange={e => setRecurringDay(e.target.value)}
+                    className="w-16 h-8 text-center text-sm font-bold rounded-lg border border-border bg-muted/40 text-foreground focus:outline-none focus:ring-2 focus:ring-[#7C4DFF]/40"
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex gap-2 pt-1">
             <Button type="button" variant="outline" className="flex-1" onClick={onClose}>

@@ -156,6 +156,22 @@ export interface CreditCardItem {
   created_at: string
 }
 
+export interface RecurringTransaction {
+  id: string
+  user_id: string
+  description: string
+  amount: number
+  type: TransactionType
+  category_id: string | null
+  account_id: string | null
+  day_of_month: number
+  notes: string | null
+  active: boolean
+  created_at: string
+  category?: Category
+  account?: Account
+}
+
 export interface Investment {
   id: string
   user_id: string

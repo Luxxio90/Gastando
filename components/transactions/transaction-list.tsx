@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Transaction, Account, Category } from '@/types'
+import { Transaction, Account, Category, RecurringTransaction } from '@/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Plus, MoreVertical, Pencil, Trash2, Search, X } from 'lucide-react'
 import { TransactionDialog } from './transaction-dialog'
+import { RecurringList } from './recurring-list'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
@@ -22,9 +23,10 @@ interface Props {
   categories: Category[]
   userId: string
   initialFilter?: 'all' | 'income' | 'expense'
+  recurring?: RecurringTransaction[]
 }
 
-export function TransactionList({ transactions, accounts, categories, userId, initialFilter = 'all' }: Props) {
+export function TransactionList({ transactions, accounts, categories, userId, initialFilter = 'all', recurring = [] }: Props) {
   const [dialogOpen, setDialogOpen]       = useState(false)
   const [editing, setEditing]             = useState<Transaction | null>(null)
   const [filter, setFilter]               = useState<'all' | 'income' | 'expense'>(initialFilter)
@@ -127,6 +129,9 @@ export function TransactionList({ transactions, accounts, categories, userId, in
           <Plus className="h-4 w-4 mr-1" /> Nueva
         </Button>
       </div>
+
+      {/* Recurrentes */}
+      {recurring.length > 0 && <RecurringList recurring={recurring} />}
 
       {/* Search */}
       <div className="relative">
