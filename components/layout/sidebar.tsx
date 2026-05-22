@@ -9,23 +9,24 @@ import {
   LayoutDashboard,
   ArrowLeftRight,
   PiggyBank,
-  TrendingUp,
   CreditCard,
   LogOut,
   Wallet,
   Settings,
   Bell,
+  BarChart2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard',    label: 'Inicio',        icon: LayoutDashboard },
   { href: '/transactions', label: 'Transacciones', icon: ArrowLeftRight },
-  { href: '/accounts', label: 'Cuentas', icon: CreditCard },
-  { href: '/budgets', label: 'Presupuestos', icon: PiggyBank },
-  { href: '/investments', label: 'Inversiones', icon: TrendingUp },
-  { href: '/avisos', label: 'Avisos', icon: Bell },
-  { href: '/settings', label: 'Ajustes', icon: Settings },
+  { href: '/accounts',     label: 'Cuentas',       icon: CreditCard },
+  { href: '/budgets',      label: 'Distribución',  icon: PiggyBank },
+  { href: '/estadisticas', label: 'Estadísticas',  icon: BarChart2 },
+  { href: '/tarjetas',     label: 'Tarjetas',      icon: Wallet },
+  { href: '/avisos',       label: 'Avisos',        icon: Bell },
+  { href: '/settings',     label: 'Ajustes',       icon: Settings },
 ]
 
 export function Sidebar() {

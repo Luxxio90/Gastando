@@ -14,7 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Sidebar />
       <main className="flex-1 overflow-auto pb-20 md:pb-0">{children}</main>
       <Suspense>
-        <MobileNav />
+        <MobileNav userEmail={user?.email} />
       </Suspense>
       {user && <FloatingActionButton userId={user.id} />}
       <InstallBanner />

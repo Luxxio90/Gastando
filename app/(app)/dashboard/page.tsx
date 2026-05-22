@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import { ExpenseChart } from '@/components/dashboard/expense-chart'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { DashboardCards } from '@/components/dashboard/dashboard-cards'
-import { DrawerMenu } from '@/components/layout/drawer-menu'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -29,12 +28,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground text-sm">{now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}</p>
-        </div>
-        <DrawerMenu userEmail={user.email} />
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+        <p className="text-muted-foreground text-sm">{now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}</p>
       </div>
 
       <DashboardCards
