@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { ArrowDownLeft, ArrowUpRight, Wallet, TrendingUp, Settings2, Eye, EyeOff } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, Wallet, TrendingUp, Settings2, Eye, EyeOff, CheckCircle2, Circle, Sparkles } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import type { Account, Investment } from '@/types'
@@ -40,11 +41,19 @@ interface RawTransaction {
   account_id: string
 }
 
+interface OnboardingState {
+  hasAccounts: boolean
+  hasIncome: boolean
+  hasBudgetCards: boolean
+  hasFixedExpenses: boolean
+}
+
 interface Props {
   accounts: Account[]
   transactions: RawTransaction[]
   investments: Investment[]
   userId: string
+  onboarding: OnboardingState
 }
 
 const CARD_TITLES: Record<CardKey, string> = {
@@ -53,7 +62,14 @@ const CARD_TITLES: Record<CardKey, string> = {
   expenses: 'Gastos del mes',
 }
 
-export function DashboardCards({ accounts, transactions, investments, userId }: Props) {
+const STEPS: { key: keyof OnboardingState; label: string; href: string }[] = [
+  { key: 'hasAccounts',     label: 'Crear una cuenta',           href: '/accounts' },
+  { key: 'hasIncome',       label: 'Agregar tu primer ingreso',  href: '/transactions' },
+  { key: 'hasBudgetCards',  label: 'Configurar tu distribución', href: '/budgets' },
+  { key: 'hasFixedExpenses',label: 'Agregar un gasto fijo',      href: '/budgets' },
+]
+
+export function DashboardCards({ accounts, transactions, investments, userId, onboarding }: Props) {
   const [config, setConfig] = useState<AccountConfig>({ balance: null, income: null, expenses: null })
   const [configuring, setConfiguring] = useState<CardKey | null>(null)
   const [draft, setDraft] = useState<string[]>([])
@@ -127,9 +143,88 @@ export function DashboardCards({ accounts, transactions, investments, userId }: 
     </button>
   )
 
+  // Welcome screen for new users with no accounts
+  if (!onboarding.hasAccounts) {
+    return (
+      <div className="flex flex-col items-center justify-center py-14 space-y-6 text-center">
+        <div
+          className="h-20 w-20 rounded-3xl flex items-center justify-center shadow-lg"
+          style={{ background: 'linear-gradient(135deg, #7C4DFF 0%, #9C6DFF 100%)' }}
+        >
+          <Wallet className="h-10 w-10 text-white" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-foreground">Bienvenido a Gastando</h2>
+          <p className="text-muted-foreground text-sm max-w-[260px] leading-relaxed">
+            Empezá creando tu primera cuenta para registrar tus gastos e ingresos.
+          </p>
+        </div>
+        <Link href="/accounts">
+          <Button style={{ background: 'linear-gradient(135deg, #7C4DFF 0%, #9C6DFF 100%)', color: '#fff', border: 'none' }}>
+            Crear primera cuenta
+          </Button>
+        </Link>
+      </div>
+    )
+  }
+
+  const allDone = STEPS.every(s => onboarding[s.key])
+  const doneCount = STEPS.filter(s => onboarding[s.key]).length
+
   return (
     <>
       <div className="space-y-3">
+        {/* Checklist de primeros pasos */}
+        {!allDone && (
+          <Card className="overflow-hidden">
+            <div style={{ background: 'linear-gradient(135deg, #7C4DFF08 0%, transparent 100%)' }}>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#7C4DFF20' }}>
+                      <Sparkles className="h-3.5 w-3.5" style={{ color: '#7C4DFF' }} />
+                    </div>
+                    <CardTitle className="text-sm font-semibold">Primeros pasos</CardTitle>
+                  </div>
+                  <span
+                    className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                    style={{ backgroundColor: '#7C4DFF20', color: '#7C4DFF' }}
+                  >
+                    {doneCount}/4
+                  </span>
+                </div>
+                <div className="w-full h-1.5 rounded-full bg-muted mt-2">
+                  <div
+                    className="h-1.5 rounded-full transition-all duration-500"
+                    style={{ width: `${(doneCount / 4) * 100}%`, background: 'linear-gradient(90deg, #7C4DFF, #9C6DFF)' }}
+                  />
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0 pb-3 space-y-0.5">
+                {STEPS.map(step => {
+                  const done = onboarding[step.key]
+                  return (
+                    <div key={step.key} className="flex items-center gap-3 py-1.5 px-1">
+                      {done
+                        ? <CheckCircle2 className="h-4 w-4 flex-shrink-0" style={{ color: '#00CB96' }} />
+                        : <Circle className="h-4 w-4 flex-shrink-0 text-muted-foreground/30" />
+                      }
+                      <span className={cn('text-sm flex-1', done ? 'line-through text-muted-foreground/40' : 'text-foreground')}>
+                        {step.label}
+                      </span>
+                      {!done && (
+                        <Link href={step.href} className="text-xs font-semibold" style={{ color: '#7C4DFF' }}>
+                          Ir →
+                        </Link>
+                      )}
+                    </div>
+                  )
+                })}
+              </CardContent>
+            </div>
+          </Card>
+        )}
+
         {/* Fila 1 — Saldo total */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">

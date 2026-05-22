@@ -19,6 +19,8 @@ export default async function DashboardPage() {
     { data: transactions, error: txError },
     { data: accounts, error: accError },
     { data: investments },
+    { data: budgetCards },
+    { data: fixedItems },
   ] = await Promise.all([
     supabase
       .from('transactions')
@@ -29,6 +31,9 @@ export default async function DashboardPage() {
       .order('date', { ascending: false }),
     supabase.from('accounts').select('*').eq('user_id', user.id),
     supabase.from('investments').select('*').eq('user_id', user.id),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any).from('budget_cards').select('id').eq('user_id', user.id).limit(1),
+    supabase.from('fixed_expense_items').select('id').eq('user_id', user.id).limit(1),
   ])
 
   if (txError || accError) return <ErrorState title="Error al cargar el dashboard" />
@@ -45,6 +50,12 @@ export default async function DashboardPage() {
         transactions={transactions}
         investments={investments ?? []}
         userId={user.id}
+        onboarding={{
+          hasAccounts:     (accounts?.length ?? 0) > 0,
+          hasIncome:       (transactions ?? []).some(t => t.type === 'income'),
+          hasBudgetCards:  (budgetCards?.length ?? 0) > 0,
+          hasFixedExpenses:(fixedItems?.length ?? 0) > 0,
+        }}
       />
 
       <div className="space-y-4">
