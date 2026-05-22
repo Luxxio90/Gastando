@@ -399,62 +399,6 @@ export type Database = {
           user_id?: string
         }
       }
-      budget_cards: {
-        Row: {
-          calc_type: string
-          card_type: string
-          color: string
-          created_at: string | null
-          exceeded_at: string | null
-          id: string
-          manual_amount: number | null
-          month: number
-          name: string
-          percentage: number | null
-          source_card_id: string | null
-          sum_category_id: string | null
-          track_account_id: string | null
-          track_category_id: string | null
-          user_id: string
-          year: number
-        }
-        Insert: {
-          calc_type: string
-          card_type: string
-          color?: string
-          created_at?: string | null
-          exceeded_at?: string | null
-          id?: string
-          manual_amount?: number | null
-          month: number
-          name: string
-          percentage?: number | null
-          source_card_id?: string | null
-          sum_category_id?: string | null
-          track_account_id?: string | null
-          track_category_id?: string | null
-          user_id: string
-          year: number
-        }
-        Update: {
-          calc_type?: string
-          card_type?: string
-          color?: string
-          created_at?: string | null
-          exceeded_at?: string | null
-          id?: string
-          manual_amount?: number | null
-          month?: number
-          name?: string
-          percentage?: number | null
-          source_card_id?: string | null
-          sum_category_id?: string | null
-          track_account_id?: string | null
-          track_category_id?: string | null
-          user_id?: string
-          year?: number
-        }
-      }
     }
     Views: { [_ in never]: never }
     Functions: { [_ in never]: never }
