@@ -211,7 +211,7 @@ export default async function BudgetsPage({
   }
 
   // Update exceeded_at if status changed
-  const now = new Date().toISOString()
+  const nowISO = new Date().toISOString()
   await Promise.all(
     trackingCards
       .filter(card => {
@@ -220,7 +220,7 @@ export default async function BudgetsPage({
       })
       .map(card => {
         const exceeded = (actualByCard[card.id] ?? 0) > (resolvedAmounts[card.id] ?? 0)
-        card.exceeded_at = exceeded ? now : null
+        card.exceeded_at = exceeded ? nowISO : null
         return supabase.from('budget_cards').update({ exceeded_at: card.exceeded_at }).eq('id', card.id)
       })
   )
