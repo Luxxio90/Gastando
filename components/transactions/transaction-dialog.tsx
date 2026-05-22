@@ -290,18 +290,18 @@ export function TransactionDialog({
 
           {/* Repetir mensualmente (solo al crear) */}
           {!isEditing && (
-            <div className="space-y-2">
-              <button
-                type="button"
+            <div
+              className="rounded-xl border overflow-hidden transition-colors"
+              style={recurring ? { borderColor: '#7C4DFF50' } : { borderColor: 'hsl(var(--border))' }}
+            >
+              {/* Fila del toggle */}
+              <div
+                className="flex items-center justify-between px-3 py-3 cursor-pointer"
+                style={recurring ? { backgroundColor: '#7C4DFF08' } : {}}
                 onClick={() => setRecurring(!recurring)}
-                className="w-full flex items-center justify-between px-3 py-3 rounded-xl border transition-all"
-                style={recurring
-                  ? { backgroundColor: '#7C4DFF10', borderColor: '#7C4DFF50' }
-                  : { backgroundColor: 'transparent', borderColor: 'hsl(var(--border))' }
-                }
               >
                 <div className="flex items-center gap-2.5">
-                  <div className="h-7 w-7 rounded-lg flex items-center justify-center"
+                  <div className="h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0"
                     style={{ backgroundColor: recurring ? '#7C4DFF20' : 'hsl(var(--muted))' }}>
                     <Repeat className="h-3.5 w-3.5" style={{ color: recurring ? '#7C4DFF' : 'hsl(var(--muted-foreground))' }} />
                   </div>
@@ -316,18 +316,24 @@ export function TransactionDialog({
                     style={{ transform: recurring ? 'translateX(16px)' : 'translateX(2px)' }}
                   />
                 </div>
-              </button>
+              </div>
 
+              {/* Día del mes — sub-fila dentro de la misma card */}
               {recurring && (
-                <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-muted/40 border border-border/60">
-                  <span className="text-sm text-muted-foreground flex-1">Día del mes</span>
+                <div
+                  className="flex items-center justify-between px-3 py-2.5 border-t"
+                  style={{ borderColor: '#7C4DFF30', backgroundColor: '#7C4DFF05' }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <span className="text-sm text-muted-foreground">Día del mes</span>
                   <input
                     type="number"
                     min={1}
                     max={28}
                     value={recurringDay}
                     onChange={e => setRecurringDay(e.target.value)}
-                    className="w-16 h-8 text-center text-sm font-bold rounded-lg border border-border bg-muted/40 text-foreground focus:outline-none focus:ring-2 focus:ring-[#7C4DFF]/40"
+                    className="w-16 h-8 text-center text-sm font-bold rounded-lg border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-[#7C4DFF]/40"
+                    style={{ borderColor: '#7C4DFF40' }}
                   />
                 </div>
               )}
