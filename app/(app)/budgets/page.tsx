@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { BudgetCardsView } from '@/components/budgets/budget-cards-view'
 import { FixedExpensesTable } from '@/components/budgets/fixed-expenses-table'
+import { ErrorState } from '@/components/ui/error-state'
 import { BudgetCard, FixedExpenseItem, FixedExpenseGroup, Responsible } from '@/types'
 
 export default async function BudgetsPage({
@@ -24,9 +25,9 @@ export default async function BudgetsPage({
   const prevYear  = month === 1 ? year - 1 : year
 
   const [
-    { data: cards },
-    { data: categories },
-    { data: transactions },
+    { data: cards, error: cardsError },
+    { data: categories, error: catError },
+    { data: transactions, error: txError },
     { data: fixedItems },
     { data: expenseTypes },
     { data: responsibles },
@@ -63,6 +64,8 @@ export default async function BudgetsPage({
       .eq('user_id', user.id).eq('month', month).eq('year', year).order('order'),
     supabase.from('accounts').select('*').eq('user_id', user.id).order('name'),
   ])
+
+  if (cardsError || catError || txError) return <ErrorState title="Error al cargar la distribución" />
 
   let allCards      = (cards      ?? []) as BudgetCard[]
   let allFixedItems = (fixedItems ?? []) as FixedExpenseItem[]

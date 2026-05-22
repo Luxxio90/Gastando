@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { AvisosView } from '@/components/avisos/avisos-view'
+import { ErrorState } from '@/components/ui/error-state'
 
 export default async function AvisosPage() {
   const supabase = await createClient()
@@ -11,8 +12,10 @@ export default async function AvisosPage() {
   const month = now.getMonth() + 1
   const year = now.getFullYear()
 
-  const { data: accounts } = await supabase
+  const { data: accounts, error: accError } = await supabase
     .from('accounts').select('*').eq('user_id', user.id).order('name')
+
+  if (accError) return <ErrorState title="Error al cargar los avisos" />
 
   // Fetch pending fixed expenses with a due_day set (current month)
   const { data: rawFixed } = await supabase

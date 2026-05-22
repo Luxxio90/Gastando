@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { CreditCardsView } from '@/components/tarjetas/credit-cards-view'
+import { ErrorState } from '@/components/ui/error-state'
 import type { CreditCard, CreditCardMonth, CreditCardItem, Account } from '@/types'
 
 export default async function TarjetasPage({
@@ -20,10 +21,12 @@ export default async function TarjetasPage({
   const prevMonth = month === 1 ? 12 : month - 1
   const prevYear = month === 1 ? year - 1 : year
 
-  const [{ data: cards }, { data: accounts }] = await Promise.all([
+  const [{ data: cards, error: cardsError }, { data: accounts, error: accError }] = await Promise.all([
     supabase.from('credit_cards').select('*').eq('user_id', user.id).order('created_at'),
     supabase.from('accounts').select('*').eq('user_id', user.id).order('name'),
   ])
+
+  if (cardsError || accError) return <ErrorState title="Error al cargar las tarjetas" />
 
   const allCards = (cards ?? []) as CreditCard[]
 

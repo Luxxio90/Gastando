@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { ExpenseChart } from '@/components/dashboard/expense-chart'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { DashboardCards } from '@/components/dashboard/dashboard-cards'
+import { ErrorState } from '@/components/ui/error-state'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -14,7 +15,11 @@ export default async function DashboardPage() {
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
   const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString()
 
-  const [{ data: transactions }, { data: accounts }, { data: investments }] = await Promise.all([
+  const [
+    { data: transactions, error: txError },
+    { data: accounts, error: accError },
+    { data: investments },
+  ] = await Promise.all([
     supabase
       .from('transactions')
       .select('*, category:categories(*), account:accounts(*)')
@@ -26,6 +31,8 @@ export default async function DashboardPage() {
     supabase.from('investments').select('*').eq('user_id', user.id),
   ])
 
+  if (txError || accError) return <ErrorState title="Error al cargar el dashboard" />
+
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -34,15 +41,15 @@ export default async function DashboardPage() {
       </div>
 
       <DashboardCards
-        accounts={accounts ?? []}
-        transactions={transactions ?? []}
+        accounts={accounts}
+        transactions={transactions}
         investments={investments ?? []}
         userId={user.id}
       />
 
       <div className="space-y-4">
-        <ExpenseChart transactions={transactions ?? []} />
-        <RecentTransactions transactions={(transactions ?? []).slice(0, 8)} />
+        <ExpenseChart transactions={transactions} />
+        <RecentTransactions transactions={transactions.slice(0, 8)} />
       </div>
     </div>
   )

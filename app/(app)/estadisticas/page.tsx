@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { EstadisticasView } from '@/components/estadisticas/estadisticas-view'
+import { ErrorState } from '@/components/ui/error-state'
 
 export default async function EstadisticasPage({
   searchParams,
@@ -24,7 +25,11 @@ export default async function EstadisticasPage({
   while (trendMonth <= 0) { trendMonth += 12; trendYear-- }
   const trendStart = new Date(trendYear, trendMonth - 1, 1).toISOString()
 
-  const [{ data: transactions }, { data: trendTransactions }, { data: accounts }] = await Promise.all([
+  const [
+    { data: transactions, error: txError },
+    { data: trendTransactions, error: trendError },
+    { data: accounts, error: accError },
+  ] = await Promise.all([
     supabase
       .from('transactions')
       .select('type, amount, account_id, description, date, transfer_group_id, category:categories(name, icon, color)')
@@ -43,6 +48,8 @@ export default async function EstadisticasPage({
       .eq('user_id', user.id)
       .order('name'),
   ])
+
+  if (txError || trendError || accError) return <ErrorState title="Error al cargar las estadísticas" />
 
   return (
     <div className="p-4 pb-24 max-w-2xl mx-auto">
