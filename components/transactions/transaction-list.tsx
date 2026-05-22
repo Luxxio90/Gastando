@@ -200,6 +200,9 @@ export function TransactionList({ transactions, accounts, categories, userId, in
                         {!isTransfer && (t.category as any)?.name ? ` · ${(t.category as any).name}` : ''}
                         {isTransfer && <span style={{ color: TRANSFER_COLOR }}> · Transferencia</span>}
                       </p>
+                      {t.notes && (
+                        <p className="text-[11px] text-muted-foreground/60 mt-0.5 truncate italic">{t.notes}</p>
+                      )}
                     </div>
 
                     <span
