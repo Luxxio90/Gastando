@@ -75,11 +75,12 @@ export default async function BudgetsPage({
   // ── Auto-copy budget cards ──────────────────────────────────────────────────
   if (allCards.length === 0) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: prevCards } = await (supabase as any)
+    const { data: prevCardsRaw } = await (supabase as any)
       .from('budget_cards').select('*')
       .eq('user_id', user.id).eq('month', prevMonth).eq('year', prevYear).order('created_at')
+    const prevCards = (prevCardsRaw ?? []) as BudgetCard[]
 
-    if (prevCards && prevCards.length > 0) {
+    if (prevCards.length > 0) {
       const nonPct = prevCards.filter(c => c.calc_type !== 'percentage')
       const pct    = prevCards.filter(c => c.calc_type === 'percentage')
 
