@@ -304,8 +304,9 @@ export function BudgetCardsView({ cards, categories, resolvedAmounts, actualByCa
             return (
               <div
                 key={card.id}
-                className="bg-card rounded-xl border overflow-hidden"
+                className="bg-card rounded-xl border overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
                 style={{ borderColor: exceeded ? '#FF4D6D40' : 'hsl(var(--border))' }}
+                onClick={() => openEdit(card)}
               >
                 {/* Barra de progreso */}
                 <div className="h-1 bg-muted/40">
