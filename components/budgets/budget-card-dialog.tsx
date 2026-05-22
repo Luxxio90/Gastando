@@ -134,9 +134,10 @@ export function BudgetCardDialog({
       exceeded_at: form.track_account_id ? (editing?.exceeded_at ?? null) : null,
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = editing
-      ? await supabase.from('budget_cards').update(payload).eq('id', editing.id)
-      : await supabase.from('budget_cards').insert(payload)
+      ? await (supabase as any).from('budget_cards').update(payload).eq('id', editing.id)
+      : await (supabase as any).from('budget_cards').insert(payload)
 
     if (error) {
       toast.error('Error al guardar: ' + error.message)

@@ -52,7 +52,8 @@ export default async function AvisosPage() {
   const cardMonths = (rawMonths ?? []).map((m: any) => ({ ...m, total: cardTotals[m.id] ?? 0 }))
 
   // Fetch exceeded budget cards for current month
-  const { data: rawExceeded } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: rawExceeded } = await (supabase as any)
     .from('budget_cards')
     .select('id, name, exceeded_at, track_account_id')
     .eq('user_id', user.id)

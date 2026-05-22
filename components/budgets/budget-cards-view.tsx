@@ -42,7 +42,8 @@ export function BudgetCardsView({ cards, categories, resolvedAmounts, actualByCa
   function navigate(m: number, y: number) { router.push(`/budgets?month=${m}&year=${y}`) }
 
   async function handleDelete(id: string) {
-    const { error } = await supabase.from('budget_cards').delete().eq('id', id)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).from('budget_cards').delete().eq('id', id)
     if (error) toast.error('Error al eliminar')
     else { toast.success('Fila eliminada'); router.refresh() }
   }

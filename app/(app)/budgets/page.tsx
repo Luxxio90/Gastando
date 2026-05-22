@@ -34,7 +34,8 @@ export default async function BudgetsPage({
     { data: existingGroups },
     { data: accounts },
   ] = await Promise.all([
-    supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any)
       .from('budget_cards')
       .select('*, sum_category:categories!sum_category_id(id,name,icon,type), track_category:categories!track_category_id(id,name,icon,type)')
       .eq('user_id', user.id).eq('month', month).eq('year', year).order('created_at'),
@@ -73,7 +74,8 @@ export default async function BudgetsPage({
 
   // ── Auto-copy budget cards ──────────────────────────────────────────────────
   if (allCards.length === 0) {
-    const { data: prevCards } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: prevCards } = await (supabase as any)
       .from('budget_cards').select('*')
       .eq('user_id', user.id).eq('month', prevMonth).eq('year', prevYear).order('created_at')
 
@@ -81,9 +83,10 @@ export default async function BudgetsPage({
       const nonPct = prevCards.filter(c => c.calc_type !== 'percentage')
       const pct    = prevCards.filter(c => c.calc_type === 'percentage')
 
-      const { data: insertedNonPct } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: insertedNonPct } = await (supabase as any)
         .from('budget_cards')
-        .insert(nonPct.map(c => ({
+        .insert(nonPct.map((c: any) => ({
           user_id: user.id, month, year,
           name: c.name, color: c.color, card_type: c.card_type, calc_type: c.calc_type,
           manual_amount: 0, sum_category_id: c.sum_category_id,
@@ -95,8 +98,9 @@ export default async function BudgetsPage({
       nonPct.forEach((old, i) => { if (insertedNonPct?.[i]) idMap[old.id] = insertedNonPct[i].id })
 
       if (pct.length > 0) {
-        await supabase.from('budget_cards').insert(
-          pct.map(c => ({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from('budget_cards').insert(
+          pct.map((c: any) => ({
             user_id: user.id, month, year,
             name: c.name, color: c.color, card_type: c.card_type, calc_type: 'percentage',
             manual_amount: 0, sum_category_id: c.sum_category_id, percentage: c.percentage,
@@ -106,7 +110,8 @@ export default async function BudgetsPage({
         )
       }
 
-      const { data: newCards } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: newCards } = await (supabase as any)
         .from('budget_cards')
         .select('*, sum_category:categories!sum_category_id(id,name,icon,type), track_category:categories!track_category_id(id,name,icon,type)')
         .eq('user_id', user.id).eq('month', month).eq('year', year).order('created_at')
@@ -221,7 +226,8 @@ export default async function BudgetsPage({
       .map(card => {
         const exceeded = (actualByCard[card.id] ?? 0) > (resolvedAmounts[card.id] ?? 0)
         card.exceeded_at = exceeded ? nowISO : null
-        return supabase.from('budget_cards').update({ exceeded_at: card.exceeded_at }).eq('id', card.id)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return (supabase as any).from('budget_cards').update({ exceeded_at: card.exceeded_at }).eq('id', card.id)
       })
   )
 
