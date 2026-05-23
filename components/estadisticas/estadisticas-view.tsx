@@ -159,7 +159,7 @@ export function EstadisticasView({ month, year, transactions, trendTransactions,
 
   // Top 5 individual expenses
   const topExpenses = filteredTx
-    .filter(t => t.type === 'expense')
+    .filter(t => t.type === 'expense' && t.category?.name !== 'Transferencia')
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 5)
 
