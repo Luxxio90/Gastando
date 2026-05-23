@@ -127,6 +127,7 @@ export interface CreditCard {
   user_id: string
   name: string
   network: CreditCardNetwork
+  account_id: string | null
   created_at: string
 }
 
@@ -141,6 +142,7 @@ export interface CreditCardMonth {
   paid_at: string | null
   account_id: string | null
   paid_amount: number | null
+  transaction_id: string | null
   created_at: string
   card?: CreditCard
 }

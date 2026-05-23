@@ -82,11 +82,11 @@ interface Props {
   year: number
 }
 
-type CardForm = { name: string; network: CreditCardNetwork }
+type CardForm = { name: string; network: CreditCardNetwork; account_id: string }
 type ItemForm = { description: string; installment_current: string; installment_total: string; amount: string }
 type PayForm = { account_id: string; amount: string }
 
-const emptyCardForm: CardForm = { name: '', network: 'visa' }
+const emptyCardForm: CardForm = { name: '', network: 'visa', account_id: '' }
 const emptyItemForm: ItemForm = { description: '', installment_current: '', installment_total: '', amount: '' }
 
 export function CreditCardsView({ cards: initialCards, months: initialMonths, items: initialItems, accounts, userId, month, year }: Props) {
@@ -139,18 +139,19 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
 
   // ── Card CRUD ──────────────────────────────────────────────────
   function openCreateCard() { setEditingCard(null); setCardForm(emptyCardForm); setCardDialog(true) }
-  function openEditCard(c: CC) { setEditingCard(c); setCardForm({ name: c.name, network: c.network }); setCardDialog(true) }
+  function openEditCard(c: CC) { setEditingCard(c); setCardForm({ name: c.name, network: c.network, account_id: c.account_id ?? '' }); setCardDialog(true) }
 
   async function handleSaveCard(e: React.FormEvent) {
     e.preventDefault()
     setCardLoading(true)
+    const cardPayload = { name: cardForm.name, network: cardForm.network, account_id: cardForm.account_id || null }
     if (editingCard) {
-      const { error } = await supabase.from('credit_cards').update({ name: cardForm.name, network: cardForm.network }).eq('id', editingCard.id)
+      const { error } = await supabase.from('credit_cards').update(cardPayload).eq('id', editingCard.id)
       if (error) { toast.error('Error al guardar'); setCardLoading(false); return }
-      setCards(prev => prev.map(c => c.id === editingCard.id ? { ...c, ...cardForm } : c))
+      setCards(prev => prev.map(c => c.id === editingCard.id ? { ...c, ...cardPayload } : c))
       toast.success('Tarjeta actualizada')
     } else {
-      const { data, error } = await supabase.from('credit_cards').insert({ user_id: userId, name: cardForm.name, network: cardForm.network }).select().single()
+      const { data, error } = await supabase.from('credit_cards').insert({ user_id: userId, ...cardPayload }).select().single()
       if (error || !data) { toast.error('Error al crear'); setCardLoading(false); return }
       setCards(prev => [...prev, data as CC])
       const { data: cm } = await supabase.from('credit_card_months').insert({ card_id: data.id, user_id: userId, month, year }).select().single()
@@ -170,8 +171,63 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
   }
 
   // ── Status toggle ──────────────────────────────────────────────
-  async function toggleStatus(cardMonthId: string, current: CreditCardStatus) {
+  async function toggleStatus(cardMonthId: string, current: CreditCardStatus, cardId?: string) {
     const next = current === 'pending' ? 'paid' : 'pending'
+
+    if (next === 'paid' && cardId) {
+      const card = cards.find(c => c.id === cardId)
+      if (card?.account_id) {
+        const total = cardTotal(cardId)
+        const account = accounts.find(a => a.id === card.account_id)
+        if (account && total > 0) {
+          let catId: string | null = null
+          const { data: cats } = await supabase.from('categories').select('id').eq('name', 'Tarjeta de crédito').eq('type', 'expense').or(`user_id.eq.${userId},is_default.eq.true`).limit(1)
+          if (cats && cats.length > 0) {
+            catId = cats[0].id
+          } else {
+            const { data: newCat } = await supabase.from('categories').insert({ user_id: userId, name: 'Tarjeta de crédito', icon: '💳', color: '#6366f1', type: 'expense', is_default: false }).select('id').single()
+            catId = newCat?.id ?? null
+          }
+          if (catId) {
+            const { data: tx } = await supabase.from('transactions').insert({
+              user_id: userId, account_id: card.account_id, category_id: catId,
+              type: 'expense', amount: total,
+              description: `Pago tarjeta: ${card.name}`,
+              date: new Date().toISOString().split('T')[0], notes: null,
+            }).select('id').single()
+            await Promise.all([
+              supabase.from('accounts').update({ balance: account.balance - total }).eq('id', card.account_id),
+              supabase.from('credit_card_months').update({
+                status: 'paid', paid_at: new Date().toISOString(),
+                account_id: card.account_id, paid_amount: total,
+                transaction_id: tx?.id ?? null,
+              }).eq('id', cardMonthId),
+            ])
+            setMonths(prev => prev.map(m => m.id === cardMonthId ? { ...m, status: 'paid' as CreditCardStatus, paid_amount: total, account_id: card.account_id, transaction_id: tx?.id ?? null } : m))
+            toast.success(`Pago de ${formatCurrency(total)} debitado de ${account.name}`)
+            return
+          }
+        }
+      }
+    }
+
+    if (next === 'pending') {
+      const cm = months.find(m => m.id === cardMonthId)
+      if (cm?.transaction_id && cm.account_id && cm.paid_amount) {
+        const account = accounts.find(a => a.id === cm.account_id)
+        await Promise.all([
+          supabase.from('transactions').delete().eq('id', cm.transaction_id),
+          account ? supabase.from('accounts').update({ balance: account.balance + cm.paid_amount }).eq('id', cm.account_id) : Promise.resolve(),
+          supabase.from('credit_card_months').update({
+            status: 'pending', paid_at: null, account_id: null, paid_amount: null, transaction_id: null,
+          }).eq('id', cardMonthId),
+        ])
+        setMonths(prev => prev.map(m => m.id === cardMonthId ? { ...m, status: 'pending' as CreditCardStatus, paid_at: null, account_id: null, paid_amount: null, transaction_id: null } : m))
+        toast.success('Pago revertido y saldo restaurado')
+        return
+      }
+    }
+
     const { error } = await supabase.from('credit_card_months').update({ status: next }).eq('id', cardMonthId)
     if (error) { toast.error('Error al actualizar estado'); return }
     setMonths(prev => prev.map(m => m.id === cardMonthId ? { ...m, status: next } : m))
@@ -230,7 +286,8 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
 
   // ── Payment ────────────────────────────────────────────────────
   function openPayDialog() {
-    setPayForm({ account_id: accounts[0]?.id ?? '', amount: selectedTotal.toString() })
+    const linkedId = selectedCard?.account_id ?? accounts[0]?.id ?? ''
+    setPayForm({ account_id: linkedId, amount: selectedTotal.toString() })
     setPayDialog(true)
   }
 
@@ -253,22 +310,21 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
     const { data: acc } = await supabase.from('accounts').select('balance').eq('id', payForm.account_id).single()
     if (!acc) { toast.error('Cuenta no encontrada'); setPayLoading(false); return }
 
-    const [r1, r2] = await Promise.all([
-      supabase.from('transactions').insert({
-        user_id: userId, account_id: payForm.account_id, category_id: catId,
-        type: 'expense', amount, description: `Pago tarjeta: ${selectedCard?.name}`,
-        date: new Date().toISOString().split('T')[0], notes: null,
-      }),
-      supabase.from('accounts').update({ balance: acc.balance - amount }).eq('id', payForm.account_id),
-    ])
-    if (r1.error || r2.error) { toast.error('Error al registrar el pago'); setPayLoading(false); return }
+    const { data: txData, error: txError } = await supabase.from('transactions').insert({
+      user_id: userId, account_id: payForm.account_id, category_id: catId,
+      type: 'expense', amount, description: `Pago tarjeta: ${selectedCard?.name}`,
+      date: new Date().toISOString().split('T')[0], notes: null,
+    }).select('id').single()
+    const r2 = await supabase.from('accounts').update({ balance: acc.balance - amount }).eq('id', payForm.account_id)
+    if (txError || r2.error) { toast.error('Error al registrar el pago'); setPayLoading(false); return }
 
     await supabase.from('credit_card_months').update({
       status: 'paid', paid_at: new Date().toISOString(),
       account_id: payForm.account_id, paid_amount: amount,
+      transaction_id: txData?.id ?? null,
     }).eq('id', selectedMonth.id)
 
-    setMonths(prev => prev.map(m => m.id === selectedMonth.id ? { ...m, status: 'paid' as CreditCardStatus, paid_amount: amount, account_id: payForm.account_id } : m))
+    setMonths(prev => prev.map(m => m.id === selectedMonth.id ? { ...m, status: 'paid' as CreditCardStatus, paid_amount: amount, account_id: payForm.account_id, transaction_id: txData?.id ?? null } : m))
     toast.success(`Pago de ${formatCurrency(amount)} registrado`)
     setPayDialog(false); setPayLoading(false)
   }
@@ -375,7 +431,7 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
                     <div className="text-right">
                       <p className="text-white/50 text-xs mb-0.5">Estado</p>
                       <button
-                        onClick={e => { e.stopPropagation(); cm && toggleStatus(cm.id, cm.status as CreditCardStatus) }}
+                        onClick={e => { e.stopPropagation(); cm && toggleStatus(cm.id, cm.status as CreditCardStatus, card.id) }}
                         className={cn(
                           'text-xs font-semibold px-2.5 py-1 rounded-full',
                           isPaid ? 'bg-[#00CB96]/25 text-[#00CB96]' : 'bg-[#FF4D6D]/25 text-[#FF4D6D]'
@@ -459,7 +515,7 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
                   <div className="flex items-center gap-3">
                     <NetworkLogo network={selectedCard.network} />
                     <button
-                      onClick={() => toggleStatus(selectedMonth.id, selectedMonth.status as CreditCardStatus)}
+                      onClick={() => toggleStatus(selectedMonth.id, selectedMonth.status as CreditCardStatus, selectedCard?.id)}
                       className={cn(
                         'text-xs font-semibold px-2.5 py-1 rounded-full',
                         selectedMonth.status === 'paid'
@@ -576,6 +632,23 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
                   <NetworkLogo network={cardForm.network} />
                 </div>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Cuenta para pagar <span className="text-muted-foreground font-normal text-xs">(opcional)</span></Label>
+              <Select value={cardForm.account_id} onValueChange={v => setCardForm({ ...cardForm, account_id: v === '__none__' ? '' : v })}>
+                <SelectTrigger className="w-full">
+                  <span className={cardForm.account_id ? 'text-sm' : 'text-sm text-muted-foreground'}>
+                    {accounts.find(a => a.id === cardForm.account_id)?.name ?? 'Sin cuenta vinculada'}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Sin cuenta vinculada</SelectItem>
+                  {accounts.map(a => (
+                    <SelectItem key={a.id} value={a.id}>{a.name} · {formatCurrency(a.balance, a.currency)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">Al marcar como pagada se debitará automáticamente de esta cuenta.</p>
             </div>
             <div className="flex gap-2 pt-2">
               <Button type="button" variant="outline" className="flex-1" onClick={() => setCardDialog(false)}>Cancelar</Button>

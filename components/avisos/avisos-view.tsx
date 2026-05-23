@@ -24,7 +24,7 @@ type RawFixed = {
 type RawCard = {
   id: string
   due_date: string
-  card: { id: string; name: string; network: CreditCardNetwork }
+  card: { id: string; name: string; network: CreditCardNetwork; account_id: string | null }
   total: number
 }
 
@@ -106,11 +106,13 @@ type FixedAlert = {
 type CardAlert = {
   type: 'card'
   id: string
+  cardId: string
   name: string
   network: CreditCardNetwork
   dueDate: string
   daysLeft: number
   total: number
+  accountId: string | null
 }
 
 type Alert = FixedAlert | CardAlert
@@ -119,10 +121,12 @@ function AlertCardInner({
   alert,
   marking,
   onPay,
+  onPayCard,
 }: {
   alert: Alert
   marking: boolean
   onPay: (alert: FixedAlert) => void
+  onPayCard: (alert: CardAlert) => void
 }) {
   const color    = urgencyColor(alert.daysLeft)
   const label    = urgencyLabel(alert.daysLeft)
@@ -210,6 +214,17 @@ function AlertCardInner({
                   <Check className="h-3 w-3 mr-1" />
                   {marking ? 'Guardando...' : 'Pagar'}
                 </Button>
+              ) : (alert as CardAlert).accountId ? (
+                <Button
+                  size="sm"
+                  disabled={marking}
+                  onClick={(e) => { e.stopPropagation(); onPayCard(alert as CardAlert) }}
+                  className="text-xs font-semibold h-7 px-3"
+                  style={{ backgroundColor: '#00CB9620', color: '#00CB96', border: '1px solid #00CB9645' }}
+                >
+                  <Check className="h-3 w-3 mr-1" />
+                  {marking ? 'Guardando...' : 'Pagar'}
+                </Button>
               ) : (
                 <span className="inline-flex items-center gap-1 text-xs font-semibold h-7 px-3 rounded-md border border-input text-muted-foreground">
                   Ver tarjeta <ChevronRight className="h-3.5 w-3.5 ml-1" />
@@ -223,17 +238,17 @@ function AlertCardInner({
   )
 }
 
-function AlertCard({ alert, marking, onPay }: { alert: Alert; marking: boolean; onPay: (alert: FixedAlert) => void }) {
-  if (alert.type === 'card') {
+function AlertCard({ alert, marking, onPay, onPayCard }: { alert: Alert; marking: boolean; onPay: (alert: FixedAlert) => void; onPayCard: (alert: CardAlert) => void }) {
+  if (alert.type === 'card' && !(alert as CardAlert).accountId) {
     return (
       <a href="/tarjetas" className="block bg-card border border-border rounded-xl overflow-hidden">
-        <AlertCardInner alert={alert} marking={marking} onPay={onPay} />
+        <AlertCardInner alert={alert} marking={marking} onPay={onPay} onPayCard={onPayCard} />
       </a>
     )
   }
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
-      <AlertCardInner alert={alert} marking={marking} onPay={onPay} />
+      <AlertCardInner alert={alert} marking={marking} onPay={onPay} onPayCard={onPayCard} />
     </div>
   )
 }
@@ -265,6 +280,7 @@ export function AvisosView({ fixedExpenses, cardMonths, exceededBudgets, userId,
   const [paid, setPaid]           = useState<Set<string>>(new Set())
   const [marking, setMarking]     = useState<Set<string>>(new Set())
   const [pendingPay, setPendingPay] = useState<PendingPayItem | null>(null)
+  const supabase = createClient()
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -287,19 +303,23 @@ export function AvisosView({ fixedExpenses, cardMonths, exceededBudgets, userId,
       daysLeft:   item.due_day - todayDay,
     }))
 
-  const cardAlerts: Alert[] = cardMonths.map(cm => {
-    const dueDate = parseDueDate(cm.due_date)
-    const daysLeft = Math.round((dueDate.getTime() - today.getTime()) / 86_400_000)
-    return {
-      type:    'card',
-      id:      cm.id,
-      name:    cm.card.name,
-      network: cm.card.network,
-      dueDate: cm.due_date,
-      daysLeft,
-      total:   cm.total,
-    }
-  })
+  const cardAlerts: Alert[] = cardMonths
+    .filter(cm => !paid.has('card:' + cm.id))
+    .map(cm => {
+      const dueDate = parseDueDate(cm.due_date)
+      const daysLeft = Math.round((dueDate.getTime() - today.getTime()) / 86_400_000)
+      return {
+        type:      'card',
+        id:        cm.id,
+        cardId:    cm.card.id,
+        name:      cm.card.name,
+        network:   cm.card.network,
+        dueDate:   cm.due_date,
+        daysLeft,
+        total:     cm.total,
+        accountId: cm.card.account_id ?? null,
+      }
+    })
 
   // Sort: most overdue first, then by closest due date
   const allAlerts = [...fixedAlerts, ...cardAlerts].sort((a, b) => a.daysLeft - b.daysLeft)
@@ -307,6 +327,44 @@ export function AvisosView({ fixedExpenses, cardMonths, exceededBudgets, userId,
   const totalPending = allAlerts.reduce(
     (s, a) => s + (a.type === 'fixed' ? a.amount : a.total), 0
   )
+
+  async function handlePayCard(alert: CardAlert) {
+    if (!alert.accountId) return
+    const account = accounts.find(a => a.id === alert.accountId)
+    if (!account) return
+    setMarking(prev => new Set([...prev, alert.id]))
+
+    let catId: string | null = null
+    const { data: cats } = await supabase.from('categories').select('id').eq('name', 'Tarjeta de crédito').eq('type', 'expense').or(`user_id.eq.${userId},is_default.eq.true`).limit(1)
+    if (cats && cats.length > 0) {
+      catId = cats[0].id
+    } else {
+      const { data: newCat } = await supabase.from('categories').insert({ user_id: userId, name: 'Tarjeta de crédito', icon: '💳', color: '#6366f1', type: 'expense', is_default: false }).select('id').single()
+      catId = newCat?.id ?? null
+    }
+
+    if (!catId) { toast.error('Error al preparar categoría'); setMarking(prev => { const s = new Set(prev); s.delete(alert.id); return s }); return }
+
+    const { data: txData, error: txError } = await supabase.from('transactions').insert({
+      user_id: userId, account_id: alert.accountId, category_id: catId,
+      type: 'expense', amount: alert.total,
+      description: `Pago tarjeta: ${alert.name}`,
+      date: new Date().toISOString().split('T')[0], notes: null,
+    }).select('id').single()
+    const [r2, r3] = await Promise.all([
+      supabase.from('accounts').update({ balance: account.balance - alert.total }).eq('id', alert.accountId),
+      supabase.from('credit_card_months').update({
+        status: 'paid', paid_at: new Date().toISOString(),
+        account_id: alert.accountId, paid_amount: alert.total,
+        transaction_id: txData?.id ?? null,
+      }).eq('id', alert.id),
+    ])
+
+    setMarking(prev => { const s = new Set(prev); s.delete(alert.id); return s })
+    if (txError || r2.error || r3.error) { toast.error('Error al registrar el pago'); return }
+    setPaid(prev => new Set([...prev, 'card:' + alert.id]))
+    toast.success(`Pago de ${formatCurrency(alert.total)} debitado de ${account.name}`)
+  }
 
   function openPayDialog(alert: FixedAlert) {
     const raw = fixedExpenses.find(f => f.id === alert.id)
@@ -404,6 +462,7 @@ export function AvisosView({ fixedExpenses, cardMonths, exceededBudgets, userId,
           alert={alert}
           marking={marking.has(alert.id)}
           onPay={openPayDialog}
+          onPayCard={handlePayCard}
         />
       ))}
 

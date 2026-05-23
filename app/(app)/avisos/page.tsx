@@ -30,7 +30,7 @@ export default async function AvisosPage() {
   // Fetch pending credit card months with a due_date set (current month)
   const { data: rawMonths } = await supabase
     .from('credit_card_months')
-    .select('*, card:credit_cards(id,name,network)')
+    .select('*, card:credit_cards(id,name,network,account_id)')
     .eq('user_id', user.id)
     .eq('month', month)
     .eq('year', year)
