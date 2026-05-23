@@ -3,17 +3,25 @@ import { redirect } from 'next/navigation'
 import { ExpenseChart } from '@/components/dashboard/expense-chart'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { DashboardCards } from '@/components/dashboard/dashboard-cards'
+import { MonthNav } from '@/components/dashboard/month-nav'
 import { ErrorState } from '@/components/ui/error-state'
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string; year?: string }>
+}) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-
   if (!user) redirect('/auth/login')
 
-  const now = new Date()
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString()
+  const params   = await searchParams
+  const now      = new Date()
+  const month    = parseInt(params.month ?? String(now.getMonth() + 1))
+  const year     = parseInt(params.year  ?? String(now.getFullYear()))
+
+  const firstDay = new Date(year, month - 1, 1).toISOString()
+  const lastDay  = new Date(year, month, 0, 23, 59, 59).toISOString()
 
   const [
     { data: transactions, error: txError },
@@ -40,9 +48,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
+      <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground text-sm">{now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}</p>
+        <MonthNav month={month} year={year} />
       </div>
 
       <DashboardCards
