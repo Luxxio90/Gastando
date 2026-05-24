@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   ArrowLeftRight, BarChart2, Bell, ChevronRight, CreditCard,
-  LayoutDashboard, LogOut, Menu, PiggyBank, Settings, Wallet, X,
+  LayoutDashboard, LogOut, Menu, PiggyBank, Settings, TrendingUp, Wallet, X,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -25,6 +25,7 @@ const NAV_ITEMS = [
 const DRAWER_ITEMS = [
   { href: '/estadisticas', icon: BarChart2,  label: 'Estadísticas', description: 'Gastos por categoría y tendencias', color: '#3BB2F6' },
   { href: '/tarjetas',     icon: Wallet,     label: 'Tarjetas',     description: 'Resumen de tarjetas de crédito',    color: '#FF4D6D' },
+  { href: '/inversiones',  icon: TrendingUp, label: 'Inversiones',  description: 'Portafolio y rendimiento',          color: '#10b981' },
   { href: '/avisos',       icon: Bell,       label: 'Avisos',       description: 'Vencimientos próximos',             color: '#F59E0B' },
   { href: '/settings',     icon: Settings,   label: 'Ajustes',      description: 'Cuentas, categorías y más',         color: '#7C4DFF' },
 ]

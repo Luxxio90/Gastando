@@ -15,6 +15,7 @@ import {
   Settings,
   Bell,
   BarChart2,
+  TrendingUp,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -25,6 +26,7 @@ const navItems = [
   { href: '/budgets',      label: 'Distribución',  icon: PiggyBank },
   { href: '/estadisticas', label: 'Estadísticas',  icon: BarChart2 },
   { href: '/tarjetas',     label: 'Tarjetas',      icon: Wallet },
+  { href: '/inversiones',  label: 'Inversiones',   icon: TrendingUp },
   { href: '/avisos',       label: 'Avisos',        icon: Bell },
   { href: '/settings',     label: 'Ajustes',       icon: Settings },
 ]
