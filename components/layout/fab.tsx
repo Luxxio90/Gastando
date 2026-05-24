@@ -49,7 +49,7 @@ export function FloatingActionButton({ userId }: { userId: string }) {
         <div className="fixed inset-0 z-40 md:hidden" onClick={() => setOpen(false)} />
       )}
 
-      <div className="fixed bottom-20 right-4 z-50 flex flex-col items-end gap-3 md:hidden">
+      <div className="fixed bottom-20 right-4 z-50 flex flex-col items-end gap-3 md:hidden" style={{ pointerEvents: 'none' }}>
         {/* Speed dial */}
         <div className="flex flex-col items-end gap-2.5">
           {ACTIONS.map((action, i) => (
@@ -66,7 +66,7 @@ export function FloatingActionButton({ userId }: { userId: string }) {
                 transitionDelay: open
                   ? `${i * 55}ms`
                   : `${(ACTIONS.length - 1 - i) * 30}ms`,
-                pointerEvents: open ? 'auto' : 'none',
+                pointerEvents: open ? 'auto' : 'none', // container is none, so 'auto' here re-enables
               }}
             >
               <span className="text-sm font-bold" style={{ color: action.color }}>
@@ -90,6 +90,7 @@ export function FloatingActionButton({ userId }: { userId: string }) {
           onClick={() => setOpen(!open)}
           className="h-14 w-14 rounded-2xl shadow-xl flex items-center justify-center transition-all duration-300"
           style={{
+            pointerEvents: 'auto',
             background: open
               ? 'hsl(var(--muted))'
               : 'linear-gradient(135deg, #7C4DFF 0%, #9C6DFF 100%)',
