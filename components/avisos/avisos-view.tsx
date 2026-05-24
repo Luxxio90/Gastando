@@ -41,6 +41,8 @@ interface Props {
   exceededBudgets: ExceededBudget[]
   userId: string
   accounts: Account[]
+  month: number
+  year: number
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -276,7 +278,7 @@ function EmptyState() {
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 
-export function AvisosView({ fixedExpenses, cardMonths, exceededBudgets, userId, accounts }: Props) {
+export function AvisosView({ fixedExpenses, cardMonths, exceededBudgets, userId, accounts, month, year }: Props) {
   const [paid, setPaid]           = useState<Set<string>>(new Set())
   const [marking, setMarking]     = useState<Set<string>>(new Set())
   const [pendingPay, setPendingPay] = useState<PendingPayItem | null>(null)
@@ -284,24 +286,27 @@ export function AvisosView({ fixedExpenses, cardMonths, exceededBudgets, userId,
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const todayDay = today.getDate()
 
   // Build unified alert list
   const fixedAlerts: Alert[] = fixedExpenses
     .filter(item => !paid.has(item.id))
-    .map(item => ({
-      type:       'fixed',
-      id:         item.id,
-      name:       item.category?.name ?? 'Sin categoría',
-      icon:       item.category?.icon ?? '📋',
-      iconColor:  item.category?.color ?? '#7C4DFF',
-      description: item.description,
-      groupName:  item.group?.name ?? null,
-      groupColor: item.group?.color ?? null,
-      amount:     item.amount,
-      dueDay:     item.due_day,
-      daysLeft:   item.due_day - todayDay,
-    }))
+    .map(item => {
+      const dueDate = new Date(year, month - 1, item.due_day)
+      const daysLeft = Math.round((dueDate.getTime() - today.getTime()) / 86_400_000)
+      return {
+        type:       'fixed',
+        id:         item.id,
+        name:       item.category?.name ?? 'Sin categoría',
+        icon:       item.category?.icon ?? '📋',
+        iconColor:  item.category?.color ?? '#7C4DFF',
+        description: item.description,
+        groupName:  item.group?.name ?? null,
+        groupColor: item.group?.color ?? null,
+        amount:     item.amount,
+        dueDay:     item.due_day,
+        daysLeft,
+      }
+    })
 
   const cardAlerts: Alert[] = cardMonths
     .filter(cm => !paid.has('card:' + cm.id))

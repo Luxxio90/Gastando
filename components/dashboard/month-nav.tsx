@@ -5,14 +5,14 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
-export function MonthNav({ month, year }: { month: number; year: number }) {
+export function MonthNav({ month, year, basePath = '/dashboard' }: { month: number; year: number; basePath?: string }) {
   const router = useRouter()
 
   function navigate(dir: -1 | 1) {
     let m = month + dir, y = year
     if (m < 1) { m = 12; y-- }
     if (m > 12) { m = 1; y++ }
-    router.push(`/dashboard?month=${m}&year=${y}`)
+    router.push(`${basePath}?month=${m}&year=${y}`)
   }
 
   const now = new Date()

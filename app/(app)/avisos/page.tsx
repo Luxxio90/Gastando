@@ -1,23 +1,28 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { AvisosView } from '@/components/avisos/avisos-view'
+import { MonthNav } from '@/components/dashboard/month-nav'
 import { ErrorState } from '@/components/ui/error-state'
 
-export default async function AvisosPage() {
+export default async function AvisosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string; year?: string }>
+}) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const now = new Date()
-  const month = now.getMonth() + 1
-  const year = now.getFullYear()
+  const params = await searchParams
+  const now    = new Date()
+  const month  = parseInt(params.month ?? String(now.getMonth() + 1))
+  const year   = parseInt(params.year  ?? String(now.getFullYear()))
 
   const { data: accounts, error: accError } = await supabase
     .from('accounts').select('*').eq('user_id', user.id).order('name')
 
   if (accError) return <ErrorState title="Error al cargar los avisos" />
 
-  // Fetch pending fixed expenses with a due_day set (current month)
   const { data: rawFixed } = await supabase
     .from('fixed_expense_items')
     .select('*, category:categories(id,name,icon,color), group:fixed_expense_groups(id,name,color)')
@@ -27,7 +32,6 @@ export default async function AvisosPage() {
     .eq('status', 'pending')
     .not('due_day', 'is', null)
 
-  // Fetch pending credit card months with a due_date set (current month)
   const { data: rawMonths } = await supabase
     .from('credit_card_months')
     .select('*, card:credit_cards(id,name,network,account_id)')
@@ -37,7 +41,6 @@ export default async function AvisosPage() {
     .eq('status', 'pending')
     .not('due_date', 'is', null)
 
-  // Fetch items to compute totals per card month
   const monthIds = (rawMonths ?? []).map((m: any) => m.id as string)
   const { data: rawItems } = monthIds.length > 0
     ? await supabase.from('credit_card_items').select('card_month_id, amount').in('card_month_id', monthIds)
@@ -51,7 +54,6 @@ export default async function AvisosPage() {
 
   const cardMonths = (rawMonths ?? []).map((m: any) => ({ ...m, total: cardTotals[m.id] ?? 0 }))
 
-  // Fetch exceeded budget cards for current month
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: rawExceeded } = await (supabase as any)
     .from('budget_cards')
@@ -62,13 +64,11 @@ export default async function AvisosPage() {
     .not('exceeded_at', 'is', null)
     .not('track_account_id', 'is', null)
 
-  const monthLabel = now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
-
   return (
     <div className="p-4 pb-24 max-w-2xl mx-auto space-y-4">
-      <div>
+      <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Avisos</h1>
-        <p className="text-sm text-muted-foreground mt-0.5 capitalize">{monthLabel}</p>
+        <MonthNav month={month} year={year} basePath="/avisos" />
       </div>
       <AvisosView
         fixedExpenses={(rawFixed ?? []) as any[]}
@@ -76,6 +76,8 @@ export default async function AvisosPage() {
         exceededBudgets={(rawExceeded ?? []) as any[]}
         userId={user.id}
         accounts={(accounts ?? []) as any[]}
+        month={month}
+        year={year}
       />
     </div>
   )
