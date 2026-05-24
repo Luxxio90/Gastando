@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/u
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/utils'
 import type { CreditCard as CC, CreditCardMonth, CreditCardItem, CreditCardNetwork, CreditCardStatus, Account } from '@/types'
+import { CreditCardChart } from './credit-card-chart'
 
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
@@ -80,6 +81,8 @@ interface Props {
   userId: string
   month: number
   year: number
+  historyMonths: CreditCardMonth[]
+  historyItems: { card_month_id: string; amount: number }[]
 }
 
 type CardForm = { name: string; network: CreditCardNetwork; account_id: string }
@@ -89,7 +92,7 @@ type PayForm = { account_id: string; amount: string }
 const emptyCardForm: CardForm = { name: '', network: 'visa', account_id: '' }
 const emptyItemForm: ItemForm = { description: '', installment_current: '', installment_total: '', amount: '' }
 
-export function CreditCardsView({ cards: initialCards, months: initialMonths, items: initialItems, accounts, userId, month, year }: Props) {
+export function CreditCardsView({ cards: initialCards, months: initialMonths, items: initialItems, accounts, userId, month, year, historyMonths, historyItems }: Props) {
   const router = useRouter()
   const supabase = createClient()
 
@@ -498,6 +501,15 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
           )}
         </div>
       )}
+
+      {/* Chart */}
+      <CreditCardChart
+        cards={cards}
+        historyMonths={historyMonths}
+        historyItems={historyItems}
+        month={month}
+        year={year}
+      />
 
       {/* Detail dialog */}
       <Dialog open={detailDialog} onOpenChange={v => { if (!v) setDetailDialog(false) }}>

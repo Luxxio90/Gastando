@@ -40,6 +40,8 @@ export default async function TarjetasPage({
         userId={user.id}
         month={month}
         year={year}
+        historyMonths={[]}
+        historyItems={[]}
       />
     )
   }
@@ -128,8 +130,32 @@ export default async function TarjetasPage({
 
   // Fetch all items for this month's card_months
   const allMonthIds = allMonths.map(m => m.id)
-  const { data: items } = allMonthIds.length > 0
-    ? await supabase.from('credit_card_items').select('*').in('card_month_id', allMonthIds).order('created_at')
+
+  // Compute last 6 months for the chart
+  const chartPeriods = Array.from({ length: 6 }, (_, i) => {
+    let m = month - (5 - i)
+    let y = year
+    while (m <= 0) { m += 12; y-- }
+    return { month: m, year: y }
+  })
+
+  const [{ data: items }, { data: histMonths }] = await Promise.all([
+    allMonthIds.length > 0
+      ? supabase.from('credit_card_items').select('*').in('card_month_id', allMonthIds).order('created_at')
+      : { data: [] },
+    allCards.length > 0
+      ? supabase
+          .from('credit_card_months')
+          .select('id, card_id, month, year, status, paid_at, account_id, paid_amount, transaction_id, due_date, user_id, created_at')
+          .eq('user_id', user.id)
+          .in('card_id', allCards.map(c => c.id))
+          .or(chartPeriods.map(p => `and(month.eq.${p.month},year.eq.${p.year})`).join(','))
+      : { data: [] },
+  ])
+
+  const histMonthIds = (histMonths ?? []).map((m: any) => m.id as string)
+  const { data: histItems } = histMonthIds.length > 0
+    ? await supabase.from('credit_card_items').select('card_month_id, amount').in('card_month_id', histMonthIds)
     : { data: [] }
 
   return (
@@ -142,6 +168,8 @@ export default async function TarjetasPage({
       userId={user.id}
       month={month}
       year={year}
+      historyMonths={(histMonths ?? []) as CreditCardMonth[]}
+      historyItems={(histItems ?? []) as { card_month_id: string; amount: number }[]}
     />
   )
 }
