@@ -599,7 +599,7 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
 
       {/* Card dialog */}
       <Dialog open={cardDialog} onOpenChange={v => { if (!v) setCardDialog(false) }}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="sm:max-w-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingCard ? 'Editar tarjeta' : 'Nueva tarjeta'}</DialogTitle>
           </DialogHeader>
