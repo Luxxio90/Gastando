@@ -56,12 +56,12 @@ export function CreditCardChart({ cards, historyMonths, historyItems, month, yea
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
           <XAxis
             dataKey="label"
-            tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+            tick={{ fontSize: 10, fill: '#9ca3af' }}
             axisLine={false}
             tickLine={false}
           />
           <YAxis
-            tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+            tick={{ fontSize: 10, fill: '#9ca3af' }}
             axisLine={false}
             tickLine={false}
             tickFormatter={v =>

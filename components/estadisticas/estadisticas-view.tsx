@@ -518,7 +518,7 @@ export function EstadisticasView({ month, year, transactions, trendTransactions,
             <BarChart data={trendData} barGap={3} barCategoryGap="30%">
               <XAxis
                 dataKey="name"
-                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                tick={{ fontSize: 11, fill: '#9ca3af' }}
                 axisLine={false} tickLine={false}
               />
               <YAxis hide />
