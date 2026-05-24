@@ -17,7 +17,7 @@ export default async function AccountsPage() {
   if (error) return <ErrorState title="Error al cargar las cuentas" />
 
   return (
-    <div className="p-6">
+    <div className="p-6 pb-28">
       <AccountsList accounts={accounts} userId={user.id} />
     </div>
   )
