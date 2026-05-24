@@ -16,6 +16,7 @@ import {
   Bell,
   BarChart2,
   TrendingUp,
+  Calculator,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -28,6 +29,7 @@ const navItems = [
   { href: '/tarjetas',     label: 'Tarjetas',      icon: Wallet },
   { href: '/inversiones',  label: 'Inversiones',   icon: TrendingUp },
   { href: '/avisos',       label: 'Avisos',        icon: Bell },
+  { href: '/simulador',    label: 'Simulador',     icon: Calculator },
   { href: '/settings',     label: 'Ajustes',       icon: Settings },
 ]
 
