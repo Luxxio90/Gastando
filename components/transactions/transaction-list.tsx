@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Plus, MoreVertical, Pencil, Trash2, Search, X } from 'lucide-react'
+import { ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Plus, MoreVertical, Pencil, Trash2, Search, X, ChevronDown } from 'lucide-react'
 import { TransactionDialog } from './transaction-dialog'
 import { RecurringList } from './recurring-list'
 import { createClient } from '@/lib/supabase/client'
@@ -30,6 +30,8 @@ export function TransactionList({ transactions, accounts, categories, userId, in
   const [dialogOpen, setDialogOpen]       = useState(false)
   const [editing, setEditing]             = useState<Transaction | null>(null)
   const [filter, setFilter]               = useState<'all' | 'income' | 'expense'>(initialFilter)
+  const [catFilter, setCatFilter]         = useState('')
+  const [accFilter, setAccFilter]         = useState('')
   const [deleting, setDeleting]           = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<Transaction | null>(null)
   const [search, setSearch]               = useState('')
@@ -43,6 +45,8 @@ export function TransactionList({ transactions, accounts, categories, userId, in
   const q = search.trim().toLowerCase()
   const filtered = allLoaded.filter(t => {
     if (filter !== 'all' && t.type !== filter) return false
+    if (catFilter && t.category_id !== catFilter) return false
+    if (accFilter && t.account_id !== accFilter) return false
     if (!q) return true
     return (
       t.description?.toLowerCase().includes(q) ||
@@ -75,6 +79,14 @@ export function TransactionList({ transactions, accounts, categories, userId, in
   function openEdit(t: Transaction) {
     setEditing(t)
     setTimeout(() => setDialogOpen(true), 50)
+  }
+
+  function handleSaved(data: { id: string; type: 'income' | 'expense'; amount: number; description: string; date: string; account_id: string; category_id: string; notes: string | null }) {
+    const account  = accounts.find(a => a.id === data.account_id)
+    const category = categories.find(c => c.id === data.category_id)
+    setAllLoaded(prev => prev.map(t =>
+      t.id === data.id ? { ...t, ...data, account, category } : t
+    ))
   }
 
   async function handleDelete(t: Transaction) {
@@ -154,11 +166,11 @@ export function TransactionList({ transactions, accounts, categories, userId, in
       </div>
 
       {/* Filter chips */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {FILTERS.map(({ key, label }) => (
           <button
             key={key}
-            onClick={() => setFilter(key)}
+            onClick={() => { setFilter(key); setCatFilter('') }}
             className="px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
             style={filter === key
               ? { background: '#7C4DFF20', borderColor: '#7C4DFF60', color: '#7C4DFF' }
@@ -168,6 +180,72 @@ export function TransactionList({ transactions, accounts, categories, userId, in
             {label}
           </button>
         ))}
+
+        {/* Categoría dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
+              style={catFilter
+                ? { background: '#3BB2F620', borderColor: '#3BB2F660', color: '#3BB2F6' }
+                : { background: 'transparent', borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }
+              }
+            >
+              {catFilter ? categories.find(c => c.id === catFilter)?.name ?? 'Categoría' : 'Categoría'}
+              <ChevronDown className="h-3 w-3" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto">
+            {catFilter && (
+              <>
+                <DropdownMenuItem onClick={() => setCatFilter('')}>
+                  <X className="h-3.5 w-3.5 mr-2" /> Todas las categorías
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
+            {categories
+              .filter(c => filter === 'all' ? true : c.type === filter)
+              .map(c => (
+                <DropdownMenuItem key={c.id} onClick={() => setCatFilter(c.id)}>
+                  <span className="mr-2">{c.icon}</span> {c.name}
+                </DropdownMenuItem>
+              ))
+            }
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Cuenta dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
+              style={accFilter
+                ? { background: '#00CB9620', borderColor: '#00CB9660', color: '#00CB96' }
+                : { background: 'transparent', borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }
+              }
+            >
+              {accFilter ? accounts.find(a => a.id === accFilter)?.name ?? 'Cuenta' : 'Cuenta'}
+              <ChevronDown className="h-3 w-3" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            {accFilter && (
+              <>
+                <DropdownMenuItem onClick={() => setAccFilter('')}>
+                  <X className="h-3.5 w-3.5 mr-2" /> Todas las cuentas
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
+            {accounts.map(a => (
+              <DropdownMenuItem key={a.id} onClick={() => setAccFilter(a.id)}>
+                <div className="h-2.5 w-2.5 rounded-full mr-2 flex-shrink-0" style={{ backgroundColor: a.color }} />
+                {a.name}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <Card>
@@ -315,6 +393,7 @@ export function TransactionList({ transactions, accounts, categories, userId, in
         categories={categories}
         userId={userId}
         editingTransaction={editing}
+        onSaved={handleSaved}
       />
     </div>
   )

@@ -22,6 +22,7 @@ interface Props {
   defaultType?: 'income' | 'expense'
   defaultAccountId?: string
   editingTransaction?: Transaction | null
+  onSaved?: (data: { id: string; type: 'income' | 'expense'; amount: number; description: string; date: string; account_id: string; category_id: string; notes: string | null }) => void
 }
 
 const emptyForm = (type: 'income' | 'expense', accountId: string) => ({
@@ -37,7 +38,7 @@ const emptyForm = (type: 'income' | 'expense', accountId: string) => ({
 export function TransactionDialog({
   open, onClose, accounts, categories, userId,
   defaultType = 'expense', defaultAccountId = '',
-  editingTransaction,
+  editingTransaction, onSaved,
 }: Props) {
   const router = useRouter()
   const supabase = createClient()
@@ -76,10 +77,32 @@ export function TransactionDialog({
     setLoading(true)
     const amount = parseFloat(form.amount)
 
+    if (isEditing) {
+      const editPayload = {
+        type: form.type,
+        amount,
+        description: form.description,
+        date: form.date,
+        account_id: form.account_id,
+        category_id: form.category_id,
+        notes: form.notes || null,
+      }
+      const { error } = await supabase.from('transactions').update(editPayload).eq('id', editingTransaction!.id)
+      if (error) {
+        toast.error('Error al guardar: ' + error.message)
+      } else {
+        onSaved?.({ id: editingTransaction!.id, ...editPayload })
+        toast.success('Transacción actualizada')
+        onClose()
+        router.refresh()
+      }
+      setLoading(false)
+      return
+    }
+
     let recurringId: string | null = null
 
-    // Si es nueva y tiene recurrencia activada, crear la plantilla primero
-    if (!isEditing && recurring) {
+    if (recurring) {
       const { data: rt, error: rtError } = await supabase
         .from('recurring_transactions')
         .insert({
@@ -111,11 +134,7 @@ export function TransactionDialog({
       recurring_transaction_id: recurringId,
     }
 
-    if (isEditing) {
-      const { error } = await supabase.from('transactions').update(payload).eq('id', editingTransaction!.id)
-      if (error) toast.error('Error al guardar: ' + error.message)
-      else { toast.success('Transacción actualizada'); onClose(); router.refresh() }
-    } else {
+    {
       const { error } = await supabase.from('transactions').insert(payload)
       if (error) toast.error('Error al guardar: ' + error.message)
       else { toast.success(recurring ? 'Transacción registrada y recurrente creada' : 'Transacción registrada'); onClose(); router.refresh() }
