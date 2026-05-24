@@ -12,7 +12,8 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { LogOut, User, Mail, Shield, Plus, MoreVertical } from 'lucide-react'
+import { LogOut, User, Mail, Shield, Plus, MoreVertical, FileText } from 'lucide-react'
+import Link from 'next/link'
 import { toast } from 'sonner'
 import { NotificationsToggle } from './notifications-toggle'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
@@ -548,6 +549,24 @@ export function SettingsView({ user, categories: initialCategories, expenseTypes
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Legal */}
+      <Card>
+        <CardHeader><CardTitle className="text-base">Legal</CardTitle></CardHeader>
+        <CardContent className="space-y-1 p-4 pt-0">
+          <Link href="/privacidad" className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-muted/50 transition-colors">
+            <FileText className="h-4 w-4 text-muted-foreground/60 flex-shrink-0" />
+            <span className="text-sm text-muted-foreground">Política de Privacidad</span>
+          </Link>
+          <Link href="/terminos" className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-muted/50 transition-colors">
+            <FileText className="h-4 w-4 text-muted-foreground/60 flex-shrink-0" />
+            <span className="text-sm text-muted-foreground">Términos de Uso</span>
+          </Link>
+          <div className="pt-2 px-2">
+            <p className="text-[11px] text-muted-foreground/40">Gastando v1.0 · Mayo 2026</p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

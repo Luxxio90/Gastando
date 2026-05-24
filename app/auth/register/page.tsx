@@ -143,6 +143,13 @@ export default function RegisterPage() {
             </Link>
           </p>
         </div>
+
+        <p className="text-center text-[11px] text-muted-foreground/50 mt-5">
+          Al registrarte aceptás nuestros{' '}
+          <Link href="/terminos" className="underline hover:text-muted-foreground transition-colors">Términos de Uso</Link>
+          {' '}y{' '}
+          <Link href="/privacidad" className="underline hover:text-muted-foreground transition-colors">Política de Privacidad</Link>
+        </p>
       </div>
     </div>
   )
