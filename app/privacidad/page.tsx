@@ -99,7 +99,7 @@ export default function PrivacidadPage() {
           <Link href="/terminos" className="hover:text-foreground transition-colors" style={{ color: '#7C4DFF' }}>
             Términos de Uso
           </Link>
-          <Link href="/auth/login" className="hover:text-foreground transition-colors">
+          <Link href="/dashboard" className="hover:text-foreground transition-colors">
             Volver al inicio
           </Link>
         </div>
