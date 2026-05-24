@@ -120,11 +120,32 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    /* Remove iOS gray flash on tap */
+    -webkit-tap-highlight-color: transparent;
   }
   body {
     @apply bg-background text-foreground;
+    /* Prevent overscroll bounce on iOS */
+    overscroll-behavior: none;
   }
   html {
     @apply font-sans;
+  }
+
+  /* Eliminate 300ms tap delay — tells browser not to wait for double-tap */
+  button, a, input, select, textarea, [role="button"] {
+    touch-action: manipulation;
+  }
+
+  /* Prevent text selection flash on rapid taps */
+  button, [role="button"] {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Instant visual feedback on press */
+  button:active, a:active, [role="button"]:active {
+    opacity: 0.75;
+    transition: opacity 50ms;
   }
 }
