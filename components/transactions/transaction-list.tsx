@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Plus, MoreVertical, Pencil, Trash2, Search, X, ChevronDown } from 'lucide-react'
+import { ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Plus, MoreVertical, Pencil, Trash2, Search, X, ChevronDown, Download } from 'lucide-react'
 import { TransactionDialog } from './transaction-dialog'
 import { RecurringList } from './recurring-list'
 import { createClient } from '@/lib/supabase/client'
@@ -89,6 +89,29 @@ export function TransactionList({ transactions, accounts, categories, userId, in
     ))
   }
 
+  function exportCSV() {
+    const rows = [
+      ['Fecha', 'Descripción', 'Tipo', 'Monto', 'Cuenta', 'Categoría', 'Notas'],
+      ...filtered.map(t => [
+        t.date,
+        t.description,
+        t.transfer_group_id ? 'Transferencia' : t.type === 'income' ? 'Ingreso' : 'Gasto',
+        t.transfer_group_id ? t.amount : t.type === 'income' ? t.amount : -t.amount,
+        (t.account as any)?.name ?? '',
+        t.transfer_group_id ? 'Transferencia' : (t.category as any)?.name ?? '',
+        t.notes ?? '',
+      ]),
+    ]
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href     = url
+    a.download = `transacciones.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   async function handleDelete(t: Transaction) {
     setDeleting(t.id)
     setPendingDelete(null)
@@ -133,13 +156,22 @@ export function TransactionList({ transactions, accounts, categories, userId, in
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Transacciones</h1>
-        <Button
-          onClick={openCreate}
-          size="sm"
-          style={{ background: 'linear-gradient(135deg, #7C4DFF 0%, #9C6DFF 100%)', color: '#fff', border: 'none' }}
-        >
-          <Plus className="h-4 w-4 mr-1" /> Nueva
-        </Button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportCSV}
+            title="Exportar CSV"
+            className="h-8 w-8 flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+          >
+            <Download className="h-4 w-4" />
+          </button>
+          <Button
+            onClick={openCreate}
+            size="sm"
+            style={{ background: 'linear-gradient(135deg, #7C4DFF 0%, #9C6DFF 100%)', color: '#fff', border: 'none' }}
+          >
+            <Plus className="h-4 w-4 mr-1" /> Nueva
+          </Button>
+        </div>
       </div>
 
       {/* Recurrentes */}
