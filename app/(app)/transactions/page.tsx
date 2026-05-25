@@ -26,10 +26,11 @@ export default async function TransactionsPage({ searchParams }: Props) {
     { data: accounts, error: accError },
     { data: categories, error: catError },
     { data: allRecurring },
+    { data: responsibles },
   ] = await Promise.all([
     supabase
       .from('transactions')
-      .select('*, category:categories(*), account:accounts(*)')
+      .select('*, category:categories(*), account:accounts(*), responsible:responsible_parties(*)')
       .eq('user_id', user.id)
       .order('date', { ascending: false })
       .range(0, 29),
@@ -40,6 +41,7 @@ export default async function TransactionsPage({ searchParams }: Props) {
       .select('*, category:categories(*), account:accounts(*)')
       .eq('user_id', user.id)
       .order('created_at'),
+    supabase.from('responsible_parties').select('*').eq('user_id', user.id).order('name'),
   ])
 
   if (txError || accError || catError) return <ErrorState title="Error al cargar las transacciones" />
@@ -89,6 +91,7 @@ export default async function TransactionsPage({ searchParams }: Props) {
             transactions={fresh ?? []}
             accounts={accounts ?? []}
             categories={categories ?? []}
+            responsibles={responsibles ?? []}
             userId={user.id}
             initialFilter={initialFilter}
             recurring={allRecurring ?? []}

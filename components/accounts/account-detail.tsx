@@ -329,6 +329,7 @@ export function AccountDetail({ account, transactions, categories, accounts, use
         onClose={() => { setDialogOpen(false); setEditingTransaction(null) }}
         accounts={accounts}
         categories={categories}
+        responsibles={[]}
         userId={userId}
         defaultAccountId={account.id}
         editingTransaction={editingTransaction}

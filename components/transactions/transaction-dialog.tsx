@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Account, Category, Transaction } from '@/types'
+import { Account, Category, Transaction, Responsible } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
@@ -18,11 +18,12 @@ interface Props {
   onClose: () => void
   accounts: Account[]
   categories: Category[]
+  responsibles: Responsible[]
   userId: string
   defaultType?: 'income' | 'expense'
   defaultAccountId?: string
   editingTransaction?: Transaction | null
-  onSaved?: (data: { id: string; type: 'income' | 'expense'; amount: number; description: string; date: string; account_id: string; category_id: string; notes: string | null }) => void
+  onSaved?: (data: { id: string; type: 'income' | 'expense'; amount: number; description: string; date: string; account_id: string; category_id: string; notes: string | null; responsible_party_id: string | null }) => void
 }
 
 const emptyForm = (type: 'income' | 'expense', accountId: string) => ({
@@ -33,10 +34,11 @@ const emptyForm = (type: 'income' | 'expense', accountId: string) => ({
   account_id: accountId,
   category_id: '',
   notes: '',
+  responsible_party_id: '',
 })
 
 export function TransactionDialog({
-  open, onClose, accounts, categories, userId,
+  open, onClose, accounts, categories, responsibles, userId,
   defaultType = 'expense', defaultAccountId = '',
   editingTransaction, onSaved,
 }: Props) {
@@ -57,6 +59,7 @@ export function TransactionDialog({
         account_id: editingTransaction.account_id,
         category_id: editingTransaction.category_id,
         notes: editingTransaction.notes ?? '',
+        responsible_party_id: editingTransaction.responsible_party_id ?? '',
       })
     } else {
       setForm(emptyForm(defaultType, defaultAccountId))
@@ -86,6 +89,7 @@ export function TransactionDialog({
         account_id: form.account_id,
         category_id: form.category_id,
         notes: form.notes || null,
+        responsible_party_id: form.responsible_party_id || null,
       }
       const { error } = await supabase.from('transactions').update(editPayload).eq('id', editingTransaction!.id)
       if (error) {
@@ -132,6 +136,7 @@ export function TransactionDialog({
       category_id: form.category_id,
       notes: form.notes || null,
       recurring_transaction_id: recurringId,
+      responsible_party_id: form.responsible_party_id || null,
     }
 
     {
@@ -306,6 +311,34 @@ export function TransactionDialog({
               className="bg-muted/40 border-border/60"
             />
           </div>
+
+          {/* Encargado */}
+          {responsibles.length > 0 && (
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+                Encargado <span className="normal-case font-normal text-muted-foreground/60">(opcional)</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {responsibles.map(r => {
+                  const active = form.responsible_party_id === r.id
+                  return (
+                    <button
+                      key={r.id} type="button"
+                      onClick={() => setForm({ ...form, responsible_party_id: active ? '' : r.id })}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-all"
+                      style={active
+                        ? { backgroundColor: r.color + '20', borderColor: r.color + '60', color: 'hsl(var(--foreground))' }
+                        : { backgroundColor: 'transparent', borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }
+                      }
+                    >
+                      <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: r.color }} />
+                      {r.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Repetir mensualmente (solo al crear) */}
           {!isEditing && (

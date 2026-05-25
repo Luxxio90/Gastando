@@ -20,9 +20,11 @@ type RawTxCat = {
   description?: string | null
   date?: string | null
   transfer_group_id?: string | null
+  responsible_party_id?: string | null
   category?: { name: string; icon: string; color: string } | null
 }
-type RawAccount = { id: string; name: string; color: string; type?: string }
+type RawAccount     = { id: string; name: string; color: string; type?: string }
+type RawResponsible = { id: string; name: string; color: string }
 
 interface Props {
   month: number
@@ -30,6 +32,7 @@ interface Props {
   transactions: RawTxCat[]
   trendTransactions: RawTx[]
   accounts: RawAccount[]
+  responsibles: RawResponsible[]
 }
 
 function getLast6Months(month: number, year: number) {
@@ -85,7 +88,7 @@ function CustomTooltip({ active, payload, label }: any) {
   )
 }
 
-export function EstadisticasView({ month, year, transactions, trendTransactions, accounts }: Props) {
+export function EstadisticasView({ month, year, transactions, trendTransactions, accounts, responsibles }: Props) {
   const router = useRouter()
   const [selectedIds, setSelectedIds] = useState<Set<string> | null>(null)
   const [selectedCat, setSelectedCat] = useState<string | null>(null)
@@ -162,6 +165,19 @@ export function EstadisticasView({ month, year, transactions, trendTransactions,
     .filter(t => t.type === 'expense' && t.category?.name !== 'Transferencia')
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 5)
+
+  // Gasto por encargado
+  const respExpenses = responsibles.length > 0
+    ? responsibles.map(r => ({
+        ...r,
+        expense: filteredTx
+          .filter(t => t.type === 'expense' && t.responsible_party_id === r.id)
+          .reduce((s, t) => s + t.amount, 0),
+        income: filteredTx
+          .filter(t => t.type === 'income' && t.responsible_party_id === r.id)
+          .reduce((s, t) => s + t.amount, 0),
+      })).filter(r => r.expense > 0 || r.income > 0)
+    : []
 
   // 6-month trend
   const periods = getLast6Months(month, year)
@@ -490,6 +506,53 @@ export function EstadisticasView({ month, year, transactions, trendTransactions,
                     </p>
                     <p className="text-[10px] text-muted-foreground">{pct.toFixed(1)}%</p>
                   </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Gasto por encargado */}
+      {respExpenses.length > 0 && (
+        <div className="bg-card rounded-xl border border-border overflow-hidden">
+          <div className="px-4 py-3 border-b border-border/60"
+            style={{ background: 'linear-gradient(90deg, #7C4DFF10 0%, transparent 60%)' }}>
+            <p className="font-bold text-sm text-foreground">Gasto por encargado</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Solo transacciones con encargado asignado</p>
+          </div>
+          <div className="p-4 space-y-3">
+            {respExpenses.map(r => {
+              const totalResp = r.expense + r.income
+              const maxResp   = Math.max(...respExpenses.map(x => x.expense))
+              return (
+                <div key={r.id} className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded-full flex-shrink-0" style={{ backgroundColor: r.color }} />
+                      <span className="text-sm font-semibold text-foreground">{r.name}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-right">
+                      {r.expense > 0 && (
+                        <span className="text-xs font-bold tabular-nums" style={{ color: '#FF4D6D' }}>
+                          -{formatCurrency(r.expense)}
+                        </span>
+                      )}
+                      {r.income > 0 && (
+                        <span className="text-xs font-bold tabular-nums" style={{ color: '#00CB96' }}>
+                          +{formatCurrency(r.income)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {r.expense > 0 && (
+                    <div className="w-full h-1.5 rounded-full bg-muted">
+                      <div
+                        className="h-1.5 rounded-full transition-all duration-500"
+                        style={{ width: `${maxResp > 0 ? (r.expense / maxResp) * 100 : 0}%`, backgroundColor: r.color }}
+                      />
+                    </div>
+                  )}
                 </div>
               )
             })}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Transaction, Account, Category, RecurringTransaction } from '@/types'
+import { Transaction, Account, Category, RecurringTransaction, Responsible } from '@/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -21,12 +21,13 @@ interface Props {
   transactions: Transaction[]
   accounts: Account[]
   categories: Category[]
+  responsibles: Responsible[]
   userId: string
   initialFilter?: 'all' | 'income' | 'expense'
   recurring?: RecurringTransaction[]
 }
 
-export function TransactionList({ transactions, accounts, categories, userId, initialFilter = 'all', recurring = [] }: Props) {
+export function TransactionList({ transactions, accounts, categories, responsibles, userId, initialFilter = 'all', recurring = [] }: Props) {
   const [dialogOpen, setDialogOpen]       = useState(false)
   const [editing, setEditing]             = useState<Transaction | null>(null)
   const [filter, setFilter]               = useState<'all' | 'income' | 'expense'>(initialFilter)
@@ -59,7 +60,7 @@ export function TransactionList({ transactions, accounts, categories, userId, in
     setLoadingMore(true)
     const { data } = await supabase
       .from('transactions')
-      .select('*, category:categories(*), account:accounts(*)')
+      .select('*, category:categories(*), account:accounts(*), responsible:responsible_parties(*)')
       .eq('user_id', userId)
       .order('date', { ascending: false })
       .range(allLoaded.length, allLoaded.length + PAGE_SIZE - 1)
@@ -81,11 +82,12 @@ export function TransactionList({ transactions, accounts, categories, userId, in
     setTimeout(() => setDialogOpen(true), 50)
   }
 
-  function handleSaved(data: { id: string; type: 'income' | 'expense'; amount: number; description: string; date: string; account_id: string; category_id: string; notes: string | null }) {
-    const account  = accounts.find(a => a.id === data.account_id)
-    const category = categories.find(c => c.id === data.category_id)
+  function handleSaved(data: { id: string; type: 'income' | 'expense'; amount: number; description: string; date: string; account_id: string; category_id: string; notes: string | null; responsible_party_id: string | null }) {
+    const account     = accounts.find(a => a.id === data.account_id)
+    const category    = categories.find(c => c.id === data.category_id)
+    const responsible = responsibles.find(r => r.id === data.responsible_party_id)
     setAllLoaded(prev => prev.map(t =>
-      t.id === data.id ? { ...t, ...data, account, category } : t
+      t.id === data.id ? { ...t, ...data, account, category, responsible } : t
     ))
   }
 
@@ -423,6 +425,7 @@ export function TransactionList({ transactions, accounts, categories, userId, in
         onClose={() => { setDialogOpen(false); setEditing(null) }}
         accounts={accounts}
         categories={categories}
+        responsibles={responsibles}
         userId={userId}
         editingTransaction={editing}
         onSaved={handleSaved}

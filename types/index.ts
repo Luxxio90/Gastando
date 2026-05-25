@@ -44,9 +44,11 @@ export interface Transaction {
   date: string
   notes: string | null
   transfer_group_id: string | null
+  responsible_party_id: string | null
   created_at: string
   account?: Account
   category?: Category
+  responsible?: Responsible
 }
 
 export interface Budget {

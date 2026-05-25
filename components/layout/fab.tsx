@@ -5,7 +5,7 @@ import { Plus, TrendingUp, TrendingDown, ArrowLeftRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { TransactionDialog } from '@/components/transactions/transaction-dialog'
 import { TransferDialog } from '@/components/transactions/transfer-dialog'
-import { Account, Category } from '@/types'
+import { Account, Category, Responsible } from '@/types'
 
 const ACTIONS = [
   { type: 'income'   as const, label: 'Ingreso',    color: '#00CB96', Icon: TrendingUp },
@@ -18,28 +18,33 @@ export function FloatingActionButton({ userId }: { userId: string }) {
   const [dialogType, setDialogType] = useState<'income' | 'expense' | 'transfer' | null>(null)
   const [accounts, setAccounts] = useState<Account[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [responsibles, setResponsibles] = useState<Responsible[]>([])
   const supabase = createClient()
 
   useEffect(() => {
     async function load() {
-      const [{ data: acc }, { data: cat }] = await Promise.all([
+      const [{ data: acc }, { data: cat }, { data: resp }] = await Promise.all([
         supabase.from('accounts').select('*').eq('user_id', userId),
         supabase.from('categories').select('*').or(`user_id.eq.${userId},is_default.eq.true`).order('name'),
+        supabase.from('responsible_parties').select('*').eq('user_id', userId).order('name'),
       ])
       setAccounts(acc ?? [])
       setCategories(cat ?? [])
+      setResponsibles(resp ?? [])
     }
     load()
   }, [userId])
 
   async function handleSelect(type: 'income' | 'expense' | 'transfer') {
     setOpen(false)
-    const [{ data: acc }, { data: cat }] = await Promise.all([
+    const [{ data: acc }, { data: cat }, { data: resp }] = await Promise.all([
       supabase.from('accounts').select('*').eq('user_id', userId),
       supabase.from('categories').select('*').or(`user_id.eq.${userId},is_default.eq.true`).order('name'),
+      supabase.from('responsible_parties').select('*').eq('user_id', userId).order('name'),
     ])
     setAccounts(acc ?? [])
     setCategories(cat ?? [])
+    setResponsibles(resp ?? [])
     setDialogType(type)
   }
 
@@ -111,6 +116,7 @@ export function FloatingActionButton({ userId }: { userId: string }) {
           onClose={() => setDialogType(null)}
           accounts={accounts}
           categories={categories}
+          responsibles={responsibles}
           userId={userId}
           defaultType={dialogType}
         />

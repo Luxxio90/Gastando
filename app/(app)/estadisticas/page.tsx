@@ -29,10 +29,11 @@ export default async function EstadisticasPage({
     { data: transactions, error: txError },
     { data: trendTransactions, error: trendError },
     { data: accounts, error: accError },
+    { data: responsibles },
   ] = await Promise.all([
     supabase
       .from('transactions')
-      .select('type, amount, account_id, description, date, transfer_group_id, category:categories(name, icon, color)')
+      .select('type, amount, account_id, description, date, transfer_group_id, responsible_party_id, category:categories(name, icon, color)')
       .eq('user_id', user.id)
       .gte('date', firstDay)
       .lte('date', lastDay),
@@ -45,6 +46,11 @@ export default async function EstadisticasPage({
     supabase
       .from('accounts')
       .select('id, name, color, type')
+      .eq('user_id', user.id)
+      .order('name'),
+    supabase
+      .from('responsible_parties')
+      .select('id, name, color')
       .eq('user_id', user.id)
       .order('name'),
   ])
@@ -63,6 +69,7 @@ export default async function EstadisticasPage({
         transactions={(transactions ?? []) as any[]}
         trendTransactions={(trendTransactions ?? []) as any[]}
         accounts={(accounts ?? []) as any[]}
+        responsibles={(responsibles ?? []) as any[]}
       />
     </div>
   )
