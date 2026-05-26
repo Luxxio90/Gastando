@@ -109,6 +109,7 @@ export default async function TransactionsPage({ searchParams }: Props) {
         transactions={transactions ?? []}
         accounts={accounts ?? []}
         categories={categories ?? []}
+        responsibles={responsibles ?? []}
         userId={user.id}
         initialFilter={initialFilter}
         recurring={allRecurring ?? []}
