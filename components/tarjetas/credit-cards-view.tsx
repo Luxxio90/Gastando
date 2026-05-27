@@ -142,7 +142,7 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
 
   // ── Card CRUD ──────────────────────────────────────────────────
   function openCreateCard() { setEditingCard(null); setCardForm(emptyCardForm); setCardDialog(true) }
-  function openEditCard(c: CC) { setEditingCard(c); setCardForm({ name: c.name, network: c.network, account_id: c.account_id ?? '' }); setCardDialog(true) }
+  function openEditCard(c: CC) { setEditingCard(c); setCardForm({ name: c.name, network: c.network as CreditCardNetwork, account_id: c.account_id ?? '' }); setCardDialog(true) }
 
   async function handleSaveCard(e: React.FormEvent) {
     e.preventDefault()
@@ -379,7 +379,7 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
               <div
                 key={card.id}
                 className="rounded-2xl overflow-hidden cursor-pointer select-none"
-                style={{ background: NETWORK_GRADIENTS[card.network] }}
+                style={{ background: NETWORK_GRADIENTS[card.network as CreditCardNetwork] }}
                 onClick={() => { setSelectedCardId(card.id); setDetailDialog(true) }}
               >
                 {/* Decorative circles */}
@@ -391,7 +391,7 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
                   <div className="flex items-start justify-between mb-1 relative">
                     <p className="text-white font-bold text-lg leading-tight">{card.name}</p>
                     <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                      <NetworkLogo network={card.network} />
+                      <NetworkLogo network={card.network as CreditCardNetwork} />
                       <div className="relative">
                         <button
                           onClick={() => setOpenMenuId(openMenuId === card.id ? null : card.id)}
@@ -517,7 +517,7 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
           {selectedCard && selectedMonth && (
             <>
               {/* Card visual mini header */}
-              <div className="p-4 relative" style={{ background: NETWORK_GRADIENTS[selectedCard.network] }}>
+              <div className="p-4 relative" style={{ background: NETWORK_GRADIENTS[selectedCard.network as CreditCardNetwork] }}>
                 <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full bg-white/5 pointer-events-none" />
                 <div className="flex items-center justify-between">
                   <div>
@@ -525,7 +525,7 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
                     <p className="text-white/50 text-xs tracking-widest mt-0.5">●●●● ●●●● ●●●●</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <NetworkLogo network={selectedCard.network} />
+                    <NetworkLogo network={selectedCard.network as CreditCardNetwork} />
                     <button
                       onClick={() => toggleStatus(selectedMonth.id, selectedMonth.status as CreditCardStatus, selectedCard?.id)}
                       className={cn(
@@ -647,7 +647,7 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
             </div>
             <div className="space-y-2">
               <Label>Cuenta para pagar <span className="text-muted-foreground font-normal text-xs">(opcional)</span></Label>
-              <Select value={cardForm.account_id} onValueChange={v => setCardForm({ ...cardForm, account_id: v === '__none__' ? '' : v })}>
+              <Select value={cardForm.account_id} onValueChange={v => setCardForm({ ...cardForm, account_id: (v ?? '') === '__none__' ? '' : (v ?? '') })}>
                 <SelectTrigger className="w-full">
                   <span className={cardForm.account_id ? 'text-sm' : 'text-sm text-muted-foreground'}>
                     {accounts.find(a => a.id === cardForm.account_id)?.name ?? 'Sin cuenta vinculada'}

@@ -264,6 +264,7 @@ export type Database = {
           paid_amount: number | null
           paid_at: string | null
           status: string
+          transaction_id: string | null
           user_id: string
           year: number
         }
@@ -277,6 +278,7 @@ export type Database = {
           paid_amount?: number | null
           paid_at?: string | null
           status?: string
+          transaction_id?: string | null
           user_id: string
           year: number
         }
@@ -290,6 +292,7 @@ export type Database = {
           paid_amount?: number | null
           paid_at?: string | null
           status?: string
+          transaction_id?: string | null
           user_id?: string
           year?: number
         }
@@ -308,10 +311,18 @@ export type Database = {
             referencedRelation: "credit_cards"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "credit_card_months_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
         ]
       }
       credit_cards: {
         Row: {
+          account_id: string | null
           created_at: string | null
           id: string
           name: string
@@ -319,6 +330,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          account_id?: string | null
           created_at?: string | null
           id?: string
           name: string
@@ -326,13 +338,22 @@ export type Database = {
           user_id: string
         }
         Update: {
+          account_id?: string | null
           created_at?: string | null
           id?: string
           name?: string
           network?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "credit_cards_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       expense_types: {
         Row: {
@@ -520,6 +541,63 @@ export type Database = {
         }
         Relationships: []
       }
+      recurring_transactions: {
+        Row: {
+          account_id: string | null
+          active: boolean
+          amount: number
+          category_id: string | null
+          created_at: string | null
+          day_of_month: number
+          description: string
+          id: string
+          notes: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          active?: boolean
+          amount: number
+          category_id?: string | null
+          created_at?: string | null
+          day_of_month?: number
+          description: string
+          id?: string
+          notes?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          active?: boolean
+          amount?: number
+          category_id?: string | null
+          created_at?: string | null
+          day_of_month?: number
+          description?: string
+          id?: string
+          notes?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_transactions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       responsible_parties: {
         Row: {
           color: string
@@ -554,6 +632,8 @@ export type Database = {
           description: string
           id: string
           notes: string | null
+          recurring_transaction_id: string | null
+          responsible_party_id: string | null
           transfer_group_id: string | null
           type: string
           user_id: string
@@ -567,6 +647,8 @@ export type Database = {
           description: string
           id?: string
           notes?: string | null
+          recurring_transaction_id?: string | null
+          responsible_party_id?: string | null
           transfer_group_id?: string | null
           type: string
           user_id: string
@@ -580,6 +662,8 @@ export type Database = {
           description?: string
           id?: string
           notes?: string | null
+          recurring_transaction_id?: string | null
+          responsible_party_id?: string | null
           transfer_group_id?: string | null
           type?: string
           user_id?: string
@@ -597,6 +681,20 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_recurring_transaction_id_fkey"
+            columns: ["recurring_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_responsible_party_id_fkey"
+            columns: ["responsible_party_id"]
+            isOneToOne: false
+            referencedRelation: "responsible_parties"
             referencedColumns: ["id"]
           },
         ]

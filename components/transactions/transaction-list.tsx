@@ -177,7 +177,14 @@ export function TransactionList({ transactions, accounts, categories, responsibl
       </div>
 
       {/* Recurrentes */}
-      {recurring.length > 0 && <RecurringList recurring={recurring} />}
+      {recurring.length > 0 && (
+        <RecurringList
+          recurring={recurring}
+          accounts={accounts}
+          categories={categories}
+          userId={userId}
+        />
+      )}
 
       {/* Search */}
       <div className="relative">
@@ -217,17 +224,15 @@ export function TransactionList({ transactions, accounts, categories, responsibl
 
         {/* Categoría dropdown */}
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
-              style={catFilter
-                ? { background: '#3BB2F620', borderColor: '#3BB2F660', color: '#3BB2F6' }
-                : { background: 'transparent', borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }
-              }
-            >
-              {catFilter ? categories.find(c => c.id === catFilter)?.name ?? 'Categoría' : 'Categoría'}
-              <ChevronDown className="h-3 w-3" />
-            </button>
+          <DropdownMenuTrigger
+            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
+            style={catFilter
+              ? { background: '#3BB2F620', borderColor: '#3BB2F660', color: '#3BB2F6' }
+              : { background: 'transparent', borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }
+            }
+          >
+            {catFilter ? categories.find(c => c.id === catFilter)?.name ?? 'Categoría' : 'Categoría'}
+            <ChevronDown className="h-3 w-3" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto">
             {catFilter && (
@@ -251,17 +256,15 @@ export function TransactionList({ transactions, accounts, categories, responsibl
 
         {/* Cuenta dropdown */}
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
-              style={accFilter
-                ? { background: '#00CB9620', borderColor: '#00CB9660', color: '#00CB96' }
-                : { background: 'transparent', borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }
-              }
-            >
-              {accFilter ? accounts.find(a => a.id === accFilter)?.name ?? 'Cuenta' : 'Cuenta'}
-              <ChevronDown className="h-3 w-3" />
-            </button>
+          <DropdownMenuTrigger
+            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
+            style={accFilter
+              ? { background: '#00CB9620', borderColor: '#00CB9660', color: '#00CB96' }
+              : { background: 'transparent', borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }
+            }
+          >
+            {accFilter ? accounts.find(a => a.id === accFilter)?.name ?? 'Cuenta' : 'Cuenta'}
+            <ChevronDown className="h-3 w-3" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             {accFilter && (

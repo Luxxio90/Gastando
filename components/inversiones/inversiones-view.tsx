@@ -75,7 +75,7 @@ export function InversionesView({ investments: initial, userId }: Props) {
   function openEdit(inv: Investment) {
     setEditing(inv)
     setForm({
-      name: inv.name, type: inv.type, initial_amount: String(inv.initial_amount),
+      name: inv.name, type: inv.type as InvestmentType, initial_amount: String(inv.initial_amount),
       current_value: String(inv.current_value), currency: inv.currency,
       purchase_date: inv.purchase_date, notes: inv.notes ?? '',
     })
@@ -184,7 +184,7 @@ export function InversionesView({ investments: initial, userId }: Props) {
                     </Pie>
                     <Tooltip
                       contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 10, fontSize: 12 }}
-                      formatter={(v: number) => [formatCurrency(v), '']}
+                      formatter={(v) => [formatCurrency(v as number), '']}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -206,7 +206,7 @@ export function InversionesView({ investments: initial, userId }: Props) {
           {/* Investment list */}
           <div className="space-y-3">
             {investments.map(inv => {
-              const meta = TYPE_META[inv.type]
+              const meta = TYPE_META[inv.type as InvestmentType] ?? TYPE_META.other
               const gain = inv.current_value - inv.initial_amount
               const pct  = inv.initial_amount > 0 ? (gain / inv.initial_amount) * 100 : 0
               const pos  = gain >= 0
@@ -353,7 +353,7 @@ export function InversionesView({ investments: initial, userId }: Props) {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Moneda</Label>
-                <Select value={form.currency} onValueChange={v => setForm({ ...form, currency: v })}>
+                <Select value={form.currency} onValueChange={v => setForm({ ...form, currency: v ?? '' })}>
                   <SelectTrigger className="w-full">
                     <span className="text-sm">{form.currency}</span>
                   </SelectTrigger>

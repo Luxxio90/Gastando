@@ -39,7 +39,7 @@ const COLORS = ['#7C4DFF', '#00CB96', '#3BB2F6', '#FF4D6D', '#F59E0B', '#EC4899'
 
 function computeRunningBalances(transactions: Transaction[], currentBalance: number) {
   const sorted = [...transactions].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime() || new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime() || new Date(a.created_at ?? 0).getTime() - new Date(b.created_at ?? 0).getTime()
   )
   let balance = currentBalance
   for (let i = sorted.length - 1; i >= 0; i--) {

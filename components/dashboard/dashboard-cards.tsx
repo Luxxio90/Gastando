@@ -36,7 +36,7 @@ function saveKey(userId: string, key: CardKey, val: string[] | null) {
 }
 
 interface RawTransaction {
-  type: 'income' | 'expense'
+  type: string
   amount: number
   account_id: string
 }

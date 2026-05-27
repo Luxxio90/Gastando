@@ -58,7 +58,7 @@ export default async function TransactionsPage({ searchParams }: Props) {
       .lte('date', lastDay)
 
     const materializedIds = new Set(materialized?.map(t => t.recurring_transaction_id) ?? [])
-    const toCreate = activeRecurring.filter(rt => !materializedIds.has(rt.id))
+    const toCreate = activeRecurring.filter(rt => !materializedIds.has(rt.id) && rt.account_id && rt.category_id)
 
     if (toCreate.length > 0) {
       await supabase.from('transactions').insert(
@@ -67,8 +67,8 @@ export default async function TransactionsPage({ searchParams }: Props) {
           type: rt.type,
           amount: rt.amount,
           description: rt.description,
-          category_id: rt.category_id,
-          account_id: rt.account_id,
+          category_id: rt.category_id!,
+          account_id: rt.account_id!,
           date: `${year}-${String(month).padStart(2, '0')}-${String(Math.min(rt.day_of_month, daysInMonth)).padStart(2, '0')}`,
           notes: rt.notes,
           recurring_transaction_id: rt.id,

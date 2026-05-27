@@ -64,7 +64,7 @@ export function BudgetCardDialog({
     if (editing) {
       setForm({
         name: editing.name,
-        card_type: editing.card_type,
+        card_type: editing.card_type as 'income' | 'expense',
         calc_type: editing.calc_type as CalcType,
         manual_amount: editing.manual_amount?.toString() ?? '',
         sum_category_id: editing.sum_category_id ?? '',
@@ -365,7 +365,7 @@ export function BudgetCardDialog({
               </p>
               <Select
                 value={form.track_account_id}
-                onValueChange={v => setForm({ ...form, track_account_id: v === '__none__' ? '' : v })}
+                onValueChange={v => setForm({ ...form, track_account_id: (v ?? '') === '__none__' ? '' : (v ?? '') })}
               >
                 <SelectTrigger className="w-full bg-muted/40 border-border/60">
                   <span className={form.track_account_id ? 'text-sm' : 'text-sm text-muted-foreground'}>

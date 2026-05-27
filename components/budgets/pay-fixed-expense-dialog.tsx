@@ -42,7 +42,7 @@ export function PayFixedExpenseDialog({ open, onClose, item, accounts, userId, o
         supabase.from('transactions').insert({
           user_id: userId,
           account_id: accountId,
-          category_id: item.category_id,
+          category_id: item.category_id as string,
           type: 'expense',
           amount: item.amount,
           description: desc,

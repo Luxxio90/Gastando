@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { AccountDetail } from '@/components/accounts/account-detail'
+import type { Account } from '@/types'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -31,7 +32,7 @@ export default async function AccountDetailPage({ params }: Props) {
   return (
     <div className="p-4 md:p-6">
       <AccountDetail
-        account={account}
+        account={account as Account}
         transactions={transactions ?? []}
         categories={categories ?? []}
         accounts={allAccounts ?? []}

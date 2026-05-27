@@ -52,7 +52,7 @@ export function TransactionDialog({
   useEffect(() => {
     if (editingTransaction) {
       setForm({
-        type: editingTransaction.type,
+        type: editingTransaction.type as 'income' | 'expense',
         amount: editingTransaction.amount.toString(),
         description: editingTransaction.description,
         date: editingTransaction.date,

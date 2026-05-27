@@ -79,7 +79,7 @@ export function SettingsView({ user, categories: initialCategories, expenseTypes
 
   function openEditCat(c: Category) {
     setEditingCat(c)
-    setCatForm({ name: c.name, icon: c.icon, type: c.type, expense_type_id: c.expense_type_id ?? '' })
+    setCatForm({ name: c.name, icon: c.icon, type: c.type as 'income' | 'expense', expense_type_id: c.expense_type_id ?? '' })
     setTimeout(() => setCatDialogOpen(true), 0)
   }
 
@@ -113,7 +113,7 @@ export function SettingsView({ user, categories: initialCategories, expenseTypes
         .select('*, expense_type:expense_types(id,name,is_default)')
         .single()
       if (error) { toast.error(`Error al crear categoría: ${error.message}`) }
-      else { toast.success('Categoría creada'); setCategories(prev => [...prev, data]); setCatDialogOpen(false) }
+      else { toast.success('Categoría creada'); setCategories(prev => [...prev, data as unknown as Category]); setCatDialogOpen(false) }
     }
     setCatLoading(false)
   }

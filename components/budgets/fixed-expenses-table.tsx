@@ -218,7 +218,7 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
       category_id: item.category_id ?? '',
       description: item.description ?? '',
       amount: item.amount.toString(),
-      status: item.status,
+      status: item.status as FixedExpenseStatus,
       responsible: item.responsible ?? '',
       due_day: item.due_day?.toString() ?? '',
       account_id: '',
@@ -263,7 +263,7 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
         const today = new Date().toISOString().split('T')[0]
         await supabase.from('transactions').insert({
           user_id: userId, account_id: itemForm.account_id,
-          category_id: itemForm.category_id || null,
+          category_id: (itemForm.category_id || null) as string,
           type: 'expense', amount, description: desc, date: today, notes: null,
         })
         toast.success('Gasto registrado y pago asentado en la cuenta')
@@ -506,7 +506,7 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
                           {groupItems.map(item => {
                             const cat = fixedCategories.find(c => c.id === item.category_id)
                                       ?? (item.category as Category | undefined)
-                            const color = statusColor(item.status)
+                            const color = statusColor(item.status as FixedExpenseStatus)
                             return (
                               <div
                                 key={item.id}
@@ -537,7 +537,7 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
                                     className="text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
                                     style={{ color, backgroundColor: color + '20', border: `1px solid ${color}40` }}
                                   >
-                                    {statusLabel(item.status)}
+                                    {statusLabel(item.status as FixedExpenseStatus)}
                                   </span>
                                 </div>
                                 <div className="text-right">
