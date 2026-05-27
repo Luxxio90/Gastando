@@ -96,11 +96,11 @@ export default function RegisterPage() {
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Mínimo 8 caracteres"
                   value={form.password}
                   onChange={e => setForm({ ...form, password: e.target.value })}
                   required
-                  minLength={6}
+                  minLength={8}
                   className="h-11 rounded-xl bg-muted/50 border-border focus-visible:ring-1 focus-visible:ring-[#7C4DFF] pr-10"
                 />
                 <button
