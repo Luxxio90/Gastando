@@ -191,9 +191,16 @@ export default async function BudgetsPage({
   const allTransactions = transactions ?? []
   const incomeByCat: Record<string, number>  = {}
   const expenseByCat: Record<string, number> = {}
+  const variableExpenseByCat: Record<string, number> = {}
   for (const t of allTransactions) {
-    if (t.type === 'income') incomeByCat[t.category_id]  = (incomeByCat[t.category_id]  ?? 0) + t.amount
-    else                     expenseByCat[t.category_id] = (expenseByCat[t.category_id] ?? 0) + t.amount
+    if (t.type === 'income') {
+      incomeByCat[t.category_id] = (incomeByCat[t.category_id] ?? 0) + t.amount
+    } else {
+      expenseByCat[t.category_id] = (expenseByCat[t.category_id] ?? 0) + t.amount
+      if (!t.transfer_group_id) {
+        variableExpenseByCat[t.category_id] = (variableExpenseByCat[t.category_id] ?? 0) + t.amount
+      }
+    }
   }
 
   const resolvedAmounts: Record<string, number> = {}
@@ -253,7 +260,7 @@ export default async function BudgetsPage({
       />
       <VariableExpensesCard
         categories={categories ?? []}
-        expenseByCat={expenseByCat}
+        variableExpenseByCat={variableExpenseByCat}
         fixedTypeId={fixedTypeId}
         totalIncome={totalIncome}
       />

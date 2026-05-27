@@ -2,22 +2,21 @@
 
 import { Category } from '@/types'
 import { formatCurrency } from '@/lib/utils'
-import { TrendingUp } from 'lucide-react'
 
 interface Props {
   categories: Category[]
-  expenseByCat: Record<string, number>
+  variableExpenseByCat: Record<string, number>
   fixedTypeId: string | undefined
   totalIncome: number
 }
 
-export function VariableExpensesCard({ categories, expenseByCat, fixedTypeId, totalIncome }: Props) {
+export function VariableExpensesCard({ categories, variableExpenseByCat, fixedTypeId, totalIncome }: Props) {
   const variableCats = categories.filter(
     c => c.type === 'expense' && c.expense_type_id !== fixedTypeId
   )
 
   const rows = variableCats
-    .map(c => ({ cat: c, amount: expenseByCat[c.id] ?? 0 }))
+    .map(c => ({ cat: c, amount: variableExpenseByCat[c.id] ?? 0 }))
     .filter(r => r.amount > 0)
     .sort((a, b) => b.amount - a.amount)
 
@@ -29,11 +28,13 @@ export function VariableExpensesCard({ categories, expenseByCat, fixedTypeId, to
   const VARIABLE_COLOR = '#F59E0B'
 
   return (
-    <div className="space-y-3 max-w-2xl mx-auto">
-      <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-        <TrendingUp className="h-3.5 w-3.5" />
-        Gastos variables
-      </h2>
+    <div className="space-y-4 max-w-2xl mx-auto mt-8">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-foreground">Gastos variables</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Gastos del mes sin contar fijos ni transferencias</p>
+        </div>
+      </div>
 
       <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
         {/* Header */}
