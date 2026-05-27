@@ -6,9 +6,20 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { endpoint, p256dh, auth } = await req.json()
-  if (!endpoint || !p256dh || !auth)
+  const body = await req.json()
+  const { endpoint, p256dh, auth } = body
+  if (!endpoint || !p256dh || !auth ||
+      typeof endpoint !== 'string' || typeof p256dh !== 'string' || typeof auth !== 'string')
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+
+  // Rate limit: max 5 push subscriptions per user
+  const { count } = await supabase
+    .from('push_subscriptions')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .neq('endpoint', endpoint)
+  if ((count ?? 0) >= 5)
+    return NextResponse.json({ error: 'Too many subscriptions' }, { status: 429 })
 
   const { error } = await supabase.from('push_subscriptions').upsert(
     { user_id: user.id, endpoint, p256dh, auth },

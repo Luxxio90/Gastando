@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import webpush from 'web-push'
 import { createClient } from '@/lib/supabase/server'
+import { timingSafeEqual } from 'crypto'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,9 +16,12 @@ export async function GET(req: NextRequest) {
     vapidPrivateKey,
   )
 
-  const secret = req.headers.get('authorization')?.replace('Bearer ', '')
-  if (secret !== process.env.CRON_SECRET)
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const secret = req.headers.get('authorization')?.replace('Bearer ', '') ?? ''
+  const expected = process.env.CRON_SECRET ?? ''
+  const safe = expected.length > 0 &&
+    secret.length === expected.length &&
+    timingSafeEqual(Buffer.from(secret), Buffer.from(expected))
+  if (!safe) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const supabase = await createClient()
 
