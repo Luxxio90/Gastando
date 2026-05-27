@@ -18,15 +18,22 @@ interface Props {
 export function RecurringList({ recurring }: Props) {
   const router = useRouter()
   const supabase = createClient()
-  const [toggling, setToggling]       = useState<string | null>(null)
+  const [toggling, setToggling]           = useState<string | null>(null)
+  const [localActive, setLocalActive]     = useState<Record<string, boolean>>({})
   const [pendingDelete, setPendingDelete] = useState<RecurringTransaction | null>(null)
-  const [deleting, setDeleting]       = useState(false)
+  const [deleting, setDeleting]           = useState(false)
 
   if (recurring.length === 0) return null
 
+  function isActive(rt: RecurringTransaction) {
+    return rt.id in localActive ? localActive[rt.id] : rt.active
+  }
+
   async function toggleActive(rt: RecurringTransaction) {
+    const next = !isActive(rt)
+    setLocalActive(prev => ({ ...prev, [rt.id]: next }))
     setToggling(rt.id)
-    await supabase.from('recurring_transactions').update({ active: !rt.active }).eq('id', rt.id)
+    await supabase.from('recurring_transactions').update({ active: next }).eq('id', rt.id)
     router.refresh()
     setToggling(null)
   }
@@ -67,7 +74,7 @@ export function RecurringList({ recurring }: Props) {
                       <p className="text-[11px] text-muted-foreground mt-0.5">
                         Día {rt.day_of_month} de cada mes
                         {(rt.account as any)?.name ? ` · ${(rt.account as any).name}` : ''}
-                        {!rt.active && <span className="ml-1 text-muted-foreground/50">· Pausada</span>}
+                        {!isActive(rt) && <span className="ml-1 text-muted-foreground/50">· Pausada</span>}
                       </p>
                     </div>
 
@@ -80,11 +87,11 @@ export function RecurringList({ recurring }: Props) {
                       onClick={() => toggleActive(rt)}
                       disabled={toggling === rt.id}
                       className="relative h-5 w-9 rounded-full flex-shrink-0 transition-colors disabled:opacity-50"
-                      style={{ backgroundColor: rt.active ? '#7C4DFF' : 'hsl(var(--muted))' }}
+                      style={{ backgroundColor: isActive(rt) ? '#7C4DFF' : 'hsl(var(--muted))' }}
                     >
                       <span
                         className="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform"
-                        style={{ transform: rt.active ? 'translateX(16px)' : 'translateX(2px)' }}
+                        style={{ transform: isActive(rt) ? 'translateX(16px)' : 'translateX(2px)' }}
                       />
                     </button>
 

@@ -54,7 +54,7 @@ export function FloatingActionButton({ userId }: { userId: string }) {
         <div className="fixed inset-0 z-40 md:hidden" onClick={() => setOpen(false)} />
       )}
 
-      <div className="fixed bottom-20 right-4 z-50 flex flex-col items-end gap-3 md:hidden" style={{ pointerEvents: 'none' }}>
+      <div className="fixed right-4 z-50 flex flex-col items-end gap-3 md:hidden" style={{ pointerEvents: 'none', bottom: 'calc(5rem + env(safe-area-inset-bottom))' }}>
         {/* Speed dial */}
         <div className="flex flex-col items-end gap-2.5">
           {ACTIONS.map((action, i) => (
