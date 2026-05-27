@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { BudgetCardsView } from '@/components/budgets/budget-cards-view'
 import { FixedExpensesTable } from '@/components/budgets/fixed-expenses-table'
+import { VariableExpensesCard } from '@/components/budgets/variable-expenses-card'
 import { ErrorState } from '@/components/ui/error-state'
 import { BudgetCard, FixedExpenseItem, FixedExpenseGroup, Responsible } from '@/types'
 
@@ -234,9 +235,10 @@ export default async function BudgetsPage({
 
   const fixedTypeId      = expenseTypes?.find(et => et.name === 'Gasto fijo')?.id
   const fixedCategories  = (categories ?? []).filter(c => c.type === 'expense' && c.expense_type_id === fixedTypeId)
+  const totalIncome      = Object.values(incomeByCat).reduce((s, v) => s + v, 0)
 
   return (
-    <div className="p-6 pb-28">
+    <div className="p-6 pb-28 space-y-8">
       <BudgetCardsView
         cards={allCards}
         categories={categories ?? []}
@@ -248,6 +250,12 @@ export default async function BudgetsPage({
         userId={user.id}
         month={month}
         year={year}
+      />
+      <VariableExpensesCard
+        categories={categories ?? []}
+        expenseByCat={expenseByCat}
+        fixedTypeId={fixedTypeId}
+        totalIncome={totalIncome}
       />
       <FixedExpensesTable
         key={`${month}-${year}`}
