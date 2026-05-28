@@ -6,7 +6,7 @@ import { BudgetCard, Category, Account } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Plus, ChevronLeft, ChevronRight, MoreVertical, AlertTriangle, Target } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, ChevronDown, MoreVertical, AlertTriangle, Target } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { BudgetCardDialog } from './budget-card-dialog'
@@ -38,6 +38,7 @@ export function BudgetCardsView({ cards, categories, resolvedAmounts, actualByCa
   const supabase = createClient()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingCard, setEditingCard] = useState<BudgetCard | null>(null)
+  const [collapsed, setCollapsed] = useState(false)
 
   function navigate(m: number, y: number) { router.push(`/budgets?month=${m}&year=${y}`) }
 
@@ -115,15 +116,26 @@ export function BudgetCardsView({ cards, categories, resolvedAmounts, actualByCa
       ) : (
         <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
           {/* Header columnas */}
-          <div className="grid grid-cols-[1fr_56px_120px_32px] bg-muted/40 border-b border-border px-4 py-2.5">
-            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Categoría</span>
+          <button
+            type="button"
+            onClick={() => setCollapsed(c => !c)}
+            className="w-full grid grid-cols-[1fr_56px_120px_32px] items-center bg-muted/40 border-b border-border px-4 py-2.5 text-left transition-colors hover:bg-muted/60"
+            style={{ borderBottom: collapsed ? 'none' : undefined }}
+          >
+            <div className="flex items-center gap-1.5">
+              <ChevronDown
+                className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 flex-shrink-0"
+                style={{ transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}
+              />
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Categoría</span>
+            </div>
             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest text-center">%</span>
             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest text-right">Monto</span>
             <span />
-          </div>
+          </button>
 
           {/* Sección Ingresos */}
-          {incomeCards.length > 0 && (
+          {!collapsed && incomeCards.length > 0 && (
             <>
               <div className="px-4 py-2 border-b border-border/50" style={{ backgroundColor: INCOME_COLOR + '12' }}>
                 <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: INCOME_COLOR }}>
@@ -189,7 +201,7 @@ export function BudgetCardsView({ cards, categories, resolvedAmounts, actualByCa
           )}
 
           {/* Sección Gastos */}
-          {expenseCards.length > 0 && (
+          {!collapsed && expenseCards.length > 0 && (
             <>
               <div className="px-4 py-2 border-b border-border/50" style={{ backgroundColor: EXPENSE_COLOR + '12' }}>
                 <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: EXPENSE_COLOR }}>
@@ -267,7 +279,7 @@ export function BudgetCardsView({ cards, categories, resolvedAmounts, actualByCa
           )}
 
           {/* Sin asignar */}
-          {totalIncome > 0 && (
+          {!collapsed && totalIncome > 0 && (
             <div className="grid grid-cols-[1fr_56px_120px_32px] items-center px-4 py-3 bg-muted/30">
               <span className="text-sm font-semibold text-muted-foreground">Sin asignar</span>
               <span className="text-center text-[10px] font-semibold text-muted-foreground">
