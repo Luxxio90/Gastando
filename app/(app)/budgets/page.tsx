@@ -261,7 +261,6 @@ export default async function BudgetsPage({
       <VariableExpensesCard
         categories={categories ?? []}
         variableExpenseByCat={variableExpenseByCat}
-        fixedTypeId={fixedTypeId}
         totalIncome={totalIncome}
       />
       <FixedExpensesTable

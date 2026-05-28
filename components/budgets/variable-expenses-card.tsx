@@ -6,14 +6,11 @@ import { formatCurrency } from '@/lib/utils'
 interface Props {
   categories: Category[]
   variableExpenseByCat: Record<string, number>
-  fixedTypeId: string | undefined
   totalIncome: number
 }
 
-export function VariableExpensesCard({ categories, variableExpenseByCat, fixedTypeId, totalIncome }: Props) {
-  const variableCats = categories.filter(
-    c => c.type === 'expense' && c.expense_type_id !== fixedTypeId
-  )
+export function VariableExpensesCard({ categories, variableExpenseByCat, totalIncome }: Props) {
+  const variableCats = categories.filter(c => c.type === 'expense')
 
   const rows = variableCats
     .map(c => ({ cat: c, amount: variableExpenseByCat[c.id] ?? 0 }))
@@ -32,7 +29,7 @@ export function VariableExpensesCard({ categories, variableExpenseByCat, fixedTy
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-foreground">Gastos variables</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">Gastos del mes sin contar fijos ni transferencias</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Gastos del mes sin contar transferencias</p>
         </div>
       </div>
 
