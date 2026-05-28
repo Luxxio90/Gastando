@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { Category } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 
@@ -10,6 +12,8 @@ interface Props {
 }
 
 export function VariableExpensesCard({ categories, variableExpenseByCat, totalIncome }: Props) {
+  const [collapsed, setCollapsed] = useState(false)
+
   const variableCats = categories.filter(c => c.type === 'expense')
 
   const rows = variableCats
@@ -34,14 +38,25 @@ export function VariableExpensesCard({ categories, variableExpenseByCat, totalIn
       </div>
 
       <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
-        {/* Header */}
-        <div className="grid grid-cols-[1fr_56px_120px] bg-muted/40 border-b border-border px-4 py-2.5">
-          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Categoría</span>
+        {/* Header clickeable */}
+        <button
+          type="button"
+          onClick={() => setCollapsed(c => !c)}
+          className="w-full grid grid-cols-[1fr_56px_120px] items-center px-4 py-2.5 bg-muted/40 border-b border-border text-left transition-colors hover:bg-muted/60"
+          style={{ borderBottom: collapsed ? 'none' : undefined }}
+        >
+          <div className="flex items-center gap-1.5">
+            <ChevronDown
+              className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 flex-shrink-0"
+              style={{ transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}
+            />
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Categoría</span>
+          </div>
           <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest text-center">%</span>
           <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest text-right">Monto</span>
-        </div>
+        </button>
 
-        {rows.map(({ cat, amount }) => {
+        {!collapsed && rows.map(({ cat, amount }) => {
           const pct = total > 0 ? ((amount / total) * 100).toFixed(1) : null
           const barWidth = total > 0 ? (amount / total) * 100 : 0
           return (
