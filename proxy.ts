@@ -27,7 +27,8 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  if (!user && !pathname.startsWith('/auth')) {
+  const PUBLIC_PATHS = ['/', '/privacidad', '/terminos']
+  if (!user && !pathname.startsWith('/auth') && !PUBLIC_PATHS.includes(pathname)) {
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 
