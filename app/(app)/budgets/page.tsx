@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { BudgetCardsView } from '@/components/budgets/budget-cards-view'
 import { FixedExpensesTable } from '@/components/budgets/fixed-expenses-table'
 import { VariableExpensesCard } from '@/components/budgets/variable-expenses-card'
+import { ExpenseTotalsSummary } from '@/components/budgets/expense-totals-summary'
 import { ErrorState } from '@/components/ui/error-state'
 import { BudgetCard, FixedExpenseItem, FixedExpenseGroup, Responsible } from '@/types'
 
@@ -243,6 +244,8 @@ export default async function BudgetsPage({
   const fixedTypeId      = expenseTypes?.find(et => et.name === 'Gasto fijo')?.id
   const fixedCategories  = (categories ?? []).filter(c => c.type === 'expense' && c.expense_type_id === fixedTypeId)
   const totalIncome      = Object.values(incomeByCat).reduce((s, v) => s + v, 0)
+  const totalFixed       = allFixedItems.reduce((s, i) => s + (i.amount ?? 0), 0)
+  const totalVariable    = Object.values(variableExpenseByCat).reduce((s, v) => s + v, 0)
 
   return (
     <div className="p-6 pb-28 space-y-8">
@@ -273,6 +276,11 @@ export default async function BudgetsPage({
         userId={user.id}
         month={month}
         year={year}
+      />
+      <ExpenseTotalsSummary
+        totalFixed={totalFixed}
+        totalVariable={totalVariable}
+        totalIncome={totalIncome}
       />
     </div>
   )
