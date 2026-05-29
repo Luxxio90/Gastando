@@ -34,6 +34,7 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${geistSans.variable} h-full antialiased dark`}>
       <head>
+        <meta name="color-scheme" content="dark" />
         <meta name="theme-color" content="#0C0B18" />
         <meta name="mobile-web-app-capable" content="yes" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
