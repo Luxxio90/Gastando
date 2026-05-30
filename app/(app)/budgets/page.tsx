@@ -2,10 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { BudgetCardsView } from '@/components/budgets/budget-cards-view'
 import { FixedExpensesTable } from '@/components/budgets/fixed-expenses-table'
-import { VariableExpensesCard } from '@/components/budgets/variable-expenses-card'
-import { ExpenseTotalsSummary } from '@/components/budgets/expense-totals-summary'
+import { VariableSection } from '@/components/budgets/variable-section'
 import { ErrorState } from '@/components/ui/error-state'
-import { BudgetCard, FixedExpenseItem, FixedExpenseGroup, Responsible } from '@/types'
+import { Account, BudgetCard, FixedExpenseItem, FixedExpenseGroup, Responsible } from '@/types'
 
 export default async function BudgetsPage({
   searchParams,
@@ -192,15 +191,11 @@ export default async function BudgetsPage({
   const allTransactions = transactions ?? []
   const incomeByCat: Record<string, number>  = {}
   const expenseByCat: Record<string, number> = {}
-  const variableExpenseByCat: Record<string, number> = {}
   for (const t of allTransactions) {
     if (t.type === 'income') {
       incomeByCat[t.category_id] = (incomeByCat[t.category_id] ?? 0) + t.amount
     } else {
       expenseByCat[t.category_id] = (expenseByCat[t.category_id] ?? 0) + t.amount
-      if (!t.transfer_group_id) {
-        variableExpenseByCat[t.category_id] = (variableExpenseByCat[t.category_id] ?? 0) + t.amount
-      }
     }
   }
 
@@ -245,7 +240,6 @@ export default async function BudgetsPage({
   const fixedCategories  = (categories ?? []).filter(c => c.type === 'expense' && c.expense_type_id === fixedTypeId)
   const totalIncome      = Object.values(incomeByCat).reduce((s, v) => s + v, 0)
   const totalFixed       = allFixedItems.reduce((s, i) => s + (i.amount ?? 0), 0)
-  const totalVariable    = Object.values(variableExpenseByCat).reduce((s, v) => s + v, 0)
 
   return (
     <div className="p-6 pb-28 space-y-8">
@@ -261,9 +255,11 @@ export default async function BudgetsPage({
         month={month}
         year={year}
       />
-      <VariableExpensesCard
+      <VariableSection
+        transactions={allTransactions}
         categories={categories ?? []}
-        variableExpenseByCat={variableExpenseByCat}
+        accounts={(accounts ?? []) as Account[]}
+        totalFixed={totalFixed}
         totalIncome={totalIncome}
       />
       <FixedExpensesTable
@@ -276,11 +272,6 @@ export default async function BudgetsPage({
         userId={user.id}
         month={month}
         year={year}
-      />
-      <ExpenseTotalsSummary
-        totalFixed={totalFixed}
-        totalVariable={totalVariable}
-        totalIncome={totalIncome}
       />
     </div>
   )
