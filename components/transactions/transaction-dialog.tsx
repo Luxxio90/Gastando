@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,7 +8,8 @@ import { Account, Category, Transaction, Responsible } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { TrendingUp, TrendingDown, Repeat } from 'lucide-react'
+import { TrendingUp, TrendingDown, Repeat, Paperclip, X, FileText } from 'lucide-react'
+import imageCompression from 'browser-image-compression'
 
 const INCOME_COLOR  = '#00CB96'
 const EXPENSE_COLOR = '#FF4D6D'
@@ -23,7 +24,11 @@ interface Props {
   defaultType?: 'income' | 'expense'
   defaultAccountId?: string
   editingTransaction?: Transaction | null
-  onSaved?: (data: { id: string; type: 'income' | 'expense'; amount: number; description: string; date: string; account_id: string; category_id: string; notes: string | null; responsible_party_id: string | null }) => void
+  onSaved?: (data: {
+    id: string; type: 'income' | 'expense'; amount: number; description: string
+    date: string; account_id: string; category_id: string; notes: string | null
+    responsible_party_id: string | null; attachment_url: string | null
+  }) => void
 }
 
 const emptyForm = (type: 'income' | 'expense', accountId: string) => ({
@@ -49,6 +54,14 @@ export function TransactionDialog({
   const [recurring, setRecurring] = useState(false)
   const [recurringDay, setRecurringDay] = useState('1')
 
+  // Attachment state
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [attachmentFile, setAttachmentFile]       = useState<File | null>(null)
+  const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null)
+  const [existingPath, setExistingPath]           = useState<string | null>(null)
+  const [existingSignedUrl, setExistingSignedUrl] = useState<string | null>(null)
+  const [removeExisting, setRemoveExisting]       = useState(false)
+
   useEffect(() => {
     if (editingTransaction) {
       setForm({
@@ -61,12 +74,58 @@ export function TransactionDialog({
         notes: editingTransaction.notes ?? '',
         responsible_party_id: editingTransaction.responsible_party_id ?? '',
       })
+      const path = editingTransaction.attachment_url ?? null
+      setExistingPath(path)
+      setExistingSignedUrl(null)
+      setRemoveExisting(false)
+      setAttachmentFile(null)
+      setAttachmentPreview(null)
+
+      if (path) {
+        supabase.storage.from('transaction-attachments')
+          .createSignedUrl(path, 300)
+          .then(({ data }) => { if (data) setExistingSignedUrl(data.signedUrl) })
+      }
     } else {
       setForm(emptyForm(defaultType, defaultAccountId))
       setRecurring(false)
       setRecurringDay('1')
+      setExistingPath(null)
+      setExistingSignedUrl(null)
+      setRemoveExisting(false)
+      setAttachmentFile(null)
+      setAttachmentPreview(null)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingTransaction, defaultType, defaultAccountId, open])
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+
+    let processed = file
+    if (file.type.startsWith('image/')) {
+      try {
+        processed = await imageCompression(file, {
+          maxSizeMB: 0.5,
+          maxWidthOrHeight: 1920,
+          useWebWorker: true,
+        })
+      } catch { /* use original */ }
+    }
+
+    if (attachmentPreview) URL.revokeObjectURL(attachmentPreview)
+    setAttachmentFile(processed)
+    setAttachmentPreview(URL.createObjectURL(processed))
+    setRemoveExisting(false)
+  }
+
+  function clearNewFile() {
+    if (attachmentPreview) URL.revokeObjectURL(attachmentPreview)
+    setAttachmentFile(null)
+    setAttachmentPreview(null)
+  }
 
   const filteredCategories = categories.filter(c => c.type === form.type)
   const activeColor = form.type === 'income' ? INCOME_COLOR : EXPENSE_COLOR
@@ -80,6 +139,37 @@ export function TransactionDialog({
     setLoading(true)
     const amount = parseFloat(form.amount)
 
+    // ── Resolve final attachment_url ────────────────────────────
+    let finalAttachmentUrl: string | null = existingPath
+
+    if (removeExisting && existingPath) {
+      await supabase.storage.from('transaction-attachments').remove([existingPath])
+      finalAttachmentUrl = null
+    }
+
+    if (attachmentFile) {
+      const isPdf = attachmentFile.type === 'application/pdf'
+      const ext   = isPdf ? 'pdf'
+        : attachmentFile.type === 'image/png'  ? 'png'
+        : attachmentFile.type === 'image/webp' ? 'webp'
+        : 'jpg'
+      const path = `${userId}/${crypto.randomUUID()}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('transaction-attachments').upload(path, attachmentFile)
+
+      if (uploadError) {
+        toast.error('Error al subir el comprobante')
+        setLoading(false)
+        return
+      }
+
+      if (existingPath && !removeExisting) {
+        await supabase.storage.from('transaction-attachments').remove([existingPath])
+      }
+      finalAttachmentUrl = path
+    }
+    // ────────────────────────────────────────────────────────────
+
     if (isEditing) {
       const editPayload = {
         type: form.type,
@@ -90,6 +180,7 @@ export function TransactionDialog({
         category_id: form.category_id,
         notes: form.notes || null,
         responsible_party_id: form.responsible_party_id || null,
+        attachment_url: finalAttachmentUrl,
       }
       const { error } = await supabase.from('transactions').update(editPayload).eq('id', editingTransaction!.id)
       if (error) {
@@ -105,48 +196,45 @@ export function TransactionDialog({
     }
 
     let recurringId: string | null = null
-
     if (recurring) {
       const { data: rt, error: rtError } = await supabase
         .from('recurring_transactions')
         .insert({
-          user_id: userId,
-          type: form.type,
-          amount,
-          description: form.description,
-          category_id: form.category_id,
+          user_id: userId, type: form.type, amount,
+          description: form.description, category_id: form.category_id,
           account_id: form.account_id,
           day_of_month: Math.min(Math.max(parseInt(recurringDay) || 1, 1), 28),
           notes: form.notes || null,
         })
-        .select()
-        .single()
+        .select().single()
 
       if (rtError) { toast.error('Error al crear recurrente: ' + rtError.message); setLoading(false); return }
       recurringId = rt.id
     }
 
     const payload = {
-      user_id: userId,
-      type: form.type,
-      amount,
-      description: form.description,
-      date: form.date,
-      account_id: form.account_id,
-      category_id: form.category_id,
-      notes: form.notes || null,
-      recurring_transaction_id: recurringId,
+      user_id: userId, type: form.type, amount,
+      description: form.description, date: form.date,
+      account_id: form.account_id, category_id: form.category_id,
+      notes: form.notes || null, recurring_transaction_id: recurringId,
       responsible_party_id: form.responsible_party_id || null,
+      attachment_url: finalAttachmentUrl,
     }
 
-    {
-      const { error } = await supabase.from('transactions').insert(payload)
-      if (error) toast.error('Error al guardar: ' + error.message)
-      else { toast.success(recurring ? 'Transacción registrada y recurrente creada' : 'Transacción registrada'); onClose(); router.refresh() }
+    const { error } = await supabase.from('transactions').insert(payload)
+    if (error) toast.error('Error al guardar: ' + error.message)
+    else {
+      toast.success(recurring ? 'Transacción registrada y recurrente creada' : 'Transacción registrada')
+      onClose()
+      router.refresh()
     }
 
     setLoading(false)
   }
+
+  const showExisting   = isEditing && !!existingPath && !removeExisting && !attachmentFile
+  const showNewPreview = !!attachmentFile && !!attachmentPreview
+  const showPicker     = !showNewPreview && !showExisting
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -340,13 +428,109 @@ export function TransactionDialog({
             </div>
           )}
 
+          {/* Comprobante */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+              Comprobante <span className="normal-case font-normal text-muted-foreground/60">(opcional)</span>
+            </label>
+
+            {/* Vista previa adjunto existente */}
+            {showExisting && (
+              <div className="flex items-center gap-3 p-2.5 rounded-xl border border-border bg-muted/30">
+                {existingSignedUrl && !existingPath?.endsWith('.pdf') ? (
+                  <img src={existingSignedUrl} alt="comprobante" className="h-12 w-12 rounded-lg object-cover flex-shrink-0" />
+                ) : (
+                  <div className="h-12 w-12 rounded-lg bg-muted/60 flex items-center justify-center flex-shrink-0">
+                    <FileText className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-foreground">Comprobante adjunto</p>
+                  {existingSignedUrl && (
+                    <a
+                      href={existingSignedUrl} target="_blank" rel="noopener noreferrer"
+                      className="text-[11px] hover:underline" style={{ color: '#7C4DFF' }}
+                    >
+                      Ver archivo
+                    </a>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button" title="Reemplazar"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                  >
+                    <Paperclip className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button" title="Quitar"
+                    onClick={() => setRemoveExisting(true)}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Vista previa archivo nuevo */}
+            {showNewPreview && (
+              <div className="flex items-center gap-3 p-2.5 rounded-xl border border-border bg-muted/30">
+                {attachmentFile!.type.startsWith('image/') ? (
+                  <img src={attachmentPreview!} alt="preview" className="h-12 w-12 rounded-lg object-cover flex-shrink-0" />
+                ) : (
+                  <div className="h-12 w-12 rounded-lg bg-muted/60 flex items-center justify-center flex-shrink-0">
+                    <FileText className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-foreground truncate">{attachmentFile!.name}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {attachmentFile!.size < 1024 * 1024
+                      ? `${(attachmentFile!.size / 1024).toFixed(0)} KB`
+                      : `${(attachmentFile!.size / 1024 / 1024).toFixed(1)} MB`}
+                  </p>
+                </div>
+                <button
+                  type="button" onClick={clearNewFile}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* Botón adjuntar */}
+            {showPicker && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed text-sm text-muted-foreground hover:text-foreground transition-all"
+                style={{ borderColor: 'hsl(var(--border))' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#7C4DFF60'; (e.currentTarget as HTMLButtonElement).style.background = '#7C4DFF08' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = ''; (e.currentTarget as HTMLButtonElement).style.background = '' }}
+              >
+                <Paperclip className="h-4 w-4" />
+                Adjuntar comprobante
+              </button>
+            )}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,application/pdf"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+          </div>
+
           {/* Repetir mensualmente (solo al crear) */}
           {!isEditing && (
             <div
               className="rounded-xl border overflow-hidden transition-colors"
               style={recurring ? { borderColor: '#7C4DFF50' } : { borderColor: 'hsl(var(--border))' }}
             >
-              {/* Fila del toggle */}
               <div
                 className="flex items-center justify-between px-3 py-3 cursor-pointer"
                 style={recurring ? { backgroundColor: '#7C4DFF08' } : {}}
@@ -370,7 +554,6 @@ export function TransactionDialog({
                 </div>
               </div>
 
-              {/* Día del mes — sub-fila dentro de la misma card */}
               {recurring && (
                 <div
                   className="flex items-center justify-between px-3 py-2.5 border-t"
@@ -379,9 +562,7 @@ export function TransactionDialog({
                 >
                   <span className="text-sm text-muted-foreground">Día del mes</span>
                   <input
-                    type="number"
-                    min={1}
-                    max={28}
+                    type="number" min={1} max={28}
                     value={recurringDay}
                     onChange={e => setRecurringDay(e.target.value)}
                     className="w-16 h-8 text-center text-sm font-bold rounded-lg border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-[#7C4DFF]/40"
@@ -401,8 +582,7 @@ export function TransactionDialog({
               className="flex-1 font-semibold"
               style={{
                 background: `linear-gradient(135deg, ${activeColor} 0%, ${activeColor}cc 100%)`,
-                color: '#fff',
-                border: 'none',
+                color: '#fff', border: 'none',
               }}
             >
               {loading ? 'Guardando...' : isEditing ? 'Guardar' : 'Registrar'}

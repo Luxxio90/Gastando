@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Plus, MoreVertical, Pencil, Trash2, Search, X, ChevronDown, Download } from 'lucide-react'
+import { ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Plus, MoreVertical, Pencil, Trash2, Search, X, ChevronDown, Download, Paperclip } from 'lucide-react'
 import { TransactionDialog } from './transaction-dialog'
 import { RecurringList } from './recurring-list'
 import { createClient } from '@/lib/supabase/client'
@@ -82,13 +82,21 @@ export function TransactionList({ transactions, accounts, categories, responsibl
     setTimeout(() => setDialogOpen(true), 50)
   }
 
-  function handleSaved(data: { id: string; type: 'income' | 'expense'; amount: number; description: string; date: string; account_id: string; category_id: string; notes: string | null; responsible_party_id: string | null }) {
+  function handleSaved(data: { id: string; type: 'income' | 'expense'; amount: number; description: string; date: string; account_id: string; category_id: string; notes: string | null; responsible_party_id: string | null; attachment_url: string | null }) {
     const account     = accounts.find(a => a.id === data.account_id)
     const category    = categories.find(c => c.id === data.category_id)
     const responsible = responsibles.find(r => r.id === data.responsible_party_id)
     setAllLoaded(prev => prev.map(t =>
       t.id === data.id ? { ...t, ...data, account, category, responsible } : t
     ))
+  }
+
+  async function openAttachment(t: Transaction) {
+    if (!t.attachment_url) return
+    const { data } = await supabase.storage
+      .from('transaction-attachments')
+      .createSignedUrl(t.attachment_url, 300)
+    if (data) window.open(data.signedUrl, '_blank')
   }
 
   function exportCSV() {
@@ -139,6 +147,9 @@ export function TransactionList({ transactions, accounts, categories, responsibl
       const { error } = await supabase.from('transactions').delete().eq('id', t.id)
       if (error) toast.error('Error al eliminar')
       else {
+        if (t.attachment_url) {
+          await supabase.storage.from('transaction-attachments').remove([t.attachment_url])
+        }
         setAllLoaded(prev => prev.filter(x => x.id !== t.id))
         toast.success('Transacción eliminada')
         router.refresh()
@@ -313,7 +324,19 @@ export function TransactionList({ transactions, accounts, categories, responsibl
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{t.description}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-medium text-foreground truncate">{t.description}</p>
+                        {t.attachment_url && (
+                          <button
+                            type="button"
+                            onClick={() => openAttachment(t)}
+                            title="Ver comprobante"
+                            className="flex-shrink-0 text-muted-foreground/50 hover:text-[#7C4DFF] transition-colors"
+                          >
+                            <Paperclip className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
                       <p className="text-[11px] text-muted-foreground mt-0.5">
                         {formatDate(t.date)}
                         {(t.account as any)?.name  ? ` · ${(t.account as any).name}`   : ''}

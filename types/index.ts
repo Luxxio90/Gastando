@@ -44,6 +44,7 @@ export interface Transaction {
   description: string
   date: string
   notes: string | null
+  attachment_url: string | null
   transfer_group_id: string | null
   responsible_party_id: string | null
   created_at: string | null
