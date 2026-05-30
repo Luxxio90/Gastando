@@ -72,16 +72,8 @@ export function AccountDetail({ account, transactions, categories, accounts, use
   const typeLabel = ACCOUNT_TYPES.find(t => t.value === account.type)?.label ?? ''
 
   async function handleDeleteTransaction(id: string) {
-    const t = transactions.find(tx => tx.id === id)
     const { error } = await supabase.from('transactions').delete().eq('id', id)
     if (error) { toast.error('Error al eliminar'); return }
-    if (t) {
-      const { data: acc } = await supabase.from('accounts').select('balance').eq('id', account.id).single()
-      if (acc) {
-        const delta = t.type === 'income' ? -t.amount : t.amount
-        await supabase.from('accounts').update({ balance: acc.balance + delta }).eq('id', account.id)
-      }
-    }
     toast.success('Transacción eliminada')
     router.refresh()
   }
