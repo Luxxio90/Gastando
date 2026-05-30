@@ -182,7 +182,7 @@ export function TransactionDialog({
         responsible_party_id: form.responsible_party_id || null,
         attachment_url: finalAttachmentUrl,
       }
-      const { error } = await supabase.from('transactions').update(editPayload).eq('id', editingTransaction!.id)
+      const { error } = await supabase.from('transactions').update(editPayload as any).eq('id', editingTransaction!.id)
       if (error) {
         toast.error('Error al guardar: ' + error.message)
       } else {
@@ -221,7 +221,7 @@ export function TransactionDialog({
       attachment_url: finalAttachmentUrl,
     }
 
-    const { error } = await supabase.from('transactions').insert(payload)
+    const { error } = await supabase.from('transactions').insert(payload as any)
     if (error) toast.error('Error al guardar: ' + error.message)
     else {
       toast.success(recurring ? 'Transacción registrada y recurrente creada' : 'Transacción registrada')
