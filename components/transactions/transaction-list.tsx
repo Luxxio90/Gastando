@@ -39,6 +39,8 @@ export function TransactionList({ transactions, accounts, categories, responsibl
   const [allLoaded, setAllLoaded]         = useState<Transaction[]>(transactions)
   const [hasMore, setHasMore]             = useState(transactions.length === PAGE_SIZE)
   const [loadingMore, setLoadingMore]     = useState(false)
+  const [lightboxUrl, setLightboxUrl]     = useState<string | null>(null)
+  const [lightboxLoading, setLightboxLoading] = useState(false)
 
   const router   = useRouter()
   const supabase = createClient()
@@ -93,10 +95,18 @@ export function TransactionList({ transactions, accounts, categories, responsibl
 
   async function openAttachment(t: Transaction) {
     if (!t.attachment_url) return
+    const isPdf = t.attachment_url.toLowerCase().endsWith('.pdf')
+    setLightboxLoading(true)
     const { data } = await supabase.storage
       .from('transaction-attachments')
       .createSignedUrl(t.attachment_url, 300)
-    if (data) window.open(data.signedUrl, '_blank')
+    setLightboxLoading(false)
+    if (!data) return
+    if (isPdf) {
+      window.open(data.signedUrl, '_blank')
+    } else {
+      setLightboxUrl(data.signedUrl)
+    }
   }
 
   function exportCSV() {
@@ -456,6 +466,46 @@ export function TransactionList({ transactions, accounts, categories, responsibl
         editingTransaction={editing}
         onSaved={handleSaved}
       />
+
+      {/* Lightbox */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}
+          onClick={() => setLightboxUrl(null)}
+        >
+          <button
+            onClick={() => setLightboxUrl(null)}
+            className="absolute top-4 right-4 h-9 w-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <a
+            href={lightboxUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={e => e.stopPropagation()}
+            className="absolute top-4 left-4 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white text-xs font-medium"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Abrir en nueva pestaña
+          </a>
+          <img
+            src={lightboxUrl}
+            alt="comprobante"
+            onClick={e => e.stopPropagation()}
+            className="max-w-full max-h-full rounded-xl object-contain shadow-2xl"
+            style={{ maxHeight: 'calc(100vh - 80px)' }}
+          />
+        </div>
+      )}
+
+      {/* Lightbox loading overlay */}
+      {lightboxLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="h-8 w-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+        </div>
+      )}
     </div>
   )
 }
