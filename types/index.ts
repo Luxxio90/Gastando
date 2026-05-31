@@ -112,6 +112,7 @@ export interface FixedExpenseItem {
   status: string
   responsible: string | null
   due_day: number | null
+  account_id: string | null
   created_at: string | null
   category?: Pick<Category, 'id' | 'name' | 'icon' | 'color'>
 }

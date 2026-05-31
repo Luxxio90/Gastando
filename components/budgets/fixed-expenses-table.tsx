@@ -221,7 +221,7 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
       status: item.status as FixedExpenseStatus,
       responsible: item.responsible ?? '',
       due_day: item.due_day?.toString() ?? '',
-      account_id: '',
+      account_id: item.account_id ?? '',
     })
     setItemDialogOpen(true)
   }
@@ -246,6 +246,7 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
       status: itemForm.status,
       responsible: itemForm.responsible.trim() || null,
       due_day: itemForm.due_day ? parseInt(itemForm.due_day) : null,
+      account_id: itemForm.account_id || null,
     }
     const { error, data: saved } = editingItem
       ? await supabase.from('fixed_expense_items').update(payload).eq('id', editingItem.id)
