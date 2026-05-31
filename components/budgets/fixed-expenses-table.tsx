@@ -249,9 +249,11 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
       account_id: itemForm.account_id || null,
     }
     const { error, data: saved } = editingItem
-      ? await supabase.from('fixed_expense_items').update(payload).eq('id', editingItem.id)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ? await supabase.from('fixed_expense_items').update(payload as any).eq('id', editingItem.id)
           .select('*, category:categories(id,name,icon,color)').single()
-      : await supabase.from('fixed_expense_items').insert(payload)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      : await supabase.from('fixed_expense_items').insert(payload as any)
           .select('*, category:categories(id,name,icon,color)').single()
 
     if (error) {
