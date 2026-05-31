@@ -211,12 +211,15 @@ export default async function BudgetsPage({
     }
   }
 
-  // ── Tracking: actual spending by account ────────────────────────────────────
-  const trackingCards = allCards.filter(c => c.track_account_id)
+  // ── Tracking: actual spending by account(s) ─────────────────────────────────
+  const trackingCards = allCards.filter(c => (c.track_account_ids?.length ?? 0) > 0 || c.track_account_id)
   const actualByCard: Record<string, number> = {}
   for (const card of trackingCards) {
+    const ids: string[] = card.track_account_ids?.length
+      ? card.track_account_ids
+      : card.track_account_id ? [card.track_account_id] : []
     actualByCard[card.id] = allTransactions
-      .filter(t => t.account_id === card.track_account_id && t.type === 'expense' && !t.transfer_group_id)
+      .filter(t => ids.includes(t.account_id) && t.type === 'expense' && !t.transfer_group_id)
       .reduce((s, t) => s + t.amount, 0)
   }
 

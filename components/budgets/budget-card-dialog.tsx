@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
 import { BudgetCard, Category, Account } from '@/types'
+import { Check } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -24,13 +25,13 @@ type CardForm = {
   sum_category_id: string
   source_card_id: string
   percentage: string
-  track_account_id: string
+  track_account_ids: string[]
 }
 
 const emptyForm: CardForm = {
   name: '', card_type: 'expense', calc_type: 'manual',
   manual_amount: '', sum_category_id: '', source_card_id: '', percentage: '',
-  track_account_id: '',
+  track_account_ids: [],
 }
 
 interface Props {
@@ -62,6 +63,9 @@ export function BudgetCardDialog({
 
   useEffect(() => {
     if (editing) {
+      const ids = editing.track_account_ids?.length
+        ? editing.track_account_ids
+        : editing.track_account_id ? [editing.track_account_id] : []
       setForm({
         name: editing.name,
         card_type: editing.card_type as 'income' | 'expense',
@@ -70,7 +74,7 @@ export function BudgetCardDialog({
         sum_category_id: editing.sum_category_id ?? '',
         source_card_id: editing.source_card_id ?? '',
         percentage: editing.percentage?.toString() ?? '',
-        track_account_id: editing.track_account_id ?? '',
+        track_account_ids: ids,
       })
     } else {
       setForm(emptyForm)
@@ -130,8 +134,9 @@ export function BudgetCardDialog({
       source_card_id: form.calc_type === 'percentage' ? form.source_card_id || null : null,
       percentage: form.calc_type === 'percentage' ? pctValue : null,
       track_category_id: null,
-      track_account_id: form.track_account_id || null,
-      exceeded_at: form.track_account_id ? (editing?.exceeded_at ?? null) : null,
+      track_account_id: form.track_account_ids[0] ?? null,
+      track_account_ids: form.track_account_ids,
+      exceeded_at: form.track_account_ids.length > 0 ? (editing?.exceeded_at ?? null) : null,
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -356,31 +361,52 @@ export function BudgetCardDialog({
 
           {/* Cuenta de seguimiento */}
           {accounts.length > 0 && (
-            <div className="space-y-1.5 border-t border-border/50 pt-4">
-              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                Seguimiento de cuenta <span className="normal-case font-normal">(opcional)</span>
-              </label>
+            <div className="space-y-2 border-t border-border/50 pt-4">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+                  Seguimiento de cuentas <span className="normal-case font-normal">(opcional)</span>
+                </label>
+                {form.track_account_ids.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, track_account_ids: [] })}
+                    className="text-[10px] text-muted-foreground hover:text-foreground transition-colors underline"
+                  >
+                    Quitar
+                  </button>
+                )}
+              </div>
               <p className="text-[11px] text-muted-foreground">
-                Registrá cuánto se gastó de una cuenta contra este presupuesto.
+                Seleccioná una o más cuentas para sumar sus gastos contra este presupuesto.
               </p>
-              <Select
-                value={form.track_account_id}
-                onValueChange={v => setForm({ ...form, track_account_id: (v ?? '') === '__none__' ? '' : (v ?? '') })}
-              >
-                <SelectTrigger className="w-full bg-muted/40 border-border/60">
-                  <span className={form.track_account_id ? 'text-sm' : 'text-sm text-muted-foreground'}>
-                    {form.track_account_id
-                      ? (accounts.find(a => a.id === form.track_account_id)?.name ?? 'Cuenta')
-                      : 'Sin seguimiento'}
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Sin seguimiento</SelectItem>
-                  {accounts.map(a => (
-                    <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="space-y-1.5">
+                {accounts.map(a => {
+                  const selected = form.track_account_ids.includes(a.id)
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => {
+                        const ids = selected
+                          ? form.track_account_ids.filter(id => id !== a.id)
+                          : [...form.track_account_ids, a.id]
+                        setForm({ ...form, track_account_ids: ids })
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-sm transition-all"
+                      style={selected
+                        ? { backgroundColor: a.color + '18', borderColor: a.color + '60' }
+                        : { backgroundColor: 'transparent', borderColor: 'hsl(var(--border))' }
+                      }
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: a.color }} />
+                        <span className="font-medium text-foreground">{a.name}</span>
+                      </div>
+                      {selected && <Check className="h-3.5 w-3.5 flex-shrink-0" style={{ color: a.color }} />}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           )}
 
