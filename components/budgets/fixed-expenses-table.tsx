@@ -514,15 +514,14 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
                                 className="grid grid-cols-[1fr_112px_84px] gap-x-2 items-center px-4 py-2.5 border-b border-border/40 hover:bg-muted/30 transition-colors cursor-pointer last:border-b-0"
                               >
                                 <div className="min-w-0">
-                                  <p className="text-sm font-medium text-foreground">
-                                    {cat
-                                      ? <><span className="mr-1">{cat.icon}</span>{cat.name}</>
-                                      : <span className="text-muted-foreground italic text-xs">Sin categoría</span>
-                                    }
+                                  <p className="text-sm font-semibold text-foreground truncate">
+                                    {item.description || (cat ? cat.name : 'Sin descripción')}
                                   </p>
                                   <div className="flex items-center gap-2 mt-0.5">
-                                    {item.description && (
-                                      <span className="text-[11px] text-muted-foreground truncate">{item.description}</span>
+                                    {cat && item.description && (
+                                      <span className="text-[11px] text-muted-foreground truncate">
+                                        <span className="mr-0.5">{cat.icon}</span>{cat.name}
+                                      </span>
                                     )}
                                     {item.due_day && (
                                       <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0">
