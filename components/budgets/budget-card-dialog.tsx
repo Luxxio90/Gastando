@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
-import { BudgetCard, Category, Account } from '@/types'
+import { BudgetCard, Category, Account, Responsible } from '@/types'
 import { Check } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -16,6 +16,7 @@ import { LayoutList } from 'lucide-react'
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
 type CalcType = 'manual' | 'category_sum' | 'percentage'
+type TrackMode = 'none' | 'account' | 'responsible'
 
 type CardForm = {
   name: string
@@ -25,13 +26,17 @@ type CardForm = {
   sum_category_id: string
   source_card_id: string
   percentage: string
+  track_mode: TrackMode
   track_account_ids: string[]
+  track_responsible_ids: string[]
 }
 
 const emptyForm: CardForm = {
   name: '', card_type: 'expense', calc_type: 'manual',
   manual_amount: '', sum_category_id: '', source_card_id: '', percentage: '',
+  track_mode: 'none',
   track_account_ids: [],
+  track_responsible_ids: [],
 }
 
 interface Props {
@@ -41,6 +46,7 @@ interface Props {
   cards: BudgetCard[]
   resolvedAmounts: Record<string, number>
   accounts: Account[]
+  responsibles: Responsible[]
   userId: string
   month: number
   year: number
@@ -53,7 +59,7 @@ const INCOME_COLOR  = '#00CB96'
 const EXPENSE_COLOR = '#7C4DFF'
 
 export function BudgetCardDialog({
-  open, onClose, categories, cards, resolvedAmounts, accounts,
+  open, onClose, categories, cards, resolvedAmounts, accounts, responsibles,
   userId, month, year, editing, incomeByCat, expenseByCat,
 }: Props) {
   const router = useRouter()
@@ -63,9 +69,11 @@ export function BudgetCardDialog({
 
   useEffect(() => {
     if (editing) {
-      const ids = editing.track_account_ids?.length
+      const accountIds = editing.track_account_ids?.length
         ? editing.track_account_ids
         : editing.track_account_id ? [editing.track_account_id] : []
+      const responsibleIds = editing.track_responsible_ids ?? []
+      const mode: TrackMode = responsibleIds.length > 0 ? 'responsible' : accountIds.length > 0 ? 'account' : 'none'
       setForm({
         name: editing.name,
         card_type: editing.card_type as 'income' | 'expense',
@@ -74,7 +82,9 @@ export function BudgetCardDialog({
         sum_category_id: editing.sum_category_id ?? '',
         source_card_id: editing.source_card_id ?? '',
         percentage: editing.percentage?.toString() ?? '',
-        track_account_ids: ids,
+        track_mode: mode,
+        track_account_ids: accountIds,
+        track_responsible_ids: responsibleIds,
       })
     } else {
       setForm(emptyForm)
@@ -134,9 +144,10 @@ export function BudgetCardDialog({
       source_card_id: form.calc_type === 'percentage' ? form.source_card_id || null : null,
       percentage: form.calc_type === 'percentage' ? pctValue : null,
       track_category_id: null,
-      track_account_id: form.track_account_ids[0] ?? null,
-      track_account_ids: form.track_account_ids,
-      exceeded_at: form.track_account_ids.length > 0 ? (editing?.exceeded_at ?? null) : null,
+      track_account_id: form.track_mode === 'account' ? (form.track_account_ids[0] ?? null) : null,
+      track_account_ids: form.track_mode === 'account' ? form.track_account_ids : [],
+      track_responsible_ids: form.track_mode === 'responsible' ? form.track_responsible_ids : [],
+      exceeded_at: form.track_mode !== 'none' ? (editing?.exceeded_at ?? null) : null,
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -359,33 +370,37 @@ export function BudgetCardDialog({
             )}
           </div>
 
-          {/* Cuenta de seguimiento */}
-          {accounts.length > 0 && (
-            <div className="space-y-2 border-t border-border/50 pt-4">
-              <div className="flex items-center justify-between">
-                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                  Seguimiento de cuentas <span className="normal-case font-normal">(opcional)</span>
-                </label>
-                {form.track_account_ids.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, track_account_ids: [] })}
-                    className="text-[10px] text-muted-foreground hover:text-foreground transition-colors underline"
+          {/* Seguimiento */}
+          <div className="space-y-2 border-t border-border/50 pt-4">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+              Seguimiento <span className="normal-case font-normal">(opcional)</span>
+            </label>
+            <div className="flex gap-1.5">
+              {(['none', 'account', 'responsible'] as TrackMode[]).map(m => {
+                const labels: Record<TrackMode, string> = { none: 'Ninguno', account: 'Por cuenta', responsible: 'Por encargado' }
+                const active = form.track_mode === m
+                return (
+                  <button key={m} type="button"
+                    onClick={() => setForm({ ...form, track_mode: m })}
+                    className="flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-all"
+                    style={active
+                      ? { backgroundColor: '#7C4DFF20', borderColor: '#7C4DFF50', color: '#7C4DFF' }
+                      : { backgroundColor: 'transparent', borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }
+                    }
                   >
-                    Quitar
+                    {labels[m]}
                   </button>
-                )}
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                Seleccioná una o más cuentas para sumar sus gastos contra este presupuesto.
-              </p>
+                )
+              })}
+            </div>
+
+            {form.track_mode === 'account' && (
               <div className="space-y-1.5">
+                <p className="text-[11px] text-muted-foreground">Seleccioná una o más cuentas para sumar sus gastos.</p>
                 {accounts.map(a => {
                   const selected = form.track_account_ids.includes(a.id)
                   return (
-                    <button
-                      key={a.id}
-                      type="button"
+                    <button key={a.id} type="button"
                       onClick={() => {
                         const ids = selected
                           ? form.track_account_ids.filter(id => id !== a.id)
@@ -407,8 +422,44 @@ export function BudgetCardDialog({
                   )
                 })}
               </div>
-            </div>
-          )}
+            )}
+
+            {form.track_mode === 'responsible' && (
+              <div className="space-y-1.5">
+                {responsibles.length === 0 ? (
+                  <p className="text-[11px] text-muted-foreground">No hay encargados creados aún.</p>
+                ) : (
+                  <>
+                    <p className="text-[11px] text-muted-foreground">Seleccioná uno o más encargados para sumar sus gastos.</p>
+                    {responsibles.map(r => {
+                      const selected = form.track_responsible_ids.includes(r.id)
+                      return (
+                        <button key={r.id} type="button"
+                          onClick={() => {
+                            const ids = selected
+                              ? form.track_responsible_ids.filter(id => id !== r.id)
+                              : [...form.track_responsible_ids, r.id]
+                            setForm({ ...form, track_responsible_ids: ids })
+                          }}
+                          className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-sm transition-all"
+                          style={selected
+                            ? { backgroundColor: r.color + '18', borderColor: r.color + '60' }
+                            : { backgroundColor: 'transparent', borderColor: 'hsl(var(--border))' }
+                          }
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: r.color }} />
+                            <span className="font-medium text-foreground">{r.name}</span>
+                          </div>
+                          {selected && <Check className="h-3.5 w-3.5 flex-shrink-0" style={{ color: r.color }} />}
+                        </button>
+                      )
+                    })}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
 
           <div className="flex gap-2 pt-1">
             <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancelar</Button>

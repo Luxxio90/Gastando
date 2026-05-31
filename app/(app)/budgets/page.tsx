@@ -46,7 +46,7 @@ export default async function BudgetsPage({
       .or(`user_id.eq.${user.id},is_default.eq.true`).order('type').order('name'),
     supabase
       .from('transactions')
-      .select('category_id, amount, type, account_id, transfer_group_id')
+      .select('category_id, amount, type, account_id, transfer_group_id, responsible_party_id')
       .eq('user_id', user.id).gte('date', firstDay).lte('date', lastDay),
     supabase
       .from('fixed_expense_items')
@@ -211,16 +211,25 @@ export default async function BudgetsPage({
     }
   }
 
-  // ── Tracking: actual spending by account(s) ─────────────────────────────────
-  const trackingCards = allCards.filter(c => (c.track_account_ids?.length ?? 0) > 0 || c.track_account_id)
+  // ── Tracking: actual spending by account(s) or responsible(s) ───────────────
+  const trackingCards = allCards.filter(c =>
+    (c.track_account_ids?.length ?? 0) > 0 || c.track_account_id || (c.track_responsible_ids?.length ?? 0) > 0
+  )
   const actualByCard: Record<string, number> = {}
   for (const card of trackingCards) {
-    const ids: string[] = card.track_account_ids?.length
-      ? card.track_account_ids
-      : card.track_account_id ? [card.track_account_id] : []
-    actualByCard[card.id] = allTransactions
-      .filter(t => ids.includes(t.account_id) && t.type === 'expense' && !t.transfer_group_id)
-      .reduce((s, t) => s + t.amount, 0)
+    if ((card.track_responsible_ids?.length ?? 0) > 0) {
+      const ids = card.track_responsible_ids!
+      actualByCard[card.id] = allTransactions
+        .filter(t => t.responsible_party_id && ids.includes(t.responsible_party_id) && t.type === 'expense' && !t.transfer_group_id)
+        .reduce((s, t) => s + t.amount, 0)
+    } else {
+      const ids: string[] = card.track_account_ids?.length
+        ? card.track_account_ids
+        : card.track_account_id ? [card.track_account_id] : []
+      actualByCard[card.id] = allTransactions
+        .filter(t => ids.includes(t.account_id) && t.type === 'expense' && !t.transfer_group_id)
+        .reduce((s, t) => s + t.amount, 0)
+    }
   }
 
   // Update exceeded_at if status changed
@@ -254,6 +263,7 @@ export default async function BudgetsPage({
         incomeByCat={incomeByCat}
         expenseByCat={expenseByCat}
         accounts={(accounts ?? []) as any[]}
+        responsibles={(responsibles ?? []) as Responsible[]}
         userId={user.id}
         month={month}
         year={year}

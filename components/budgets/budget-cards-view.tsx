@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { BudgetCard, Category, Account } from '@/types'
+import { BudgetCard, Category, Account, Responsible } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -19,6 +19,7 @@ interface Props {
   incomeByCat: Record<string, number>
   expenseByCat: Record<string, number>
   accounts: Account[]
+  responsibles: Responsible[]
   userId: string
   month: number
   year: number
@@ -33,7 +34,7 @@ function nextMonth(month: number, year: number) {
   return month === 12 ? { month: 1, year: year + 1 } : { month: month + 1, year }
 }
 
-export function BudgetCardsView({ cards, categories, resolvedAmounts, actualByCard, incomeByCat, expenseByCat, accounts, userId, month, year }: Props) {
+export function BudgetCardsView({ cards, categories, resolvedAmounts, actualByCard, incomeByCat, expenseByCat, accounts, responsibles, userId, month, year }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -298,25 +299,26 @@ export function BudgetCardsView({ cards, categories, resolvedAmounts, actualByCa
       )}
 
       {/* Sección de seguimiento */}
-      {cards.filter(c => (c.track_account_ids?.length ?? 0) > 0 || c.track_account_id).length > 0 && (
+      {cards.filter(c => (c.track_account_ids?.length ?? 0) > 0 || c.track_account_id || (c.track_responsible_ids?.length ?? 0) > 0).length > 0 && (
         <div className="space-y-3">
           <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
             <Target className="h-3.5 w-3.5" />
             Seguimiento
           </h2>
-          {cards.filter(c => (c.track_account_ids?.length ?? 0) > 0 || c.track_account_id).map(card => {
+          {cards.filter(c => (c.track_account_ids?.length ?? 0) > 0 || c.track_account_id || (c.track_responsible_ids?.length ?? 0) > 0).map(card => {
             const budget  = resolvedAmounts[card.id] ?? 0
             const actual  = actualByCard[card.id] ?? 0
             const remaining = budget - actual
             const pctUsed = budget > 0 ? Math.min(100, (actual / budget) * 100) : 0
             const exceeded = actual > budget
-            const trackIds: string[] = card.track_account_ids?.length
-              ? card.track_account_ids
-              : card.track_account_id ? [card.track_account_id] : []
-            const accountNames = trackIds
-              .map(id => accounts.find(a => a.id === id)?.name)
-              .filter(Boolean)
-              .join(', ')
+            const trackingLabel = (card.track_responsible_ids?.length ?? 0) > 0
+              ? card.track_responsible_ids!.map(id => responsibles.find(r => r.id === id)?.name).filter(Boolean).join(', ')
+              : (() => {
+                  const ids: string[] = card.track_account_ids?.length
+                    ? card.track_account_ids
+                    : card.track_account_id ? [card.track_account_id] : []
+                  return ids.map(id => accounts.find(a => a.id === id)?.name).filter(Boolean).join(', ')
+                })()
             const color = exceeded ? '#FF4D6D' : pctUsed >= 80 ? '#F59E0B' : '#00CB96'
 
             return (
@@ -341,7 +343,7 @@ export function BudgetCardsView({ cards, categories, resolvedAmounts, actualByCa
                         {exceeded && <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" style={{ color: '#FF4D6D' }} />}
                         <p className="font-semibold text-sm text-foreground">{card.name}</p>
                       </div>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">{accountNames || '—'}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{trackingLabel || '—'}</p>
                       {exceeded && card.exceeded_at && (
                         <p className="text-[11px] mt-0.5 font-semibold" style={{ color: '#FF4D6D' }}>
                           Superado el {new Date(card.exceeded_at).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })}
@@ -386,6 +388,7 @@ export function BudgetCardsView({ cards, categories, resolvedAmounts, actualByCa
         cards={cards}
         resolvedAmounts={resolvedAmounts}
         accounts={accounts}
+        responsibles={responsibles}
         userId={userId}
         month={month}
         year={year}
