@@ -127,6 +127,7 @@ export function FloatingActionButton({ userId }: { userId: string }) {
           open={true}
           onClose={() => setDialogType(null)}
           accounts={accounts}
+          responsibles={responsibles}
           userId={userId}
         />
       )}

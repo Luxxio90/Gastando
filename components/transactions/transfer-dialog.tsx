@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Account } from '@/types'
+import { Account, Responsible } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -17,14 +17,15 @@ interface Props {
   open: boolean
   onClose: () => void
   accounts: Account[]
+  responsibles: Responsible[]
   userId: string
 }
 
-export function TransferDialog({ open, onClose, accounts, userId }: Props) {
+export function TransferDialog({ open, onClose, accounts, responsibles, userId }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
-  const [form, setForm] = useState({ from_id: '', to_id: '', amount: '', description: 'Transferencia' })
+  const [form, setForm] = useState({ from_id: '', to_id: '', amount: '', description: 'Transferencia', responsible_id: '' })
 
   const fromAccount  = accounts.find(a => a.id === form.from_id)
   const toAccount    = accounts.find(a => a.id === form.to_id)
@@ -69,16 +70,17 @@ export function TransferDialog({ open, onClose, accounts, userId }: Props) {
       const desc           = form.description.trim() || 'Transferencia'
       const transferGroupId = crypto.randomUUID()
 
+      const responsibleId = form.responsible_id || null
       const [r1, r2] = await Promise.all([
         supabase.from('transactions').insert({
           user_id: userId, account_id: form.from_id, category_id: expenseCatId,
           type: 'expense', amount, description: `${desc} a ${toAccount?.name}`, date: today, notes: null,
-          transfer_group_id: transferGroupId,
+          transfer_group_id: transferGroupId, responsible_party_id: responsibleId,
         }),
         supabase.from('transactions').insert({
           user_id: userId, account_id: form.to_id, category_id: incomeCatId,
           type: 'income', amount, description: `${desc} desde ${fromAccount?.name}`, date: today, notes: null,
-          transfer_group_id: transferGroupId,
+          transfer_group_id: transferGroupId, responsible_party_id: responsibleId,
         }),
       ])
 
@@ -86,7 +88,7 @@ export function TransferDialog({ open, onClose, accounts, userId }: Props) {
         toast.error('Error al realizar la transferencia')
       } else {
         toast.success(`${formatCurrency(amount)} transferido a ${toAccount?.name}`)
-        setForm({ from_id: '', to_id: '', amount: '', description: 'Transferencia' })
+        setForm({ from_id: '', to_id: '', amount: '', description: 'Transferencia', responsible_id: '' })
         onClose()
         router.refresh()
       }
@@ -236,6 +238,34 @@ export function TransferDialog({ open, onClose, accounts, userId }: Props) {
               </div>
             )}
           </div>
+
+          {/* Encargado */}
+          {responsibles.length > 0 && (
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+                Encargado <span className="normal-case font-normal text-muted-foreground/60">(opcional)</span>
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {responsibles.map(r => {
+                  const active = form.responsible_id === r.id
+                  return (
+                    <button
+                      key={r.id} type="button"
+                      onClick={() => setForm({ ...form, responsible_id: active ? '' : r.id })}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
+                      style={active
+                        ? { backgroundColor: r.color + '20', borderColor: r.color + '60', color: r.color }
+                        : { backgroundColor: 'transparent', borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }
+                      }
+                    >
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: r.color }} />
+                      {r.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Descripción */}
           <div className="space-y-1.5">
