@@ -25,7 +25,7 @@ export function FloatingActionButton({ userId }: { userId: string }) {
     async function load() {
       const [{ data: acc }, { data: cat }, { data: resp }] = await Promise.all([
         supabase.from('accounts').select('*').eq('user_id', userId),
-        supabase.from('categories').select('*').or(`user_id.eq.${userId},is_default.eq.true`).order('name'),
+        supabase.from('categories').select('*, expense_type:expense_types(id,name)').or(`user_id.eq.${userId},is_default.eq.true`).order('name'),
         supabase.from('responsible_parties').select('*').eq('user_id', userId).order('name'),
       ])
       setAccounts(acc ?? [])
@@ -39,7 +39,7 @@ export function FloatingActionButton({ userId }: { userId: string }) {
     setOpen(false)
     const [{ data: acc }, { data: cat }, { data: resp }] = await Promise.all([
       supabase.from('accounts').select('*').eq('user_id', userId),
-      supabase.from('categories').select('*').or(`user_id.eq.${userId},is_default.eq.true`).order('name'),
+      supabase.from('categories').select('*, expense_type:expense_types(id,name)').or(`user_id.eq.${userId},is_default.eq.true`).order('name'),
       supabase.from('responsible_parties').select('*').eq('user_id', userId).order('name'),
     ])
     setAccounts(acc ?? [])

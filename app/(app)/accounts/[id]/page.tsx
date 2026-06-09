@@ -22,7 +22,7 @@ export default async function AccountDetailPage({ params }: Props) {
       .eq('account_id', id)
       .order('date', { ascending: false })
       .order('created_at', { ascending: false }),
-    supabase.from('categories').select('*').or(`user_id.eq.${user.id},is_default.eq.true`).order('name'),
+    supabase.from('categories').select('*, expense_type:expense_types(id,name)').or(`user_id.eq.${user.id},is_default.eq.true`).order('name'),
   ])
 
   if (!account) notFound()

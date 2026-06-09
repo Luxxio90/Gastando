@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Plus, CalendarDays, TrendingDown, MoreVertical, Layers, Check, ChevronDown, Download } from 'lucide-react'
+import { Plus, CalendarDays, TrendingDown, MoreVertical, Layers, Check, ChevronDown, Download, ArrowUpDown } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import type { Account, Category, FixedExpenseGroup, FixedExpenseItem, FixedExpenseStatus, Responsible } from '@/types'
 
@@ -81,6 +81,18 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
       next.has(groupId) ? next.delete(groupId) : next.add(groupId)
       return next
     })
+  }
+
+  // ── Sort by status per group ──────────────────────────────────────────────────
+  const STATUS_SORT_ORDER: Record<1 | 2 | 3, Record<string, number>> = {
+    1: { paid: 0, pending: 1, not_applicable: 2 },
+    2: { pending: 0, paid: 1, not_applicable: 2 },
+    3: { not_applicable: 0, paid: 1, pending: 2 },
+  }
+  const [sortByStatus, setSortByStatus] = useState<Record<string, 0 | 1 | 2 | 3>>({})
+
+  function cycleSortStatus(groupId: string) {
+    setSortByStatus(prev => ({ ...prev, [groupId]: (((prev[groupId] ?? 0) + 1) % 4) as 0 | 1 | 2 | 3 }))
   }
 
   // ── Import dialog ─────────────────────────────────────────────────────────────
@@ -424,7 +436,14 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
         ) : (
           <div className="space-y-4">
             {localGroups.map(group => {
-              const groupItems = localItems.filter(i => i.group_id === group.id)
+              const rawGroupItems = localItems.filter(i => i.group_id === group.id)
+              const sortState = sortByStatus[group.id] ?? 0
+              const groupItems = sortState === 0
+                ? rawGroupItems
+                : [...rawGroupItems].sort((a, b) =>
+                    (STATUS_SORT_ORDER[sortState as 1|2|3][a.status] ?? 0) -
+                    (STATUS_SORT_ORDER[sortState as 1|2|3][b.status] ?? 0)
+                  )
               const paid    = groupItems.filter(i => i.status === 'paid').reduce((s, i) => s + i.amount, 0)
               const pending = groupItems.filter(i => i.status === 'pending').reduce((s, i) => s + i.amount, 0)
               const na      = groupItems.filter(i => i.status === 'not_applicable').reduce((s, i) => s + i.amount, 0)
@@ -492,7 +511,18 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
                   {!collapsed && groupItems.length > 0 && (
                     <div className="grid grid-cols-[1fr_112px_84px] gap-x-2 bg-muted/30 border-b border-border/50 px-4 py-2">
                       <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Categoría</span>
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest text-center">Estado</span>
+                      <button
+                        type="button"
+                        onClick={() => cycleSortStatus(group.id)}
+                        className="flex items-center justify-center gap-1 text-[10px] font-semibold uppercase tracking-widest transition-colors hover:text-foreground"
+                        style={{ color: sortState === 1 ? '#00CB96' : sortState === 2 ? '#FF4D6D' : sortState === 3 ? '#F59E0B' : undefined }}
+                      >
+                        Estado
+                        {sortState === 0
+                          ? <ArrowUpDown className="h-2.5 w-2.5 text-muted-foreground/50" />
+                          : <div className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: sortState === 1 ? '#00CB96' : sortState === 2 ? '#FF4D6D' : '#F59E0B' }} />
+                        }
+                      </button>
                       <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest text-right">Monto</span>
                     </div>
                   )}

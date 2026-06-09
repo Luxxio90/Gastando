@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import webpush from 'web-push'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 import { timingSafeEqual } from 'crypto'
 
 export const dynamic = 'force-dynamic'
@@ -23,7 +23,10 @@ export async function GET(req: NextRequest) {
     timingSafeEqual(Buffer.from(secret), Buffer.from(expected))
   if (!safe) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const supabase = await createClient()
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 
   const tomorrow = new Date()
   tomorrow.setDate(tomorrow.getDate() + 1)

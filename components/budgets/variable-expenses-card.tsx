@@ -14,7 +14,9 @@ interface Props {
 export function VariableExpensesCard({ categories, variableExpenseByCat, totalIncome }: Props) {
   const [collapsed, setCollapsed] = useState(false)
 
-  const variableCats = categories.filter(c => c.type === 'expense')
+  const variableCats = categories.filter(c =>
+    c.type === 'expense' && c.expense_type?.name !== 'Gasto fijo'
+  )
 
   const rows = variableCats
     .map(c => ({ cat: c, amount: variableExpenseByCat[c.id] ?? 0 }))

@@ -65,6 +65,7 @@ export function TransactionList({ transactions, accounts, categories, responsibl
       .select('*, category:categories(*), account:accounts(*), responsible:responsible_parties(*)')
       .eq('user_id', userId)
       .order('date', { ascending: false })
+      .order('created_at', { ascending: false })
       .range(allLoaded.length, allLoaded.length + PAGE_SIZE - 1)
 
     if (data) {

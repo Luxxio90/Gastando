@@ -33,9 +33,10 @@ export default async function TransactionsPage({ searchParams }: Props) {
       .select('*, category:categories(*), account:accounts(*), responsible:responsible_parties(*)')
       .eq('user_id', user.id)
       .order('date', { ascending: false })
+      .order('created_at', { ascending: false })
       .range(0, 29),
     supabase.from('accounts').select('*').eq('user_id', user.id),
-    supabase.from('categories').select('*').or(`user_id.eq.${user.id},is_default.eq.true`).order('name'),
+    supabase.from('categories').select('*, expense_type:expense_types(id,name)').or(`user_id.eq.${user.id},is_default.eq.true`).order('name'),
     supabase
       .from('recurring_transactions')
       .select('*, category:categories(*), account:accounts(*)')
@@ -81,6 +82,7 @@ export default async function TransactionsPage({ searchParams }: Props) {
         .select('*, category:categories(*), account:accounts(*)')
         .eq('user_id', user.id)
         .order('date', { ascending: false })
+        .order('created_at', { ascending: false })
         .range(0, 29)
 
       const initialFilter = type === 'income' ? 'income' : type === 'expense' ? 'expense' : 'all'

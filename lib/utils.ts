@@ -10,5 +10,6 @@ export function formatCurrency(amount: number, currency = 'ARS') {
 }
 
 export function formatDate(date: string) {
-  return new Date(date).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
+  const [y, m, d] = date.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
 }

@@ -134,8 +134,8 @@ export function EstadisticasView({ month, year, transactions, trendTransactions,
   const prevMonth = month === 1 ? 12 : month - 1
   const prevYear  = month === 1 ? year - 1 : year
   const prevTx    = filteredTrend.filter(t => {
-    const d = new Date(t.date)
-    return d.getFullYear() === prevYear && d.getMonth() + 1 === prevMonth
+    const [ty, tm] = t.date.split('-').map(Number)
+    return ty === prevYear && tm === prevMonth
   })
   const prevIncome  = prevTx.filter(t => t.type === 'income').reduce((s, t)  => s + t.amount, 0)
   const prevExpense = prevTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
@@ -183,8 +183,8 @@ export function EstadisticasView({ month, year, transactions, trendTransactions,
   const periods = getLast6Months(month, year)
   const trendData = periods.map(({ month: m, year: y }) => {
     const txs = filteredTrend.filter(t => {
-      const d = new Date(t.date)
-      return d.getFullYear() === y && d.getMonth() + 1 === m
+      const [ty, tm] = t.date.split('-').map(Number)
+      return ty === y && tm === m
     })
     return {
       name:    MONTH_NAMES_SHORT[m - 1],

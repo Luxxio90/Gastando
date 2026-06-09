@@ -32,15 +32,20 @@ export function VariableSection({ transactions, categories, accounts, totalFixed
     [transactions, selectedIds]
   )
 
+  const variableCatIds = useMemo(
+    () => new Set(categories.filter(c => c.type === 'expense' && c.expense_type?.name !== 'Gasto fijo').map(c => c.id)),
+    [categories]
+  )
+
   const variableExpenseByCat = useMemo(() => {
     const map: Record<string, number> = {}
     for (const t of filtered) {
-      if (t.type === 'expense' && !t.transfer_group_id) {
+      if (t.type === 'expense' && !t.transfer_group_id && variableCatIds.has(t.category_id)) {
         map[t.category_id] = (map[t.category_id] ?? 0) + t.amount
       }
     }
     return map
-  }, [filtered])
+  }, [filtered, variableCatIds])
 
   const totalVariable = Object.values(variableExpenseByCat).reduce((s, v) => s + v, 0)
 

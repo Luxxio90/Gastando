@@ -31,11 +31,16 @@ interface Props {
   }) => void
 }
 
+const todayLocal = () => {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
+
 const emptyForm = (type: 'income' | 'expense', accountId: string) => ({
   type,
   amount: '',
   description: '',
-  date: new Date().toISOString().split('T')[0],
+  date: todayLocal(),
   account_id: accountId,
   category_id: '',
   notes: '',
@@ -127,7 +132,10 @@ export function TransactionDialog({
     setAttachmentPreview(null)
   }
 
-  const filteredCategories = categories.filter(c => c.type === form.type)
+  const filteredCategories = categories.filter(c =>
+    c.type === form.type &&
+    !(form.type === 'expense' && c.expense_type?.name === 'Gasto fijo')
+  )
   const activeColor = form.type === 'income' ? INCOME_COLOR : EXPENSE_COLOR
   const isEditing   = !!editingTransaction
 
