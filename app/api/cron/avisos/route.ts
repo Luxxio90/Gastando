@@ -6,7 +6,7 @@ import { timingSafeEqual } from 'crypto'
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  const vapidPublicKey  = 'BOJzMll7HVPQ1SV8cQnQnnlSnIgNJfuTtBc6MFCqstBERv8370NOP0RH9cN2lRWT9bq1nzCEoWEsLwxfcD8ZL-s'
+  const vapidPublicKey  = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
   const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY!
   if (!vapidPrivateKey) return NextResponse.json({ error: 'VAPID_PRIVATE_KEY not set' }, { status: 500 })
 

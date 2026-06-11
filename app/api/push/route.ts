@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { allowed, retryAfter } = checkRateLimit(`push:post:${user.id}`, 10, 60)
+  if (!allowed)
+    return NextResponse.json({ error: 'Too many requests' }, {
+      status: 429,
+      headers: { 'Retry-After': String(retryAfter) },
+    })
 
   const body = await req.json()
   const { endpoint, p256dh, auth } = body
@@ -34,6 +42,13 @@ export async function DELETE(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { allowed, retryAfter } = checkRateLimit(`push:delete:${user.id}`, 10, 60)
+  if (!allowed)
+    return NextResponse.json({ error: 'Too many requests' }, {
+      status: 429,
+      headers: { 'Retry-After': String(retryAfter) },
+    })
 
   const { endpoint } = await req.json()
   await supabase.from('push_subscriptions').delete()
