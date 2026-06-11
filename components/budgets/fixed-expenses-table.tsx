@@ -509,7 +509,7 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
 
                   {/* Column headers */}
                   {!collapsed && groupItems.length > 0 && (
-                    <div className="grid grid-cols-[1fr_112px_84px] gap-x-2 bg-muted/30 border-b border-border/50 px-4 py-2">
+                    <div className="grid grid-cols-[1fr_112px_84px_32px] gap-x-2 bg-muted/30 border-b border-border/50 px-4 py-2">
                       <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Categoría</span>
                       <button
                         type="button"
@@ -524,6 +524,7 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
                         }
                       </button>
                       <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest text-right">Monto</span>
+                      <span />
                     </div>
                   )}
 
@@ -544,7 +545,7 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
                               <div
                                 key={item.id}
                                 onClick={() => openEditItem(item)}
-                                className="grid grid-cols-[1fr_112px_84px] gap-x-2 items-center px-4 py-2.5 border-b border-border/40 hover:bg-muted/30 transition-colors cursor-pointer last:border-b-0"
+                                className="grid grid-cols-[1fr_112px_84px_32px] gap-x-2 items-center px-4 py-2.5 border-b border-border/40 hover:bg-muted/30 transition-colors cursor-pointer last:border-b-0"
                               >
                                 <div className="min-w-0">
                                   <p className="text-sm font-semibold text-foreground truncate">
@@ -577,6 +578,27 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
                                     {formatCurrency(item.amount)}
                                   </span>
                                 </div>
+                                <div className="flex justify-center" onClick={e => e.stopPropagation()}>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger className="p-1 rounded-lg text-muted-foreground/40 hover:text-foreground hover:bg-muted/60 transition-colors">
+                                      <MoreVertical className="h-3.5 w-3.5" />
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => openEditItem(item)}>Editar</DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        className="text-red-500"
+                                        onClick={async () => {
+                                          const { error } = await supabase.from('fixed_expense_items').delete().eq('id', item.id)
+                                          if (error) toast.error('Error al eliminar')
+                                          else { toast.success('Gasto eliminado'); setLocalItems(prev => prev.filter(i => i.id !== item.id)) }
+                                        }}
+                                      >
+                                        Eliminar
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
                               </div>
                             )
                           })}
@@ -584,30 +606,27 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
                           {/* Group totals */}
                           <div className="divide-y divide-border/30 bg-muted/20">
                             {paid > 0 && (
-                              <div className="grid grid-cols-[1fr_112px_84px] gap-x-2 items-center px-4 py-1.5">
+                              <div className="grid grid-cols-[1fr_112px_84px_32px] gap-x-2 items-center px-4 py-1.5">
                                 <span className="text-[11px] font-semibold" style={{ color: '#00CB96' }}>Pagado</span>
                                 <span />
-                                <span className="text-right text-[11px] font-bold tabular-nums" style={{ color: '#00CB96' }}>
-                                  {formatCurrency(paid)}
-                                </span>
+                                <span className="text-right text-[11px] font-bold tabular-nums" style={{ color: '#00CB96' }}>{formatCurrency(paid)}</span>
+                                <span />
                               </div>
                             )}
                             {pending > 0 && (
-                              <div className="grid grid-cols-[1fr_112px_84px] gap-x-2 items-center px-4 py-1.5">
+                              <div className="grid grid-cols-[1fr_112px_84px_32px] gap-x-2 items-center px-4 py-1.5">
                                 <span className="text-[11px] font-semibold" style={{ color: '#FF4D6D' }}>Pendiente</span>
                                 <span />
-                                <span className="text-right text-[11px] font-bold tabular-nums" style={{ color: '#FF4D6D' }}>
-                                  {formatCurrency(pending)}
-                                </span>
+                                <span className="text-right text-[11px] font-bold tabular-nums" style={{ color: '#FF4D6D' }}>{formatCurrency(pending)}</span>
+                                <span />
                               </div>
                             )}
                             {na > 0 && (
-                              <div className="grid grid-cols-[1fr_112px_84px] gap-x-2 items-center px-4 py-1.5">
+                              <div className="grid grid-cols-[1fr_112px_84px_32px] gap-x-2 items-center px-4 py-1.5">
                                 <span className="text-[11px] font-semibold" style={{ color: '#F59E0B' }}>No corresponde</span>
                                 <span />
-                                <span className="text-right text-[11px] font-bold tabular-nums" style={{ color: '#F59E0B' }}>
-                                  {formatCurrency(na)}
-                                </span>
+                                <span className="text-right text-[11px] font-bold tabular-nums" style={{ color: '#F59E0B' }}>{formatCurrency(na)}</span>
+                                <span />
                               </div>
                             )}
                           </div>

@@ -117,23 +117,49 @@ export function BudgetCardsView({ cards, categories, resolvedAmounts, actualByCa
       ) : (
         <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
           {/* Header columnas */}
-          <button
-            type="button"
-            onClick={() => setCollapsed(c => !c)}
-            className="w-full grid grid-cols-[1fr_56px_120px_32px] items-center bg-muted/40 border-b border-border px-4 py-2.5 text-left transition-colors hover:bg-muted/60"
+          <div
+            className="grid grid-cols-[1fr_56px_120px_32px] items-center bg-muted/40 border-b border-border px-4 py-2.5 transition-colors hover:bg-muted/60"
             style={{ borderBottom: collapsed ? 'none' : undefined }}
           >
-            <div className="flex items-center gap-1.5">
+            <div
+              className="flex items-center gap-1.5 cursor-pointer select-none"
+              onClick={() => setCollapsed(c => !c)}
+            >
               <ChevronDown
                 className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 flex-shrink-0"
                 style={{ transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}
               />
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Categoría</span>
             </div>
-            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest text-center">%</span>
-            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest text-right">Monto</span>
-            <span />
-          </button>
+            <span
+              className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest text-center cursor-pointer select-none"
+              onClick={() => setCollapsed(c => !c)}
+            >%</span>
+            <span
+              className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest text-right cursor-pointer select-none"
+              onClick={() => setCollapsed(c => !c)}
+            >Monto</span>
+            <div className="flex justify-end">
+              <DropdownMenu>
+                <DropdownMenuTrigger className="p-1 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted/60 transition-colors">
+                  <MoreVertical className="h-3.5 w-3.5" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    className="text-red-500"
+                    onClick={async () => {
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      const { error } = await (supabase as any).from('budget_cards').delete().eq('user_id', userId).eq('month', month).eq('year', year)
+                      if (error) toast.error('Error al eliminar')
+                      else { toast.success('Distribución eliminada'); router.refresh() }
+                    }}
+                  >
+                    Eliminar todo
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
 
           {/* Sección Ingresos */}
           {!collapsed && incomeCards.length > 0 && (

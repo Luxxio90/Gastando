@@ -110,6 +110,7 @@ function SortableAccountCard({ account, onEdit, onDelete, hidden }: { account: A
 }
 
 export function AccountsList({ accounts, userId }: Props) {
+  const [localAccounts, setLocalAccounts]     = useState<Account[]>(accounts)
   const [order, setOrder]                     = useState<string[]>([])
   const [mode, setMode]                       = useState<'create' | 'edit' | null>(null)
   const [editing, setEditing]                 = useState<Account | null>(null)
@@ -121,6 +122,8 @@ export function AccountsList({ accounts, userId }: Props) {
   const [hidden, setHidden]                   = useState(false)
   const router  = useRouter()
   const supabase = createClient()
+
+  useEffect(() => { setLocalAccounts(accounts) }, [accounts])
 
   useEffect(() => {
     try {
@@ -148,7 +151,7 @@ export function AccountsList({ accounts, userId }: Props) {
     try { localStorage.setItem(HIDE_KEY, String(next)) } catch {}
   }
 
-  const sortedAccounts = order.map(id => accounts.find(a => a.id === id)).filter(Boolean) as Account[]
+  const sortedAccounts = order.map(id => localAccounts.find(a => a.id === id)).filter(Boolean) as Account[]
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -164,10 +167,10 @@ export function AccountsList({ accounts, userId }: Props) {
     localStorage.setItem(ORDER_KEY(userId), JSON.stringify(newOrder))
   }
 
-  const includedAccounts = balanceIds === null ? accounts : accounts.filter(a => balanceIds.includes(a.id))
+  const includedAccounts = balanceIds === null ? localAccounts : localAccounts.filter(a => balanceIds.includes(a.id))
   const totalBalance = includedAccounts.reduce((s, a) => s + a.balance, 0)
 
-  function openBalanceConfig() { setDraft(balanceIds ?? accounts.map(a => a.id)); setBalanceConfigOpen(true) }
+  function openBalanceConfig() { setDraft(balanceIds ?? localAccounts.map(a => a.id)); setBalanceConfigOpen(true) }
   function applyBalanceConfig() {
     const val = draft.length === accounts.length ? null : draft
     setBalanceIds(val)
@@ -192,9 +195,16 @@ export function AccountsList({ accounts, userId }: Props) {
       if (error) toast.error('Error al crear la cuenta')
       else { toast.success('Cuenta creada'); closeDialog(); router.refresh() }
     } else if (mode === 'edit' && editing) {
-      const { error } = await supabase.from('accounts').update({ name: form.name, type: form.type, balance: parseFloat(form.balance) || 0, currency: form.currency, color: form.color }).eq('id', editing.id)
+      const newBalance = parseFloat(form.balance) || 0
+      const { error } = await supabase.from('accounts').update({ name: form.name, type: form.type, balance: newBalance, currency: form.currency, color: form.color }).eq('id', editing.id)
       if (error) toast.error('Error al guardar los cambios')
-      else { toast.success('Cuenta actualizada'); closeDialog(); router.refresh() }
+      else {
+        setLocalAccounts(prev => prev.map(a => a.id === editing.id
+          ? { ...a, name: form.name, type: form.type, balance: newBalance, currency: form.currency, color: form.color }
+          : a
+        ))
+        toast.success('Cuenta actualizada'); closeDialog(); router.refresh()
+      }
     }
     setLoading(false)
   }
