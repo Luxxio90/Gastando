@@ -46,29 +46,48 @@ export default async function DashboardPage({
 
   if (txError || accError) return <ErrorState title="Error al cargar el dashboard" />
 
+  const userName = user.email?.split('@')[0] ?? 'usuario'
+  const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-        <MonthNav month={month} year={year} />
+    <div className="min-h-screen" style={{ backgroundColor: '#F5F5F7' }}>
+      {/* Hero teal */}
+      <div
+        className="relative overflow-hidden px-5 pt-10 pb-20"
+        style={{ background: 'linear-gradient(135deg, #00C9A7 0%, #00B4D8 100%)' }}
+      >
+        {/* Círculos decorativos */}
+        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full opacity-10" style={{ backgroundColor: '#fff' }} />
+        <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full opacity-10" style={{ backgroundColor: '#fff' }} />
+
+        <div className="relative flex items-start justify-between">
+          <div>
+            <p className="text-white/70 text-xs font-medium uppercase tracking-wider">{MONTHS[month - 1]} {year}</p>
+            <h1 className="text-white text-xl font-bold mt-0.5">Hola, {userName} 👋</h1>
+          </div>
+          <MonthNav month={month} year={year} light />
+        </div>
       </div>
 
-      <DashboardCards
-        accounts={accounts}
-        transactions={transactions}
-        investments={investments ?? []}
-        userId={user.id}
-        onboarding={{
-          hasAccounts:     (accounts?.length ?? 0) > 0,
-          hasIncome:       (transactions ?? []).some(t => t.type === 'income'),
-          hasBudgetCards:  (budgetCards?.length ?? 0) > 0,
-          hasFixedExpenses:(fixedItems?.length ?? 0) > 0,
-        }}
-      />
+      {/* Contenido principal — se superpone al hero */}
+      <div className="relative -mt-12 px-4 pb-6 space-y-4">
+        <DashboardCards
+          accounts={accounts}
+          transactions={transactions}
+          investments={investments ?? []}
+          userId={user.id}
+          onboarding={{
+            hasAccounts:     (accounts?.length ?? 0) > 0,
+            hasIncome:       (transactions ?? []).some(t => t.type === 'income'),
+            hasBudgetCards:  (budgetCards?.length ?? 0) > 0,
+            hasFixedExpenses:(fixedItems?.length ?? 0) > 0,
+          }}
+        />
 
-      <div className="space-y-4">
-        <ExpenseChart transactions={transactions} />
-        <RecentTransactions transactions={transactions.slice(0, 8)} />
+        <div className="space-y-4">
+          <ExpenseChart transactions={transactions} />
+          <RecentTransactions transactions={transactions.slice(0, 8)} />
+        </div>
       </div>
     </div>
   )
