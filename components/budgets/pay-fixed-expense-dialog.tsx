@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Account } from '@/types'
+import { Account, Responsible } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -22,17 +22,23 @@ interface Props {
   onClose: () => void
   item: PendingPayItem | null
   accounts: Account[]
+  responsibles: Responsible[]
   userId: string
   onPaid: (itemId: string) => void
 }
 
-export function PayFixedExpenseDialog({ open, onClose, item, accounts, userId, onPaid }: Props) {
+export function PayFixedExpenseDialog({ open, onClose, item, accounts, responsibles, userId, onPaid }: Props) {
   const supabase = createClient()
-  const [accountId, setAccountId] = useState('')
-  const [loading, setLoading]     = useState(false)
+  const [accountId, setAccountId]         = useState('')
+  const [responsibleId, setResponsibleId] = useState('')
+  const [loading, setLoading]             = useState(false)
 
   async function handleConfirm() {
     if (!item || !accountId) return
+    if (responsibles.length > 0 && !responsibleId) {
+      toast.error('Seleccioná un encargado')
+      return
+    }
     setLoading(true)
     try {
       const today = new Date().toISOString().split('T')[0]
@@ -48,6 +54,7 @@ export function PayFixedExpenseDialog({ open, onClose, item, accounts, userId, o
           description: desc,
           date: today,
           notes: null,
+          responsible_party_id: responsibleId || null,
         }),
         supabase.from('fixed_expense_items').update({ status: 'paid' }).eq('id', item.id),
       ])
@@ -58,6 +65,7 @@ export function PayFixedExpenseDialog({ open, onClose, item, accounts, userId, o
         toast.success('Pago registrado')
         onPaid(item.id)
         setAccountId('')
+        setResponsibleId('')
         onClose()
       }
     } finally {
@@ -67,6 +75,7 @@ export function PayFixedExpenseDialog({ open, onClose, item, accounts, userId, o
 
   function handleClose() {
     setAccountId('')
+    setResponsibleId('')
     onClose()
   }
 
@@ -75,6 +84,7 @@ export function PayFixedExpenseDialog({ open, onClose, item, accounts, userId, o
   const catName  = item.category?.name  ?? 'Sin categoría'
   const catIcon  = item.category?.icon  ?? '📋'
   const catColor = item.category?.color ?? '#7C4DFF'
+  const canConfirm = !!accountId && (responsibles.length === 0 || !!responsibleId)
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -141,6 +151,34 @@ export function PayFixedExpenseDialog({ open, onClose, item, accounts, userId, o
             </div>
           </div>
 
+          {/* Responsible selector */}
+          {responsibles.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+                Encargado <span className="normal-case font-semibold text-red-500">*</span>
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {responsibles.map(r => {
+                  const active = responsibleId === r.id
+                  return (
+                    <button
+                      key={r.id} type="button"
+                      onClick={() => setResponsibleId(active ? '' : r.id)}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-all"
+                      style={active
+                        ? { backgroundColor: r.color + '20', borderColor: r.color + '60', color: 'hsl(var(--foreground))' }
+                        : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }
+                      }
+                    >
+                      <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: r.color }} />
+                      {r.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex gap-2 pt-1">
             <Button variant="outline" className="flex-1" onClick={handleClose} disabled={loading}>
@@ -148,7 +186,7 @@ export function PayFixedExpenseDialog({ open, onClose, item, accounts, userId, o
             </Button>
             <Button
               className="flex-1 font-semibold"
-              disabled={!accountId || loading}
+              disabled={!canConfirm || loading}
               onClick={handleConfirm}
               style={{ background: 'linear-gradient(135deg, #00CB96 0%, #00E5A8 100%)', color: '#fff', border: 'none' }}
             >

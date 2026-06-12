@@ -18,8 +18,13 @@ export default async function AvisosPage({
   const month  = parseInt(params.month ?? String(now.getMonth() + 1))
   const year   = parseInt(params.year  ?? String(now.getFullYear()))
 
-  const { data: accounts, error: accError } = await supabase
-    .from('accounts').select('*').eq('user_id', user.id).order('name')
+  const [
+    { data: accounts, error: accError },
+    { data: responsibles },
+  ] = await Promise.all([
+    supabase.from('accounts').select('*').eq('user_id', user.id).order('name'),
+    supabase.from('responsible_parties').select('*').eq('user_id', user.id).order('name'),
+  ])
 
   if (accError) return <ErrorState title="Error al cargar los avisos" />
 
@@ -76,6 +81,7 @@ export default async function AvisosPage({
         exceededBudgets={(rawExceeded ?? []) as any[]}
         userId={user.id}
         accounts={(accounts ?? []) as any[]}
+        responsibles={(responsibles ?? []) as any[]}
         month={month}
         year={year}
       />

@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Check, CreditCard, ChevronRight, Bell, PartyPopper, AlertTriangle } from 'lucide-react'
-import type { Account, CreditCardNetwork } from '@/types'
+import type { Account, CreditCardNetwork, Responsible } from '@/types'
 import { PayFixedExpenseDialog, type PendingPayItem } from '@/components/budgets/pay-fixed-expense-dialog'
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -41,6 +41,7 @@ interface Props {
   exceededBudgets: ExceededBudget[]
   userId: string
   accounts: Account[]
+  responsibles: Responsible[]
   month: number
   year: number
 }
@@ -278,7 +279,7 @@ function EmptyState() {
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 
-export function AvisosView({ fixedExpenses, cardMonths, exceededBudgets, userId, accounts, month, year }: Props) {
+export function AvisosView({ fixedExpenses, cardMonths, exceededBudgets, userId, accounts, responsibles, month, year }: Props) {
   const [paid, setPaid]           = useState<Set<string>>(new Set())
   const [marking, setMarking]     = useState<Set<string>>(new Set())
   const [pendingPay, setPendingPay] = useState<PendingPayItem | null>(null)
@@ -476,6 +477,7 @@ export function AvisosView({ fixedExpenses, cardMonths, exceededBudgets, userId,
         onClose={() => setPendingPay(null)}
         item={pendingPay}
         accounts={accounts}
+        responsibles={responsibles}
         userId={userId}
         onPaid={(id) => setPaid(prev => new Set([...prev, id]))}
       />
