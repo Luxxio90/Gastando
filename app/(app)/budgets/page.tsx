@@ -272,6 +272,7 @@ export default async function BudgetsPage({
         transactions={allTransactions}
         categories={categories ?? []}
         accounts={(accounts ?? []) as Account[]}
+        responsibles={(responsibles ?? []) as Responsible[]}
         totalFixed={totalFixed}
         totalIncome={totalIncome}
       />
