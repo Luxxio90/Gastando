@@ -15,11 +15,13 @@ interface Props {
   responsibles: Responsible[]
   selectedResponsibleIds: string[]
   onSelectResponsibles: (ids: string[]) => void
+  excludedCatIds: string[]
+  onToggleCatExclusion: (id: string) => void
 }
 
 const VARIABLE_COLOR = '#F59E0B'
 
-export function VariableExpensesCard({ categories, variableExpenseByCat, totalIncome, responsibles, selectedResponsibleIds, onSelectResponsibles }: Props) {
+export function VariableExpensesCard({ categories, variableExpenseByCat, totalIncome, responsibles, selectedResponsibleIds, onSelectResponsibles, excludedCatIds, onToggleCatExclusion }: Props) {
   const [collapsed, setCollapsed] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [draft, setDraft] = useState<string[]>([])
@@ -34,6 +36,11 @@ export function VariableExpensesCard({ categories, variableExpenseByCat, totalIn
     .sort((a, b) => b.amount - a.amount)
 
   const total = rows.reduce((s, r) => s + r.amount, 0)
+
+  // El total visible excluye las categorías desactivadas
+  const visibleTotal = rows
+    .filter(r => !excludedCatIds.includes(r.cat.id))
+    .reduce((s, r) => s + r.amount, 0)
 
   // Solo ocultar si no hay gastos Y no hay ningún filtro activo
   if (total === 0 && selectedResponsibleIds.length === 0) return null
@@ -120,14 +127,15 @@ export function VariableExpensesCard({ categories, variableExpenseByCat, totalIn
           )}
 
           {!collapsed && rows.map(({ cat, amount }) => {
+            const excluded = excludedCatIds.includes(cat.id)
             const pct = total > 0 ? ((amount / total) * 100).toFixed(1) : null
             const barWidth = total > 0 ? (amount / total) * 100 : 0
             return (
-              <div key={cat.id} className="border-b border-border last:border-b-0">
+              <div key={cat.id} className="border-b border-border last:border-b-0" style={{ opacity: excluded ? 0.45 : 1 }}>
                 <div className="grid grid-cols-[1fr_56px_120px_32px] items-center px-4 py-3">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-base leading-none flex-shrink-0">{cat.icon}</span>
-                    <p className="text-sm font-medium text-foreground truncate">{cat.name}</p>
+                    <p className={`text-sm font-medium truncate ${excluded ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{cat.name}</p>
                   </div>
                   <div className="flex justify-center">
                     {pct !== null ? (
@@ -141,9 +149,25 @@ export function VariableExpensesCard({ categories, variableExpenseByCat, totalIn
                   <div className="text-right">
                     <span className="text-sm font-semibold tabular-nums text-foreground">{formatCurrency(amount)}</span>
                   </div>
-                  <span />
+                  <div className="flex justify-end">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger className="p-1 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted/60 transition-colors">
+                        <MoreVertical className="h-3.5 w-3.5" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onToggleCatExclusion(cat.id)}>
+                          <span className="flex items-center gap-2">
+                            <span className="w-3.5 h-3.5 flex items-center justify-center text-xs">
+                              {excluded ? '○' : '✓'}
+                            </span>
+                            {excluded ? 'Incluir en total' : 'Excluir del total'}
+                          </span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
-                {barWidth > 0 && (
+                {barWidth > 0 && !excluded && (
                   <div className="h-0.5 mx-4 bg-muted/40 rounded-full overflow-hidden">
                     <div className="h-full rounded-full" style={{ width: `${barWidth}%`, backgroundColor: VARIABLE_COLOR + 'aa' }} />
                   </div>
@@ -156,9 +180,9 @@ export function VariableExpensesCard({ categories, variableExpenseByCat, totalIn
             <div className="grid grid-cols-[1fr_56px_120px_32px] items-center px-4 py-2.5" style={{ backgroundColor: VARIABLE_COLOR + '10' }}>
               <span className="text-xs font-bold" style={{ color: VARIABLE_COLOR }}>Total variables</span>
               <span className="text-center text-[10px] font-bold" style={{ color: VARIABLE_COLOR }}>
-                {pctOfIncome !== null ? `${pctOfIncome.toFixed(1)}%` : '—'}
+                {totalIncome > 0 && visibleTotal > 0 ? `${((visibleTotal / totalIncome) * 100).toFixed(1)}%` : '—'}
               </span>
-              <span className="text-right text-sm font-bold tabular-nums" style={{ color: VARIABLE_COLOR }}>{formatCurrency(total)}</span>
+              <span className="text-right text-sm font-bold tabular-nums" style={{ color: VARIABLE_COLOR }}>{formatCurrency(visibleTotal)}</span>
               <span />
             </div>
           )}

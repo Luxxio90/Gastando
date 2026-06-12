@@ -26,6 +26,11 @@ interface Props {
 export function VariableSection({ transactions, categories, accounts, responsibles, totalFixed, totalIncome }: Props) {
   const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([])
   const [selectedResponsibleIds, setSelectedResponsibleIds] = useState<string[]>([])
+  const [excludedCatIds, setExcludedCatIds] = useState<string[]>([])
+
+  function toggleCatExclusion(id: string) {
+    setExcludedCatIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
 
   const toggleAccount = (id: string) =>
     setSelectedAccountIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
@@ -54,7 +59,9 @@ export function VariableSection({ transactions, categories, accounts, responsibl
     return map
   }, [filtered, variableCatIds])
 
-  const totalVariable = Object.values(variableExpenseByCat).reduce((s, v) => s + v, 0)
+  const totalVariable = Object.entries(variableExpenseByCat)
+    .filter(([id]) => !excludedCatIds.includes(id))
+    .reduce((s, [, v]) => s + v, 0)
   const hasAccountFilter = accounts.length > 1
 
   return (
@@ -98,6 +105,8 @@ export function VariableSection({ transactions, categories, accounts, responsibl
         responsibles={responsibles}
         selectedResponsibleIds={selectedResponsibleIds}
         onSelectResponsibles={setSelectedResponsibleIds}
+        excludedCatIds={excludedCatIds}
+        onToggleCatExclusion={toggleCatExclusion}
       />
 
       <ExpenseTotalsSummary
