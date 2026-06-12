@@ -132,7 +132,11 @@ export function VariableExpensesCard({ categories, variableExpenseByCat, totalIn
             const barWidth = total > 0 ? (amount / total) * 100 : 0
             return (
               <div key={cat.id} className="border-b border-border last:border-b-0" style={{ opacity: excluded ? 0.45 : 1 }}>
-                <div className="grid grid-cols-[1fr_56px_120px_32px] items-center px-4 py-3">
+                <div
+                  className="grid grid-cols-[1fr_56px_120px] items-center px-4 py-3 cursor-pointer"
+                  onClick={() => onToggleCatExclusion(cat.id)}
+                  title={excluded ? 'Incluir en total' : 'Excluir del total'}
+                >
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-base leading-none flex-shrink-0">{cat.icon}</span>
                     <p className={`text-sm font-medium truncate ${excluded ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{cat.name}</p>
@@ -149,23 +153,6 @@ export function VariableExpensesCard({ categories, variableExpenseByCat, totalIn
                   <div className="text-right">
                     <span className="text-sm font-semibold tabular-nums text-foreground">{formatCurrency(amount)}</span>
                   </div>
-                  <div className="flex justify-end">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger className="p-1 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted/60 transition-colors">
-                        <MoreVertical className="h-3.5 w-3.5" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onToggleCatExclusion(cat.id)}>
-                          <span className="flex items-center gap-2">
-                            <span className="w-3.5 h-3.5 flex items-center justify-center text-xs">
-                              {excluded ? '○' : '✓'}
-                            </span>
-                            {excluded ? 'Incluir en total' : 'Excluir del total'}
-                          </span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
                 </div>
                 {barWidth > 0 && !excluded && (
                   <div className="h-0.5 mx-4 bg-muted/40 rounded-full overflow-hidden">
@@ -177,13 +164,12 @@ export function VariableExpensesCard({ categories, variableExpenseByCat, totalIn
           })}
 
           {!collapsed && (
-            <div className="grid grid-cols-[1fr_56px_120px_32px] items-center px-4 py-2.5" style={{ backgroundColor: VARIABLE_COLOR + '10' }}>
+            <div className="grid grid-cols-[1fr_56px_120px] items-center px-4 py-2.5" style={{ backgroundColor: VARIABLE_COLOR + '10' }}>
               <span className="text-xs font-bold" style={{ color: VARIABLE_COLOR }}>Total variables</span>
               <span className="text-center text-[10px] font-bold" style={{ color: VARIABLE_COLOR }}>
                 {totalIncome > 0 && visibleTotal > 0 ? `${((visibleTotal / totalIncome) * 100).toFixed(1)}%` : '—'}
               </span>
               <span className="text-right text-sm font-bold tabular-nums" style={{ color: VARIABLE_COLOR }}>{formatCurrency(visibleTotal)}</span>
-              <span />
             </div>
           )}
         </div>
