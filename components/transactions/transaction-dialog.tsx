@@ -143,6 +143,7 @@ export function TransactionDialog({
     e.preventDefault()
     if (!form.account_id)  { toast.error('Seleccioná una cuenta');    return }
     if (!form.category_id) { toast.error('Seleccioná una categoría'); return }
+    if (responsibles.length > 0 && !form.responsible_party_id) { toast.error('Seleccioná un encargado'); return }
 
     setLoading(true)
     const amount = parseFloat(form.amount)
@@ -412,7 +413,7 @@ export function TransactionDialog({
           {responsibles.length > 0 && (
             <div className="space-y-1.5">
               <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                Encargado <span className="normal-case font-normal text-muted-foreground/60">(opcional)</span>
+                Encargado <span className="normal-case font-semibold text-red-500">*</span>
               </label>
               <div className="flex flex-wrap gap-2">
                 {responsibles.map(r => {
