@@ -33,6 +33,8 @@ interface Props {
   userId: string
   month: number
   year: number
+  excludedGroupIds?: string[]
+  onToggleGroupExclusion?: (id: string) => void
 }
 
 type ItemForm = {
@@ -58,7 +60,7 @@ const STATUS_OPTS: { value: FixedExpenseStatus; label: string; color: string; bg
 function statusColor(s: FixedExpenseStatus) { return STATUS_OPTS.find(o => o.value === s)?.color ?? '#888' }
 function statusLabel(s: FixedExpenseStatus) { return STATUS_OPTS.find(o => o.value === s)?.label ?? s }
 
-export function FixedExpensesTable({ groups: initialGroups, items: initialItems, fixedCategories, responsibles, accounts, userId, month, year }: Props) {
+export function FixedExpensesTable({ groups: initialGroups, items: initialItems, fixedCategories, responsibles, accounts, userId, month, year, excludedGroupIds = [], onToggleGroupExclusion }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [localGroups, setLocalGroups] = useState<FixedExpenseGroup[]>(initialGroups)
@@ -453,8 +455,8 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
               return (
                 <div
                   key={group.id}
-                  className="bg-card rounded-xl border border-border overflow-hidden shadow-sm"
-                  style={{ borderLeft: `3px solid ${group.color}` }}
+                  className="bg-card rounded-xl border border-border overflow-hidden shadow-sm transition-opacity"
+                  style={{ borderLeft: `3px solid ${group.color}`, opacity: excludedGroupIds.includes(group.id) ? 0.5 : 1 }}
                 >
                   {/* Group header — click left side to collapse */}
                   <div
@@ -493,6 +495,16 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
                           {groupItems.length > 0 && (
                             <DropdownMenuItem onClick={() => handleResetGroup(group.id)}>
                               Resetear a pendiente
+                            </DropdownMenuItem>
+                          )}
+                          {onToggleGroupExclusion && (
+                            <DropdownMenuItem onClick={() => onToggleGroupExclusion(group.id)}>
+                              <span className="flex items-center gap-2">
+                                <span className="w-3.5 h-3.5 flex items-center justify-center text-xs">
+                                  {excludedGroupIds.includes(group.id) ? '○' : '✓'}
+                                </span>
+                                {excludedGroupIds.includes(group.id) ? 'Incluir en total' : 'Excluir del total'}
+                              </span>
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuSeparator />

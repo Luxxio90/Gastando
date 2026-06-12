@@ -1,8 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { BudgetCardsView } from '@/components/budgets/budget-cards-view'
-import { FixedExpensesTable } from '@/components/budgets/fixed-expenses-table'
-import { VariableSection } from '@/components/budgets/variable-section'
+import { BudgetsClientShell } from '@/components/budgets/budgets-client-shell'
 import { ErrorState } from '@/components/ui/error-state'
 import { Account, BudgetCard, FixedExpenseItem, FixedExpenseGroup, Responsible } from '@/types'
 
@@ -268,21 +267,15 @@ export default async function BudgetsPage({
         month={month}
         year={year}
       />
-      <VariableSection
+      <BudgetsClientShell
         transactions={allTransactions}
         categories={categories ?? []}
         accounts={(accounts ?? []) as Account[]}
         responsibles={(responsibles ?? []) as Responsible[]}
-        totalFixed={totalFixed}
         totalIncome={totalIncome}
-      />
-      <FixedExpensesTable
-        key={`${month}-${year}`}
         groups={allGroups}
         items={allFixedItems}
         fixedCategories={fixedCategories}
-        responsibles={(responsibles ?? []) as Responsible[]}
-        accounts={(accounts ?? []) as any[]}
         userId={user.id}
         month={month}
         year={year}
