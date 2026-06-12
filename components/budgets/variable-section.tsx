@@ -25,7 +25,7 @@ interface Props {
 
 export function VariableSection({ transactions, categories, accounts, responsibles, totalFixed, totalIncome }: Props) {
   const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([])
-  const [selectedResponsibleId, setSelectedResponsibleId] = useState<string | null>(null)
+  const [selectedResponsibleIds, setSelectedResponsibleIds] = useState<string[]>([])
 
   const toggleAccount = (id: string) =>
     setSelectedAccountIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
@@ -34,10 +34,10 @@ export function VariableSection({ transactions, categories, accounts, responsibl
     let txs = transactions
     if (selectedAccountIds.length > 0)
       txs = txs.filter(t => selectedAccountIds.includes(t.account_id))
-    if (selectedResponsibleId)
-      txs = txs.filter(t => t.responsible_party_id === selectedResponsibleId)
+    if (selectedResponsibleIds.length > 0)
+      txs = txs.filter(t => t.responsible_party_id !== null && selectedResponsibleIds.includes(t.responsible_party_id))
     return txs
-  }, [transactions, selectedAccountIds, selectedResponsibleId])
+  }, [transactions, selectedAccountIds, selectedResponsibleIds])
 
   const variableCatIds = useMemo(
     () => new Set(categories.filter(c => c.type === 'expense' && c.expense_type?.name !== 'Gasto fijo').map(c => c.id)),
@@ -96,8 +96,8 @@ export function VariableSection({ transactions, categories, accounts, responsibl
         variableExpenseByCat={variableExpenseByCat}
         totalIncome={totalIncome}
         responsibles={responsibles}
-        selectedResponsibleId={selectedResponsibleId}
-        onSelectResponsible={setSelectedResponsibleId}
+        selectedResponsibleIds={selectedResponsibleIds}
+        onSelectResponsibles={setSelectedResponsibleIds}
       />
 
       <ExpenseTotalsSummary

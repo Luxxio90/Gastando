@@ -13,14 +13,16 @@ interface Props {
   variableExpenseByCat: Record<string, number>
   totalIncome: number
   responsibles: Responsible[]
-  selectedResponsibleId: string | null
-  onSelectResponsible: (id: string | null) => void
+  selectedResponsibleIds: string[]
+  onSelectResponsibles: (ids: string[]) => void
 }
 
-export function VariableExpensesCard({ categories, variableExpenseByCat, totalIncome, responsibles, selectedResponsibleId, onSelectResponsible }: Props) {
+const VARIABLE_COLOR = '#F59E0B'
+
+export function VariableExpensesCard({ categories, variableExpenseByCat, totalIncome, responsibles, selectedResponsibleIds, onSelectResponsibles }: Props) {
   const [collapsed, setCollapsed] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
-  const [draft, setDraft] = useState<string | null>(null)
+  const [draft, setDraft] = useState<string[]>([])
 
   const variableCats = categories.filter(c =>
     c.type === 'expense' && c.expense_type?.name !== 'Gasto fijo'
@@ -33,43 +35,54 @@ export function VariableExpensesCard({ categories, variableExpenseByCat, totalIn
 
   const total = rows.reduce((s, r) => s + r.amount, 0)
 
-  if (total === 0 && !selectedResponsibleId) return null
+  // Solo ocultar si no hay gastos Y no hay ningún filtro activo
+  if (total === 0 && selectedResponsibleIds.length === 0) return null
 
   const pctOfIncome = totalIncome > 0 ? (total / totalIncome) * 100 : null
-  const VARIABLE_COLOR = '#F59E0B'
 
-  const selectedResponsible = responsibles.find(r => r.id === selectedResponsibleId)
+  const selectedNames = responsibles
+    .filter(r => selectedResponsibleIds.includes(r.id))
+    .map(r => r.name)
 
   function openEdit() {
-    setDraft(selectedResponsibleId)
+    setDraft([...selectedResponsibleIds])
     setEditOpen(true)
   }
 
+  function toggleDraft(id: string) {
+    setDraft(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
+
   function applyEdit() {
-    onSelectResponsible(draft)
+    onSelectResponsibles(draft)
     setEditOpen(false)
   }
 
   return (
     <>
       <div className="space-y-4 max-w-2xl mx-auto mt-8">
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between gap-2">
           <div>
             <h2 className="text-xl font-bold text-foreground">Gastos variables</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {selectedResponsible
-                ? `Filtrando por ${selectedResponsible.name} · sin transferencias`
+              {selectedNames.length > 0
+                ? `Filtrando por ${selectedNames.join(', ')} · sin transferencias`
                 : 'Gastos del mes sin contar transferencias'
               }
             </p>
           </div>
-          {selectedResponsible && (
-            <span
-              className="text-[10px] font-bold px-2 py-1 rounded-full"
-              style={{ backgroundColor: selectedResponsible.color + '20', color: selectedResponsible.color }}
-            >
-              {selectedResponsible.name}
-            </span>
+          {selectedNames.length > 0 && (
+            <div className="flex flex-wrap gap-1 justify-end">
+              {responsibles.filter(r => selectedResponsibleIds.includes(r.id)).map(r => (
+                <span
+                  key={r.id}
+                  className="text-[10px] font-bold px-2 py-1 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: r.color + '20', color: r.color }}
+                >
+                  {r.name}
+                </span>
+              ))}
+            </div>
           )}
         </div>
 
@@ -79,24 +92,15 @@ export function VariableExpensesCard({ categories, variableExpenseByCat, totalIn
             className="grid grid-cols-[1fr_56px_120px_32px] items-center px-4 py-2.5 bg-muted/40 border-b border-border transition-colors hover:bg-muted/60"
             style={{ borderBottom: collapsed ? 'none' : undefined }}
           >
-            <div
-              className="flex items-center gap-1.5 cursor-pointer select-none"
-              onClick={() => setCollapsed(c => !c)}
-            >
+            <div className="flex items-center gap-1.5 cursor-pointer select-none" onClick={() => setCollapsed(c => !c)}>
               <ChevronDown
                 className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 flex-shrink-0"
                 style={{ transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}
               />
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Categoría</span>
             </div>
-            <span
-              className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest text-center cursor-pointer select-none"
-              onClick={() => setCollapsed(c => !c)}
-            >%</span>
-            <span
-              className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest text-right cursor-pointer select-none"
-              onClick={() => setCollapsed(c => !c)}
-            >Monto</span>
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest text-center cursor-pointer select-none" onClick={() => setCollapsed(c => !c)}>%</span>
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest text-right cursor-pointer select-none" onClick={() => setCollapsed(c => !c)}>Monto</span>
             <div className="flex justify-end">
               <DropdownMenu>
                 <DropdownMenuTrigger className="p-1 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted/60 transition-colors">
@@ -111,7 +115,7 @@ export function VariableExpensesCard({ categories, variableExpenseByCat, totalIn
 
           {!collapsed && rows.length === 0 && (
             <div className="px-4 py-6 text-center text-xs text-muted-foreground">
-              Sin gastos variables{selectedResponsible ? ` para ${selectedResponsible.name}` : ''} este mes
+              Sin gastos variables{selectedNames.length > 0 ? ` para ${selectedNames.join(', ')}` : ''} este mes
             </div>
           )}
 
@@ -127,10 +131,7 @@ export function VariableExpensesCard({ categories, variableExpenseByCat, totalIn
                   </div>
                   <div className="flex justify-center">
                     {pct !== null ? (
-                      <span
-                        className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                        style={{ color: VARIABLE_COLOR, backgroundColor: VARIABLE_COLOR + '18' }}
-                      >
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ color: VARIABLE_COLOR, backgroundColor: VARIABLE_COLOR + '18' }}>
                         {pct}%
                       </span>
                     ) : (
@@ -138,9 +139,7 @@ export function VariableExpensesCard({ categories, variableExpenseByCat, totalIn
                     )}
                   </div>
                   <div className="text-right">
-                    <span className="text-sm font-semibold tabular-nums text-foreground">
-                      {formatCurrency(amount)}
-                    </span>
+                    <span className="text-sm font-semibold tabular-nums text-foreground">{formatCurrency(amount)}</span>
                   </div>
                   <span />
                 </div>
@@ -153,26 +152,20 @@ export function VariableExpensesCard({ categories, variableExpenseByCat, totalIn
             )
           })}
 
-          {/* Total */}
           {!collapsed && (
-            <div
-              className="grid grid-cols-[1fr_56px_120px_32px] items-center px-4 py-2.5"
-              style={{ backgroundColor: VARIABLE_COLOR + '10' }}
-            >
+            <div className="grid grid-cols-[1fr_56px_120px_32px] items-center px-4 py-2.5" style={{ backgroundColor: VARIABLE_COLOR + '10' }}>
               <span className="text-xs font-bold" style={{ color: VARIABLE_COLOR }}>Total variables</span>
               <span className="text-center text-[10px] font-bold" style={{ color: VARIABLE_COLOR }}>
                 {pctOfIncome !== null ? `${pctOfIncome.toFixed(1)}%` : '—'}
               </span>
-              <span className="text-right text-sm font-bold tabular-nums" style={{ color: VARIABLE_COLOR }}>
-                {formatCurrency(total)}
-              </span>
+              <span className="text-right text-sm font-bold tabular-nums" style={{ color: VARIABLE_COLOR }}>{formatCurrency(total)}</span>
               <span />
             </div>
           )}
         </div>
       </div>
 
-      {/* Dialog selector de encargado */}
+      {/* Dialog selector de encargados */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-xs p-0 gap-0 border-border">
           <div
@@ -180,16 +173,16 @@ export function VariableExpensesCard({ categories, variableExpenseByCat, totalIn
             style={{ background: `linear-gradient(135deg, ${VARIABLE_COLOR}18 0%, transparent 100%)` }}
           >
             <DialogTitle className="text-base font-semibold">Filtrar por encargado</DialogTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">Seleccioná un encargado o mostrá todos</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Podés elegir uno o más encargados</p>
           </div>
 
           <div className="p-4 space-y-2">
             {/* Opción "Todos" */}
             <button
               type="button"
-              onClick={() => setDraft(null)}
+              onClick={() => setDraft([])}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-sm transition-all text-left"
-              style={draft === null
+              style={draft.length === 0
                 ? { backgroundColor: VARIABLE_COLOR + '15', borderColor: VARIABLE_COLOR + '50', color: 'hsl(var(--foreground))' }
                 : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }
               }
@@ -198,21 +191,24 @@ export function VariableExpensesCard({ categories, variableExpenseByCat, totalIn
               <span className="font-medium">Todos</span>
             </button>
 
-            {responsibles.map(r => (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => setDraft(r.id)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-sm transition-all text-left"
-                style={draft === r.id
-                  ? { backgroundColor: r.color + '15', borderColor: r.color + '50', color: 'hsl(var(--foreground))' }
-                  : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }
-                }
-              >
-                <div className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: r.color }} />
-                <span className="font-medium">{r.name}</span>
-              </button>
-            ))}
+            {responsibles.map(r => {
+              const active = draft.includes(r.id)
+              return (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => toggleDraft(r.id)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-sm transition-all text-left"
+                  style={active
+                    ? { backgroundColor: r.color + '15', borderColor: r.color + '50', color: 'hsl(var(--foreground))' }
+                    : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }
+                  }
+                >
+                  <div className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: r.color }} />
+                  <span className="font-medium">{r.name}</span>
+                </button>
+              )
+            })}
 
             {responsibles.length === 0 && (
               <p className="text-xs text-muted-foreground text-center py-4">
