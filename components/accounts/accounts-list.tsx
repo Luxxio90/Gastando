@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
 import {
   Plus, MoreVertical, ChevronRight, Settings2, GripVertical,
-  Wallet, Landmark, CreditCard, PiggyBank, Banknote, Check, Eye, EyeOff,
+  Wallet, Landmark, CreditCard, PiggyBank, Banknote, Check, Eye, EyeOff, Trash2,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -100,7 +100,7 @@ function SortableAccountCard({ account, onEdit, onDelete, hidden }: { account: A
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => onEdit(account)}>Editar</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-500" onClick={() => onDelete(account.id)}>Eliminar</DropdownMenuItem>
+              <DropdownMenuItem className="text-red-500" onClick={() => onDelete(account.id)}>Eliminar cuenta</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -120,6 +120,7 @@ export function AccountsList({ accounts, userId }: Props) {
   const [balanceConfigOpen, setBalanceConfigOpen] = useState(false)
   const [draft, setDraft]                     = useState<string[]>([])
   const [hidden, setHidden]                   = useState(false)
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const router  = useRouter()
   const supabase = createClient()
 
@@ -269,7 +270,7 @@ export function AccountsList({ accounts, userId }: Props) {
           <SortableContext items={order} strategy={rectSortingStrategy}>
             <div className="grid grid-cols-1 gap-2.5">
               {sortedAccounts.map(a => (
-                <SortableAccountCard key={a.id} account={a} onEdit={openEdit} onDelete={handleDelete} hidden={hidden} />
+                <SortableAccountCard key={a.id} account={a} onEdit={openEdit} onDelete={id => setPendingDeleteId(id)} hidden={hidden} />
               ))}
             </div>
           </SortableContext>
@@ -424,6 +425,35 @@ export function AccountsList({ accounts, userId }: Props) {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation: delete account */}
+      <Dialog open={!!pendingDeleteId} onOpenChange={() => setPendingDeleteId(null)}>
+        <DialogContent className="sm:max-w-xs p-0 gap-0 border-border overflow-hidden">
+          <div className="px-5 pt-5 pb-4 border-b border-border" style={{ background: 'linear-gradient(135deg, #FF4D6D12 0%, transparent 100%)' }}>
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FF4D6D20' }}>
+                <Trash2 className="h-4 w-4" style={{ color: '#FF4D6D' }} />
+              </div>
+              <DialogTitle className="text-base font-semibold">Eliminar cuenta</DialogTitle>
+            </div>
+          </div>
+          <div className="px-5 py-4 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              ¿Eliminar esta cuenta? Esta acción no se puede deshacer. Si tiene transacciones asociadas no se podrá eliminar.
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setPendingDeleteId(null)}>Cancelar</Button>
+              <Button
+                className="flex-1 font-semibold"
+                onClick={() => { if (pendingDeleteId) { handleDelete(pendingDeleteId); setPendingDeleteId(null) } }}
+                style={{ backgroundColor: '#FF4D6D', color: '#fff', border: 'none' }}
+              >
+                Eliminar
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

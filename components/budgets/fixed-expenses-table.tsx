@@ -65,6 +65,7 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
   const supabase = createClient()
   const [localGroups, setLocalGroups] = useState<FixedExpenseGroup[]>(initialGroups)
   const [localItems, setLocalItems] = useState<FixedExpenseItem[]>(initialItems)
+  const [pendingDeleteGroup, setPendingDeleteGroup] = useState<FixedExpenseGroup | null>(null)
 
   // ── Item dialog ───────────────────────────────────────────────────────────────
   const [itemDialogOpen, setItemDialogOpen] = useState(false)
@@ -510,7 +511,7 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             className="text-red-500"
-                            onClick={() => handleGroupDelete(group)}
+                            onClick={() => setPendingDeleteGroup(group)}
                           >
                             Eliminar sección
                           </DropdownMenuItem>
@@ -942,12 +943,12 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
               <Button
                 type="button" variant="destructive" className="w-full"
                 disabled={groupDeleting}
-                onClick={async () => {
+                onClick={() => {
                   closeGroupDialog()
-                  await handleGroupDelete(editingGroup)
+                  if (editingGroup) setPendingDeleteGroup(editingGroup)
                 }}
               >
-                {groupDeleting ? 'Eliminando...' : 'Eliminar sección'}
+                Eliminar sección
               </Button>
             )}
           </form>
@@ -1056,6 +1057,37 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
               </Button>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm delete group */}
+      <Dialog open={!!pendingDeleteGroup} onOpenChange={() => setPendingDeleteGroup(null)}>
+        <DialogContent className="sm:max-w-xs p-0 gap-0 border-border overflow-hidden">
+          <div className="px-5 pt-5 pb-4 border-b border-border" style={{ background: 'linear-gradient(135deg, #FF4D6D12 0%, transparent 100%)' }}>
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FF4D6D20' }}>
+                <TrendingDown className="h-4 w-4" style={{ color: '#FF4D6D' }} />
+              </div>
+              <DialogTitle className="text-base font-semibold">Eliminar sección</DialogTitle>
+            </div>
+          </div>
+          <div className="px-5 py-4 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Se eliminará la sección <span className="font-semibold text-foreground">"{pendingDeleteGroup?.name}"</span> y todos sus gastos. Esta acción no se puede deshacer.
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setPendingDeleteGroup(null)}>Cancelar</Button>
+              <Button className="flex-1 font-semibold" style={{ backgroundColor: '#FF4D6D', color: '#fff', border: 'none' }}
+                disabled={groupDeleting}
+                onClick={async () => {
+                  if (!pendingDeleteGroup) return
+                  await handleGroupDelete(pendingDeleteGroup)
+                  setPendingDeleteGroup(null)
+                }}>
+                {groupDeleting ? 'Eliminando...' : 'Eliminar'}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </>

@@ -313,90 +313,112 @@ export function TransactionList({ transactions, accounts, categories, responsibl
             <div className="text-center text-muted-foreground py-12 text-sm">
               {q ? `Sin resultados para "${search}"` : 'No hay transacciones'}
             </div>
-          ) : (
-            <div className="divide-y divide-border/50">
-              {filtered.map(t => {
-                const isTransfer = !!t.transfer_group_id
-                return (
-                  <div key={t.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">
-                    <div
-                      className="h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{ backgroundColor: isTransfer
-                        ? TRANSFER_COLOR + '18'
-                        : t.type === 'income' ? '#00CB9618' : '#FF4D6D18'
-                      }}
-                    >
-                      {isTransfer
-                        ? <ArrowLeftRight className="h-4 w-4" style={{ color: TRANSFER_COLOR }} />
-                        : t.type === 'income'
-                          ? <ArrowUpCircle className="h-4 w-4 text-emerald-500" />
-                          : <ArrowDownCircle className="h-4 w-4 text-red-500" />
-                      }
+          ) : (() => {
+            // Group by date
+            const groups: Record<string, Transaction[]> = {}
+            for (const t of filtered) {
+              if (!groups[t.date]) groups[t.date] = []
+              groups[t.date].push(t)
+            }
+            const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a))
+
+            return (
+              <div>
+                {sortedDates.map(date => (
+                  <div key={date}>
+                    {/* Date header */}
+                    <div className="px-4 py-2 bg-muted/40 border-b border-border/40 sticky top-0 z-10">
+                      <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                        {formatDate(date)}
+                      </span>
                     </div>
+                    {/* Rows for this date */}
+                    <div className="divide-y divide-border/50">
+                      {groups[date].map(t => {
+                        const isTransfer = !!t.transfer_group_id
+                        return (
+                          <div key={t.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">
+                            <div
+                              className="h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                              style={{ backgroundColor: isTransfer
+                                ? TRANSFER_COLOR + '18'
+                                : t.type === 'income' ? '#00CB9618' : '#FF4D6D18'
+                              }}
+                            >
+                              {isTransfer
+                                ? <ArrowLeftRight className="h-4 w-4" style={{ color: TRANSFER_COLOR }} />
+                                : t.type === 'income'
+                                  ? <ArrowUpCircle className="h-4 w-4 text-emerald-500" />
+                                  : <ArrowDownCircle className="h-4 w-4 text-red-500" />
+                              }
+                            </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-sm font-medium text-foreground truncate">{t.description}</p>
-                        {t.attachment_url && (
-                          <button
-                            type="button"
-                            onClick={() => openAttachment(t)}
-                            title="Ver comprobante"
-                            className="flex-shrink-0 text-muted-foreground/50 hover:text-[#7C4DFF] transition-colors"
-                          >
-                            <Paperclip className="h-3 w-3" />
-                          </button>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        {formatDate(t.date)}
-                        {(t.account as any)?.name  ? ` · ${(t.account as any).name}`   : ''}
-                        {!isTransfer && (t.category as any)?.name ? ` · ${(t.category as any).name}` : ''}
-                        {isTransfer && <span style={{ color: TRANSFER_COLOR }}> · Transferencia</span>}
-                      </p>
-                      {t.notes && (
-                        <p className="text-[11px] text-muted-foreground/60 mt-0.5 truncate italic">{t.notes}</p>
-                      )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-sm font-medium text-foreground truncate">{t.description}</p>
+                                {t.attachment_url && (
+                                  <button
+                                    type="button"
+                                    onClick={() => openAttachment(t)}
+                                    title="Ver comprobante"
+                                    className="flex-shrink-0 text-muted-foreground/50 hover:text-[#7C4DFF] transition-colors"
+                                  >
+                                    <Paperclip className="h-3 w-3" />
+                                  </button>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-muted-foreground mt-0.5">
+                                {(t.account as any)?.name  ? `${(t.account as any).name}`   : ''}
+                                {!isTransfer && (t.category as any)?.name ? ` · ${(t.category as any).name}` : ''}
+                                {isTransfer && <span style={{ color: TRANSFER_COLOR }}> · Transferencia</span>}
+                              </p>
+                              {t.notes && (
+                                <p className="text-[11px] text-muted-foreground/60 mt-0.5 truncate italic">{t.notes}</p>
+                              )}
+                            </div>
+
+                            <span
+                              className="text-sm font-bold tabular-nums flex-shrink-0"
+                              style={{ color: isTransfer
+                                ? TRANSFER_COLOR
+                                : t.type === 'income' ? '#00CB96' : '#FF4D6D'
+                              }}
+                            >
+                              {isTransfer ? '' : t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
+                            </span>
+
+                            <DropdownMenu>
+                              <DropdownMenuTrigger className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-foreground hover:bg-muted/60 transition-colors flex-shrink-0">
+                                <MoreVertical className="h-4 w-4" />
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {!isTransfer && (
+                                  <>
+                                    <DropdownMenuItem onClick={() => openEdit(t)}>
+                                      <Pencil className="h-3.5 w-3.5 mr-2" /> Editar
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                  </>
+                                )}
+                                <DropdownMenuItem
+                                  className="text-red-500"
+                                  disabled={deleting === t.id}
+                                  onClick={() => setPendingDelete(t)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 mr-2" />
+                                  {deleting === t.id ? 'Eliminando...' : 'Eliminar'}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        )
+                      })}
                     </div>
-
-                    <span
-                      className="text-sm font-bold tabular-nums flex-shrink-0"
-                      style={{ color: isTransfer
-                        ? TRANSFER_COLOR
-                        : t.type === 'income' ? '#00CB96' : '#FF4D6D'
-                      }}
-                    >
-                      {isTransfer ? '' : t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
-                    </span>
-
-                    <DropdownMenu>
-                      <DropdownMenuTrigger className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-foreground hover:bg-muted/60 transition-colors flex-shrink-0">
-                        <MoreVertical className="h-4 w-4" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {!isTransfer && (
-                          <>
-                            <DropdownMenuItem onClick={() => openEdit(t)}>
-                              <Pencil className="h-3.5 w-3.5 mr-2" /> Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                          </>
-                        )}
-                        <DropdownMenuItem
-                          className="text-red-500"
-                          disabled={deleting === t.id}
-                          onClick={() => setPendingDelete(t)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 mr-2" />
-                          {deleting === t.id ? 'Eliminando...' : 'Eliminar'}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </div>
-                )
-              })}
-            </div>
-          )}
+                ))}
+              </div>
+            )
+          })()}
         </CardContent>
       </Card>
 

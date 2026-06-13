@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation'
 import { BudgetCard, Category, Account, Responsible } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Plus, ChevronLeft, ChevronRight, ChevronDown, MoreVertical, AlertTriangle, Target } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, ChevronDown, MoreVertical, AlertTriangle, Target, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { BudgetCardDialog } from './budget-card-dialog'
@@ -40,6 +41,8 @@ export function BudgetCardsView({ cards, categories, resolvedAmounts, actualByCa
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingCard, setEditingCard] = useState<BudgetCard | null>(null)
   const [collapsed, setCollapsed] = useState(false)
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const [pendingDeleteAll, setPendingDeleteAll] = useState(false)
 
   function navigate(m: number, y: number) { router.push(`/budgets?month=${m}&year=${y}`) }
 
@@ -147,12 +150,7 @@ export function BudgetCardsView({ cards, categories, resolvedAmounts, actualByCa
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
                     className="text-red-500"
-                    onClick={async () => {
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      const { error } = await (supabase as any).from('budget_cards').delete().eq('user_id', userId).eq('month', month).eq('year', year)
-                      if (error) toast.error('Error al eliminar')
-                      else { toast.success('Distribución eliminada'); router.refresh() }
-                    }}
+                    onClick={() => setPendingDeleteAll(true)}
                   >
                     Eliminar todo
                   </DropdownMenuItem>
@@ -207,7 +205,7 @@ export function BudgetCardsView({ cards, categories, resolvedAmounts, actualByCa
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => openEdit(card)}>Editar</DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-500" onClick={() => handleDelete(card.id)}>Eliminar</DropdownMenuItem>
+                          <DropdownMenuItem className="text-red-500" onClick={() => setPendingDeleteId(card.id)}>Eliminar</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -273,7 +271,7 @@ export function BudgetCardsView({ cards, categories, resolvedAmounts, actualByCa
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => openEdit(card)}>Editar</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-500" onClick={() => handleDelete(card.id)}>Eliminar</DropdownMenuItem>
+                            <DropdownMenuItem className="text-red-500" onClick={() => setPendingDeleteId(card.id)}>Eliminar</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -406,6 +404,60 @@ export function BudgetCardsView({ cards, categories, resolvedAmounts, actualByCa
           })}
         </div>
       )}
+
+      {/* Confirm delete row */}
+      <Dialog open={!!pendingDeleteId} onOpenChange={() => setPendingDeleteId(null)}>
+        <DialogContent className="sm:max-w-xs p-0 gap-0 border-border overflow-hidden">
+          <div className="px-5 pt-5 pb-4 border-b border-border" style={{ background: 'linear-gradient(135deg, #FF4D6D12 0%, transparent 100%)' }}>
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FF4D6D20' }}>
+                <Trash2 className="h-4 w-4" style={{ color: '#FF4D6D' }} />
+              </div>
+              <DialogTitle className="text-base font-semibold">Eliminar fila</DialogTitle>
+            </div>
+          </div>
+          <div className="px-5 py-4 space-y-4">
+            <p className="text-sm text-muted-foreground">¿Eliminar esta fila de la distribución?</p>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setPendingDeleteId(null)}>Cancelar</Button>
+              <Button className="flex-1 font-semibold" style={{ backgroundColor: '#FF4D6D', color: '#fff', border: 'none' }}
+                onClick={() => { if (pendingDeleteId) { handleDelete(pendingDeleteId); setPendingDeleteId(null) } }}>
+                Eliminar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm delete all */}
+      <Dialog open={pendingDeleteAll} onOpenChange={() => setPendingDeleteAll(false)}>
+        <DialogContent className="sm:max-w-xs p-0 gap-0 border-border overflow-hidden">
+          <div className="px-5 pt-5 pb-4 border-b border-border" style={{ background: 'linear-gradient(135deg, #FF4D6D12 0%, transparent 100%)' }}>
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FF4D6D20' }}>
+                <Trash2 className="h-4 w-4" style={{ color: '#FF4D6D' }} />
+              </div>
+              <DialogTitle className="text-base font-semibold">Eliminar toda la distribución</DialogTitle>
+            </div>
+          </div>
+          <div className="px-5 py-4 space-y-4">
+            <p className="text-sm text-muted-foreground">Se eliminarán todas las filas de distribución de este mes. Esta acción no se puede deshacer.</p>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setPendingDeleteAll(false)}>Cancelar</Button>
+              <Button className="flex-1 font-semibold" style={{ backgroundColor: '#FF4D6D', color: '#fff', border: 'none' }}
+                onClick={async () => {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const { error } = await (supabase as any).from('budget_cards').delete().eq('user_id', userId).eq('month', month).eq('year', year)
+                  setPendingDeleteAll(false)
+                  if (error) toast.error('Error al eliminar')
+                  else { toast.success('Distribución eliminada'); router.refresh() }
+                }}>
+                Eliminar todo
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <BudgetCardDialog
         open={dialogOpen}
