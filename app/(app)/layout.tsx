@@ -2,6 +2,7 @@ import { Sidebar } from '@/components/layout/sidebar'
 import { MobileNav } from '@/components/layout/mobile-nav'
 import { FloatingActionButton } from '@/components/layout/fab'
 import { InstallBanner } from '@/components/layout/install-banner'
+import { PullToRefresh } from '@/components/layout/pull-to-refresh'
 import { createClient } from '@/lib/supabase/server'
 import { Suspense } from 'react'
 
@@ -12,7 +13,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
-      <main className="flex-1 overflow-auto pb-20 md:pb-0">{children}</main>
+      <PullToRefresh>{children}</PullToRefresh>
       <Suspense>
         <MobileNav userEmail={user?.email} />
       </Suspense>
