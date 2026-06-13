@@ -58,11 +58,21 @@ export default async function EstadisticasPage({
   if (txError || trendError || accError) return <ErrorState title="Error al cargar las estadísticas" />
 
   return (
-    <div className="p-4 pb-24 max-w-2xl mx-auto">
-      <div className="mb-5">
-        <h1 className="text-2xl font-bold text-foreground">Estadísticas</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Análisis de tus finanzas</p>
+    <div className="min-h-screen" style={{ backgroundColor: '#F5F5F7' }}>
+      {/* Hero */}
+      <div
+        className="relative overflow-hidden px-5 pt-10 pb-16"
+        style={{ background: 'linear-gradient(135deg, #3BB2F6 0%, #7C4DFF 100%)' }}
+      >
+        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full opacity-10" style={{ backgroundColor: '#fff' }} />
+        <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full opacity-10" style={{ backgroundColor: '#fff' }} />
+        <div className="relative">
+          <p className="text-white/70 text-xs font-medium uppercase tracking-wider">Finanzas personales</p>
+          <h1 className="text-white text-xl font-bold mt-0.5">Estadísticas</h1>
+        </div>
       </div>
+
+      <div className="relative -mt-8 px-4 pb-24 space-y-4 max-w-2xl mx-auto">
       <EstadisticasView
         month={month}
         year={year}
@@ -71,6 +81,7 @@ export default async function EstadisticasPage({
         accounts={(accounts ?? []) as any[]}
         responsibles={(responsibles ?? []) as any[]}
       />
+      </div>
     </div>
   )
 }

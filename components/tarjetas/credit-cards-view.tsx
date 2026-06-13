@@ -333,30 +333,41 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
   }
 
   return (
-    <div className="p-4 pb-28 max-w-lg mx-auto space-y-5">
+    <div className="min-h-screen" style={{ backgroundColor: '#F5F5F7' }}>
 
-      {/* Header */}
-      <div className="flex items-center justify-between pt-2">
-        <div>
-          <h1 className="text-xl font-bold text-foreground">Mis tarjetas</h1>
-          <div className="flex items-center gap-1 mt-0.5">
-            <button onClick={prev} className="p-0.5 rounded text-muted-foreground">
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="text-xs text-muted-foreground font-medium min-w-32 text-center">{MONTHS[month - 1]} {year}</span>
-            <button onClick={next} className="p-0.5 rounded text-muted-foreground">
-              <ChevronRight className="h-4 w-4" />
+      {/* Hero */}
+      <div
+        className="relative overflow-hidden px-5 pt-10 pb-16"
+        style={{ background: 'linear-gradient(135deg, #7C4DFF 0%, #9C6DFF 100%)' }}
+      >
+        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full opacity-10" style={{ backgroundColor: '#fff' }} />
+        <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full opacity-10" style={{ backgroundColor: '#fff' }} />
+        <div className="relative flex items-start justify-between">
+          <div>
+            <p className="text-white/70 text-xs font-medium uppercase tracking-wider">{MONTHS[month - 1]} {year}</p>
+            <h1 className="text-white text-xl font-bold mt-0.5">Mis tarjetas</h1>
+          </div>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="flex items-center gap-0.5">
+              <button onClick={prev} className="p-1.5 rounded-lg hover:bg-white/20 transition-colors text-white/80">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button onClick={next} className="p-1.5 rounded-lg hover:bg-white/20 transition-colors text-white/80">
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+            <button
+              onClick={openCreateCard}
+              className="text-xs font-semibold flex items-center gap-1 px-3 py-1.5 rounded-full transition-colors"
+              style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: '#fff' }}
+            >
+              <Plus className="h-3.5 w-3.5" /> Nueva
             </button>
           </div>
         </div>
-        <button
-          onClick={openCreateCard}
-          className="text-sm font-semibold flex items-center gap-1"
-          style={{ color: '#7C4DFF' }}
-        >
-          <Plus className="h-4 w-4" /> Agregar tarjeta
-        </button>
       </div>
+
+      <div className="relative -mt-8 p-4 pb-28 max-w-lg mx-auto space-y-4">
 
       {/* Cards list */}
       {cards.length === 0 ? (
@@ -740,6 +751,7 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
           </form>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   )
 }

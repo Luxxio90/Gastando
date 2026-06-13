@@ -70,11 +70,24 @@ export default async function AvisosPage({
     .not('track_account_id', 'is', null)
 
   return (
-    <div className="p-4 pb-24 max-w-2xl mx-auto space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Avisos</h1>
-        <MonthNav month={month} year={year} basePath="/avisos" />
+    <div className="min-h-screen" style={{ backgroundColor: '#F5F5F7' }}>
+      {/* Hero */}
+      <div
+        className="relative overflow-hidden px-5 pt-10 pb-16"
+        style={{ background: 'linear-gradient(135deg, #F59E0B 0%, #FF4D6D 100%)' }}
+      >
+        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full opacity-10" style={{ backgroundColor: '#fff' }} />
+        <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full opacity-10" style={{ backgroundColor: '#fff' }} />
+        <div className="relative flex items-start justify-between">
+          <div>
+            <p className="text-white/70 text-xs font-medium uppercase tracking-wider">Vencimientos</p>
+            <h1 className="text-white text-xl font-bold mt-0.5">Avisos</h1>
+          </div>
+          <MonthNav month={month} year={year} basePath="/avisos" light />
+        </div>
       </div>
+
+      <div className="relative -mt-8 p-4 pb-24 max-w-2xl mx-auto space-y-4">
       <AvisosView
         fixedExpenses={(rawFixed ?? []) as any[]}
         cardMonths={cardMonths as any[]}
@@ -85,6 +98,7 @@ export default async function AvisosPage({
         month={month}
         year={year}
       />
+      </div>
     </div>
   )
 }
