@@ -33,6 +33,7 @@ export function TransactionList({ transactions, accounts, categories, responsibl
   const [filter, setFilter]               = useState<'all' | 'income' | 'expense'>(initialFilter)
   const [catFilter, setCatFilter]         = useState('')
   const [accFilter, setAccFilter]         = useState('')
+  const [respFilter, setRespFilter]       = useState('')
   const [deleting, setDeleting]           = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<Transaction | null>(null)
   const [search, setSearch]               = useState('')
@@ -50,6 +51,7 @@ export function TransactionList({ transactions, accounts, categories, responsibl
     if (filter !== 'all' && t.type !== filter) return false
     if (catFilter && t.category_id !== catFilter) return false
     if (accFilter && t.account_id !== accFilter) return false
+    if (respFilter && (t as any).responsible_party_id !== respFilter) return false
     if (!q) return true
     return (
       t.description?.toLowerCase().includes(q) ||
@@ -305,6 +307,38 @@ export function TransactionList({ transactions, accounts, categories, responsibl
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Encargado dropdown */}
+        {responsibles.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
+              style={respFilter
+                ? { background: '#7C4DFF20', borderColor: '#7C4DFF60', color: '#7C4DFF' }
+                : { background: 'transparent', borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }
+              }
+            >
+              {respFilter ? responsibles.find(r => r.id === respFilter)?.name ?? 'Encargado' : 'Encargado'}
+              <ChevronDown className="h-3 w-3" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {respFilter && (
+                <>
+                  <DropdownMenuItem onClick={() => setRespFilter('')}>
+                    <X className="h-3.5 w-3.5 mr-2" /> Todos
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+              {responsibles.map(r => (
+                <DropdownMenuItem key={r.id} onClick={() => setRespFilter(r.id)}>
+                  <div className="h-2.5 w-2.5 rounded-full mr-2 flex-shrink-0" style={{ backgroundColor: r.color }} />
+                  {r.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       <Card>
@@ -371,6 +405,9 @@ export function TransactionList({ transactions, accounts, categories, responsibl
                                 {(t.account as any)?.name  ? `${(t.account as any).name}`   : ''}
                                 {!isTransfer && (t.category as any)?.name ? ` · ${(t.category as any).name}` : ''}
                                 {isTransfer && <span style={{ color: TRANSFER_COLOR }}> · Transferencia</span>}
+                                {!isTransfer && (t as any).responsible?.name && (
+                                  <span> · <span style={{ color: (t as any).responsible.color ?? '#7C4DFF' }}>{(t as any).responsible.name}</span></span>
+                                )}
                               </p>
                               {t.notes && (
                                 <p className="text-[11px] text-muted-foreground/60 mt-0.5 truncate italic">{t.notes}</p>
