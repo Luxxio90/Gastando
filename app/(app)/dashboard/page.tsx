@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { ExpenseChart } from '@/components/dashboard/expense-chart'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { DashboardCards } from '@/components/dashboard/dashboard-cards'
+import { BudgetProgressCard } from '@/components/dashboard/budget-progress-card'
 import { MonthNav } from '@/components/dashboard/month-nav'
 import { ErrorState } from '@/components/ui/error-state'
 
@@ -41,10 +42,16 @@ export default async function DashboardPage({
     supabase.from('investments').select('*').eq('user_id', user.id),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase as any).from('budget_cards').select('id').eq('user_id', user.id).limit(1),
-    supabase.from('fixed_expense_items').select('id').eq('user_id', user.id).limit(1),
+    supabase.from('fixed_expense_items').select('amount, status').eq('user_id', user.id).eq('month', month).eq('year', year),
   ])
 
   if (txError || accError) return <ErrorState title="Error al cargar el dashboard" />
+
+  const allTx = transactions ?? []
+  const monthIncome   = allTx.filter(t => t.type === 'income'  && !t.transfer_group_id).reduce((s, t) => s + t.amount, 0)
+  const monthExpenses = allTx.filter(t => t.type === 'expense' && !t.transfer_group_id).reduce((s, t) => s + t.amount, 0)
+  const fixedTotal    = (fixedItems ?? []).reduce((s: number, i: any) => s + (i.amount ?? 0), 0)
+  const fixedPaid     = (fixedItems ?? []).filter((i: any) => i.status === 'paid').reduce((s: number, i: any) => s + (i.amount ?? 0), 0)
 
   const userName = user.email?.split('@')[0] ?? 'usuario'
   const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
@@ -85,6 +92,12 @@ export default async function DashboardPage({
         />
 
         <div className="space-y-4">
+          <BudgetProgressCard
+            monthIncome={monthIncome}
+            monthExpenses={monthExpenses}
+            fixedTotal={fixedTotal}
+            fixedPaid={fixedPaid}
+          />
           <ExpenseChart transactions={transactions} />
           <RecentTransactions transactions={transactions.slice(0, 8)} />
         </div>
