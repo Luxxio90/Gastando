@@ -221,8 +221,7 @@ export function AccountsList({ accounts, userId }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Cuentas</h1>
-          <div className="flex items-center gap-2.5 mt-0.5">
+          <div className="flex items-center gap-2.5">
             <p className="text-sm text-muted-foreground">
               Balance total:{' '}
               <span className="font-bold text-foreground tabular-nums">{hidden ? '••••••' : formatCurrency(totalBalance)}</span>

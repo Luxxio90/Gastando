@@ -88,16 +88,26 @@ export default async function TransactionsPage({ searchParams }: Props) {
       const initialFilter = type === 'income' ? 'income' : type === 'expense' ? 'expense' : 'all'
 
       return (
-        <div className="p-6">
-          <TransactionList
-            transactions={fresh ?? []}
-            accounts={accounts ?? []}
-            categories={categories ?? []}
-            responsibles={responsibles ?? []}
-            userId={user.id}
-            initialFilter={initialFilter}
-            recurring={allRecurring ?? []}
-          />
+        <div className="min-h-screen" style={{ backgroundColor: '#F5F5F7' }}>
+          <div className="relative overflow-hidden px-5 pt-10 pb-16" style={{ background: 'linear-gradient(135deg, #7C4DFF 0%, #3BB2F6 100%)' }}>
+            <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full opacity-10" style={{ backgroundColor: '#fff' }} />
+            <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full opacity-10" style={{ backgroundColor: '#fff' }} />
+            <div className="relative">
+              <p className="text-white/70 text-xs font-medium uppercase tracking-wider">Historial</p>
+              <h1 className="text-white text-xl font-bold mt-0.5">Transacciones</h1>
+            </div>
+          </div>
+          <div className="relative -mt-8 p-4 pb-28">
+            <TransactionList
+              transactions={fresh ?? []}
+              accounts={accounts ?? []}
+              categories={categories ?? []}
+              responsibles={responsibles ?? []}
+              userId={user.id}
+              initialFilter={initialFilter}
+              recurring={allRecurring ?? []}
+            />
+          </div>
         </div>
       )
     }
@@ -106,16 +116,26 @@ export default async function TransactionsPage({ searchParams }: Props) {
   const initialFilter = type === 'income' ? 'income' : type === 'expense' ? 'expense' : 'all'
 
   return (
-    <div className="p-6">
-      <TransactionList
-        transactions={transactions ?? []}
-        accounts={accounts ?? []}
-        categories={categories ?? []}
-        responsibles={responsibles ?? []}
-        userId={user.id}
-        initialFilter={initialFilter}
-        recurring={allRecurring ?? []}
-      />
+    <div className="min-h-screen" style={{ backgroundColor: '#F5F5F7' }}>
+      <div className="relative overflow-hidden px-5 pt-10 pb-16" style={{ background: 'linear-gradient(135deg, #7C4DFF 0%, #3BB2F6 100%)' }}>
+        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full opacity-10" style={{ backgroundColor: '#fff' }} />
+        <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full opacity-10" style={{ backgroundColor: '#fff' }} />
+        <div className="relative">
+          <p className="text-white/70 text-xs font-medium uppercase tracking-wider">Historial</p>
+          <h1 className="text-white text-xl font-bold mt-0.5">Transacciones</h1>
+        </div>
+      </div>
+      <div className="relative -mt-8 p-4 pb-28">
+        <TransactionList
+          transactions={transactions ?? []}
+          accounts={accounts ?? []}
+          categories={categories ?? []}
+          responsibles={responsibles ?? []}
+          userId={user.id}
+          initialFilter={initialFilter}
+          recurring={allRecurring ?? []}
+        />
+      </div>
     </div>
   )
 }
