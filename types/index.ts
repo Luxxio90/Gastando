@@ -135,6 +135,7 @@ export interface CreditCard {
   name: string
   network: string
   account_id: string | null
+  image_url: string | null
   created_at: string | null
 }
 

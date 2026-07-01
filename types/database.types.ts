@@ -325,6 +325,7 @@ export type Database = {
           account_id: string | null
           created_at: string | null
           id: string
+          image_url: string | null
           name: string
           network: string
           user_id: string
@@ -333,6 +334,7 @@ export type Database = {
           account_id?: string | null
           created_at?: string | null
           id?: string
+          image_url?: string | null
           name: string
           network?: string
           user_id: string
@@ -341,6 +343,7 @@ export type Database = {
           account_id?: string | null
           created_at?: string | null
           id?: string
+          image_url?: string | null
           name?: string
           network?: string
           user_id?: string
