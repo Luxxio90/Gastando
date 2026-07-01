@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatCurrency } from '@/lib/utils'
 import { Account, BudgetCard, FixedExpenseGroup, FixedExpenseItem, Category, Responsible } from '@/types'
-import { ChevronLeft, ChevronRight, ChevronDown, Plus, TrendingUp, TrendingDown, CalendarDays, ArrowLeftRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown, Plus, TrendingUp, TrendingDown, CalendarDays, ArrowLeftRight, LayoutList } from 'lucide-react'
 
 const FAB_ACTIONS = [
   { type: 'income'  as const, label: 'Ingreso', color: '#00CB96', Icon: TrendingUp },
@@ -154,6 +154,71 @@ export function SharedDashboard({ sharedAccess, accounts, transactions: initialT
     setItemLoading(false)
   }
 
+  // ── Distribution collapse ──
+  const [distribCollapsed, setDistribCollapsed] = useState(false)
+
+  // ── Category show more ──
+  const [catExpanded, setCatExpanded] = useState(false)
+
+  // ── Budget card dialog ──
+  const [cardDialogOpen, setCardDialogOpen] = useState(false)
+  const [editingCard, setEditingCard] = useState<BudgetCard | null>(null)
+  const [cardLoading, setCardLoading] = useState(false)
+  const [cardForm, setCardForm] = useState({
+    name: '',
+    card_type: 'expense' as 'income' | 'expense',
+    calc_type: 'manual' as 'manual' | 'category_sum' | 'percentage',
+    manual_amount: '',
+    sum_category_id: '',
+    source_card_id: '',
+    percentage: '',
+  })
+
+  function openEditCard(card: BudgetCard) {
+    setEditingCard(card)
+    setCardForm({
+      name: card.name,
+      card_type: card.card_type as 'income' | 'expense',
+      calc_type: card.calc_type as 'manual' | 'category_sum' | 'percentage',
+      manual_amount: card.manual_amount?.toString() ?? '',
+      sum_category_id: card.sum_category_id ?? '',
+      source_card_id: card.source_card_id ?? '',
+      percentage: card.percentage?.toString() ?? '',
+    })
+    setCardDialogOpen(true)
+  }
+
+  async function handleCardSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editingCard || !cardForm.name.trim()) return
+    setCardLoading(true)
+    try {
+      const res = await fetch('/api/shared/budget-card', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: sharedAccess.token,
+          card_id: editingCard.id,
+          name: cardForm.name.trim(),
+          card_type: cardForm.card_type,
+          calc_type: cardForm.calc_type,
+          manual_amount: cardForm.calc_type === 'manual' ? parseFloat(cardForm.manual_amount) || 0 : null,
+          sum_category_id: cardForm.calc_type === 'category_sum' ? cardForm.sum_category_id || null : null,
+          source_card_id: cardForm.calc_type === 'percentage' ? cardForm.source_card_id || null : null,
+          percentage: cardForm.calc_type === 'percentage' ? parseFloat(cardForm.percentage) || null : null,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error)
+      setCardDialogOpen(false)
+      toast.success('Fila actualizada')
+      router.refresh()
+    } catch (err: any) {
+      toast.error(err.message ?? 'Error al guardar')
+    }
+    setCardLoading(false)
+  }
+
   // ── Collapsed groups ──
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   function toggleCollapse(id: string) {
@@ -283,7 +348,7 @@ export function SharedDashboard({ sharedAccess, accounts, transactions: initialT
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Gastos por categoría</p>
             </div>
             <div className="divide-y divide-border/50">
-              {catBreakdown.map(({ cat, amount }) => {
+              {(catExpanded ? catBreakdown : catBreakdown.slice(0, 5)).map(({ cat, amount }) => {
                 const pct = monthExpense > 0 ? (amount / monthExpense) * 100 : 0
                 return (
                   <div key={cat.id} className="flex items-center gap-3 px-4 py-3">
@@ -304,88 +369,107 @@ export function SharedDashboard({ sharedAccess, accounts, transactions: initialT
                 )
               })}
             </div>
+            {catBreakdown.length > 5 && (
+              <button
+                onClick={() => setCatExpanded(e => !e)}
+                className="w-full py-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors border-t border-border/40"
+              >
+                {catExpanded ? 'Ver menos' : `Ver ${catBreakdown.length - 5} más`}
+              </button>
+            )}
           </div>
         )}
 
-        {/* Distribución */}
+        {/* Distribución — colapsable y editable */}
         {budgetCards.length > 0 && (
           <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
-            <div className="grid grid-cols-[1fr_56px_120px] items-center bg-muted/40 border-b border-border px-4 py-2.5">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Categoría</span>
+            {/* Header colapsable */}
+            <div
+              className="grid grid-cols-[1fr_56px_120px] items-center bg-muted/40 border-b border-border px-4 py-2.5 cursor-pointer select-none hover:bg-muted/60 transition-colors"
+              style={{ borderBottom: distribCollapsed ? 'none' : undefined }}
+              onClick={() => setDistribCollapsed(c => !c)}
+            >
+              <div className="flex items-center gap-1.5">
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200" style={{ transform: distribCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }} />
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Categoría</span>
+              </div>
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest text-center">%</span>
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest text-right">Monto</span>
             </div>
-            {incomeCards.length > 0 && <>
-              <div className="px-4 py-2 border-b border-border/50" style={{ backgroundColor: '#00CB9612' }}>
-                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#00CB96' }}>Ingresos</span>
-              </div>
-              {incomeCards.map(card => {
-                const amount = cardAmounts.get(card.id) ?? 0
-                const p = totalIncome > 0 ? ((amount / totalIncome) * 100).toFixed(1) : null
-                return (
-                  <div key={card.id} className="grid grid-cols-[1fr_56px_120px] items-center px-4 py-3 border-b border-border">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">{card.name}</p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{calcLabel(card)}</p>
-                    </div>
-                    <div className="flex justify-center">
-                      {p !== null ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ color: '#00CB96', backgroundColor: '#00CB9618' }}>{p}%</span> : <span className="text-xs text-muted-foreground/40">—</span>}
-                    </div>
-                    <div className="text-right">
-                      <span className="text-sm font-bold tabular-nums" style={{ color: '#00CB96' }}>{formatCurrency(amount)}</span>
-                    </div>
-                  </div>
-                )
-              })}
-              <div className="grid grid-cols-[1fr_56px_120px] items-center px-4 py-2.5 border-b border-border/50" style={{ backgroundColor: '#00CB9610' }}>
-                <span className="text-xs font-bold" style={{ color: '#00CB96' }}>Total ingresos</span>
-                <span className="text-center text-[10px] font-bold" style={{ color: '#00CB96' }}>100%</span>
-                <span className="text-right text-sm font-bold tabular-nums" style={{ color: '#00CB96' }}>{formatCurrency(totalIncome)}</span>
-              </div>
-            </>}
-            {expenseCards.length > 0 && <>
-              <div className="px-4 py-2 border-b border-border/50" style={{ backgroundColor: '#7C4DFF12' }}>
-                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#7C4DFF' }}>Distribución de gastos</span>
-              </div>
-              {expenseCards.map(card => {
-                const amount = cardAmounts.get(card.id) ?? 0
-                const p = totalIncome > 0 ? ((amount / totalIncome) * 100).toFixed(1) : null
-                const barWidth = totalIncome > 0 ? Math.min(100, (amount / totalIncome) * 100) : 0
-                return (
-                  <div key={card.id} className="border-b border-border">
-                    <div className="grid grid-cols-[1fr_56px_120px] items-center px-4 py-3">
+
+            {!distribCollapsed && <>
+              {incomeCards.length > 0 && <>
+                <div className="px-4 py-2 border-b border-border/50" style={{ backgroundColor: '#00CB9612' }}>
+                  <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#00CB96' }}>Ingresos</span>
+                </div>
+                {incomeCards.map(card => {
+                  const amount = cardAmounts.get(card.id) ?? 0
+                  const p = totalIncome > 0 ? ((amount / totalIncome) * 100).toFixed(1) : null
+                  return (
+                    <div key={card.id} onClick={() => openEditCard(card)} className="grid grid-cols-[1fr_56px_120px] items-center px-4 py-3 border-b border-border hover:bg-muted/30 transition-colors cursor-pointer">
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-foreground truncate">{card.name}</p>
                         <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{calcLabel(card)}</p>
                       </div>
                       <div className="flex justify-center">
-                        {p !== null ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ color: '#7C4DFF', backgroundColor: '#7C4DFF18' }}>{p}%</span> : <span className="text-xs text-muted-foreground/40">—</span>}
+                        {p !== null ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ color: '#00CB96', backgroundColor: '#00CB9618' }}>{p}%</span> : <span className="text-xs text-muted-foreground/40">—</span>}
                       </div>
                       <div className="text-right">
-                        <span className="text-sm font-semibold tabular-nums text-foreground">{formatCurrency(amount)}</span>
+                        <span className="text-sm font-bold tabular-nums" style={{ color: '#00CB96' }}>{formatCurrency(amount)}</span>
                       </div>
                     </div>
-                    {barWidth > 0 && (
-                      <div className="h-0.5 mx-4 bg-muted/40 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${barWidth}%`, backgroundColor: '#7C4DFFaa' }} />
+                  )
+                })}
+                <div className="grid grid-cols-[1fr_56px_120px] items-center px-4 py-2.5 border-b border-border/50" style={{ backgroundColor: '#00CB9610' }}>
+                  <span className="text-xs font-bold" style={{ color: '#00CB96' }}>Total ingresos</span>
+                  <span className="text-center text-[10px] font-bold" style={{ color: '#00CB96' }}>100%</span>
+                  <span className="text-right text-sm font-bold tabular-nums" style={{ color: '#00CB96' }}>{formatCurrency(totalIncome)}</span>
+                </div>
+              </>}
+              {expenseCards.length > 0 && <>
+                <div className="px-4 py-2 border-b border-border/50" style={{ backgroundColor: '#7C4DFF12' }}>
+                  <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#7C4DFF' }}>Distribución de gastos</span>
+                </div>
+                {expenseCards.map(card => {
+                  const amount = cardAmounts.get(card.id) ?? 0
+                  const p = totalIncome > 0 ? ((amount / totalIncome) * 100).toFixed(1) : null
+                  const barWidth = totalIncome > 0 ? Math.min(100, (amount / totalIncome) * 100) : 0
+                  return (
+                    <div key={card.id} onClick={() => openEditCard(card)} className="border-b border-border hover:bg-muted/30 transition-colors cursor-pointer">
+                      <div className="grid grid-cols-[1fr_56px_120px] items-center px-4 py-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-foreground truncate">{card.name}</p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{calcLabel(card)}</p>
+                        </div>
+                        <div className="flex justify-center">
+                          {p !== null ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ color: '#7C4DFF', backgroundColor: '#7C4DFF18' }}>{p}%</span> : <span className="text-xs text-muted-foreground/40">—</span>}
+                        </div>
+                        <div className="text-right">
+                          <span className="text-sm font-semibold tabular-nums text-foreground">{formatCurrency(amount)}</span>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                )
-              })}
-              <div className="grid grid-cols-[1fr_56px_120px] items-center px-4 py-2.5 border-b border-border/50" style={{ backgroundColor: '#7C4DFF10' }}>
-                <span className="text-xs font-bold" style={{ color: '#7C4DFF' }}>Total distribuido</span>
-                <span className="text-center text-[10px] font-bold" style={{ color: '#7C4DFF' }}>{totalIncome > 0 ? `${((totalExpense / totalIncome) * 100).toFixed(1)}%` : '—'}</span>
-                <span className="text-right text-sm font-bold tabular-nums" style={{ color: '#7C4DFF' }}>{formatCurrency(totalExpense)}</span>
-              </div>
+                      {barWidth > 0 && (
+                        <div className="h-0.5 mx-4 bg-muted/40 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${barWidth}%`, backgroundColor: '#7C4DFFaa' }} />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+                <div className="grid grid-cols-[1fr_56px_120px] items-center px-4 py-2.5 border-b border-border/50" style={{ backgroundColor: '#7C4DFF10' }}>
+                  <span className="text-xs font-bold" style={{ color: '#7C4DFF' }}>Total distribuido</span>
+                  <span className="text-center text-[10px] font-bold" style={{ color: '#7C4DFF' }}>{totalIncome > 0 ? `${((totalExpense / totalIncome) * 100).toFixed(1)}%` : '—'}</span>
+                  <span className="text-right text-sm font-bold tabular-nums" style={{ color: '#7C4DFF' }}>{formatCurrency(totalExpense)}</span>
+                </div>
+              </>}
+              {totalIncome > 0 && (
+                <div className="grid grid-cols-[1fr_56px_120px] items-center px-4 py-3 bg-muted/30">
+                  <span className="text-sm font-semibold text-muted-foreground">Sin asignar</span>
+                  <span className="text-center text-[10px] font-semibold text-muted-foreground">{`${((unassigned / totalIncome) * 100).toFixed(1)}%`}</span>
+                  <span className="text-right text-sm font-bold tabular-nums" style={{ color: unassigned >= 0 ? '#00CB96' : '#FF4D6D' }}>{formatCurrency(unassigned)}</span>
+                </div>
+              )}
             </>}
-            {totalIncome > 0 && (
-              <div className="grid grid-cols-[1fr_56px_120px] items-center px-4 py-3 bg-muted/30">
-                <span className="text-sm font-semibold text-muted-foreground">Sin asignar</span>
-                <span className="text-center text-[10px] font-semibold text-muted-foreground">{`${((unassigned / totalIncome) * 100).toFixed(1)}%`}</span>
-                <span className="text-right text-sm font-bold tabular-nums" style={{ color: unassigned >= 0 ? '#00CB96' : '#FF4D6D' }}>{formatCurrency(unassigned)}</span>
-              </div>
-            )}
           </div>
         )}
 
@@ -877,6 +961,166 @@ export function SharedDashboard({ sharedAccess, accounts, transactions: initialT
               <Button type="submit" disabled={itemLoading} className="flex-1 font-semibold"
                 style={{ background: 'linear-gradient(135deg, #FF4D6D 0%, #FF7D94 100%)', color: '#fff', border: 'none' }}>
                 {itemLoading ? 'Guardando...' : 'Guardar'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog editar fila de distribución */}
+      <Dialog open={cardDialogOpen} onOpenChange={open => { if (!open) setCardDialogOpen(false) }}>
+        <DialogContent className="sm:max-w-sm max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0 border-border">
+          <div className="px-5 pt-5 pb-4 border-b border-border flex-shrink-0"
+            style={{ background: 'linear-gradient(135deg, #7C4DFF18 0%, transparent 100%)' }}>
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#7C4DFF18' }}>
+                <LayoutList className="h-4 w-4" style={{ color: '#7C4DFF' }} />
+              </div>
+              <DialogTitle className="text-base font-semibold text-foreground">Editar fila</DialogTitle>
+            </div>
+          </div>
+
+          <form onSubmit={handleCardSubmit} className="overflow-y-auto flex-1 p-5 space-y-5">
+            {/* Nombre */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Nombre</label>
+              <Input
+                placeholder="Nombre de la fila..."
+                value={cardForm.name}
+                onChange={e => setCardForm(f => ({ ...f, name: e.target.value }))}
+                required
+                className="bg-muted/40 border-border/60"
+              />
+            </div>
+
+            {/* Tipo */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Tipo</label>
+              <div className="grid grid-cols-2 gap-2">
+                {(['income', 'expense'] as const).map(t => (
+                  <button key={t} type="button"
+                    onClick={() => setCardForm(f => ({ ...f, card_type: t }))}
+                    className="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-semibold transition-all"
+                    style={cardForm.card_type === t
+                      ? t === 'income'
+                        ? { backgroundColor: '#00CB9618', borderColor: '#00CB9650', color: '#00CB96' }
+                        : { backgroundColor: '#7C4DFF18', borderColor: '#7C4DFF50', color: '#7C4DFF' }
+                      : { backgroundColor: 'transparent', borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }}>
+                    {t === 'income' ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                    {t === 'income' ? 'Ingreso' : 'Gasto'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Cálculo */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Tipo de cálculo</label>
+              <div className="flex flex-col gap-1.5">
+                {([
+                  { value: 'manual',       label: 'Manual',            sub: 'Ingresás el monto a mano' },
+                  { value: 'category_sum', label: 'Suma de categoría', sub: 'Suma transacciones de una categoría' },
+                  { value: 'percentage',   label: 'Porcentaje',        sub: 'Porcentaje de otra fila' },
+                ] as const).map(opt => (
+                  <button key={opt.value} type="button"
+                    onClick={() => setCardForm(f => ({ ...f, calc_type: opt.value }))}
+                    className="flex items-start gap-2.5 py-2.5 px-3 rounded-xl border text-sm transition-all text-left"
+                    style={cardForm.calc_type === opt.value
+                      ? { backgroundColor: '#7C4DFF18', borderColor: '#7C4DFF50' }
+                      : { backgroundColor: 'transparent', borderColor: 'hsl(var(--border))' }}>
+                    <div className="h-3.5 w-3.5 rounded-full border-2 mt-0.5 flex-shrink-0 transition-all"
+                      style={cardForm.calc_type === opt.value
+                        ? { borderColor: '#7C4DFF', backgroundColor: '#7C4DFF' }
+                        : { borderColor: 'hsl(var(--border))' }} />
+                    <div>
+                      <p className="font-semibold text-foreground text-sm">{opt.label}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{opt.sub}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Campos según tipo */}
+            {cardForm.calc_type === 'manual' && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Monto</label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xl font-bold text-muted-foreground/60">$</span>
+                  <Input
+                    type="number" min="0" step="0.01" placeholder="0.00"
+                    value={cardForm.manual_amount}
+                    onChange={e => setCardForm(f => ({ ...f, manual_amount: e.target.value }))}
+                    className="pl-8 h-14 text-2xl font-bold bg-muted/40 border-border/60 tracking-tight"
+                    style={{ color: cardForm.card_type === 'income' ? '#00CB96' : '#7C4DFF' }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {cardForm.calc_type === 'category_sum' && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Categoría</label>
+                <div className="grid grid-cols-2 gap-1.5 max-h-44 overflow-y-auto">
+                  {(cardForm.card_type === 'income' ? incomeCategories : expenseCategories).map(c => {
+                    const active = cardForm.sum_category_id === c.id
+                    const color = c.color || '#7C4DFF'
+                    return (
+                      <button key={c.id} type="button"
+                        onClick={() => setCardForm(f => ({ ...f, sum_category_id: c.id }))}
+                        className="flex items-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all text-left"
+                        style={active
+                          ? { backgroundColor: color + '20', borderColor: color + '60' }
+                          : { backgroundColor: 'transparent', borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }}>
+                        <span className="text-base leading-none flex-shrink-0">{c.icon}</span>
+                        <span className="truncate">{c.name}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {cardForm.calc_type === 'percentage' && (
+              <>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Basado en</label>
+                  <div className="flex flex-col gap-1.5">
+                    {budgetCards.filter(c => c.id !== editingCard?.id && c.card_type === 'income').map(c => (
+                      <button key={c.id} type="button"
+                        onClick={() => setCardForm(f => ({ ...f, source_card_id: c.id }))}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl border text-sm transition-all text-left"
+                        style={cardForm.source_card_id === c.id
+                          ? { backgroundColor: '#00CB9618', borderColor: '#00CB9650' }
+                          : { backgroundColor: 'transparent', borderColor: 'hsl(var(--border))' }}>
+                        <p className="font-semibold text-foreground text-sm truncate">{c.name}</p>
+                        <span className="ml-auto text-xs text-muted-foreground tabular-nums flex-shrink-0">
+                          {formatCurrency(cardAmounts.get(c.id) ?? 0)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Porcentaje</label>
+                  <div className="relative">
+                    <Input
+                      type="number" min="0" max="100" step="0.1" placeholder="0"
+                      value={cardForm.percentage}
+                      onChange={e => setCardForm(f => ({ ...f, percentage: e.target.value }))}
+                      className="pr-10 h-12 text-xl font-bold bg-muted/40 border-border/60 text-center tracking-tight"
+                    />
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xl font-bold text-muted-foreground/60">%</span>
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="flex gap-2 pt-1">
+              <Button type="button" variant="outline" className="flex-1" onClick={() => setCardDialogOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={cardLoading} className="flex-1 font-semibold"
+                style={{ background: 'linear-gradient(135deg, #7C4DFF 0%, #9C6DFF 100%)', color: '#fff', border: 'none' }}>
+                {cardLoading ? 'Guardando...' : 'Guardar'}
               </Button>
             </div>
           </form>
