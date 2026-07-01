@@ -699,6 +699,36 @@ export type Database = {
           },
         ]
       }
+      shared_access: {
+        Row: {
+          id: string
+          user_id: string
+          token: string
+          name: string
+          account_ids: string[]
+          fixed_group_names: string[]
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          token?: string
+          name: string
+          account_ids: string[]
+          fixed_group_names?: string[]
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          token?: string
+          name?: string
+          account_ids?: string[]
+          fixed_group_names?: string[]
+          created_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
