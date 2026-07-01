@@ -4,7 +4,12 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatCurrency } from '@/lib/utils'
 import { Account, BudgetCard, FixedExpenseGroup, FixedExpenseItem, Category, Responsible } from '@/types'
-import { ChevronLeft, ChevronRight, ChevronDown, Plus, TrendingUp, TrendingDown, CalendarDays } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown, Plus, TrendingUp, TrendingDown, CalendarDays, ArrowLeftRight } from 'lucide-react'
+
+const FAB_ACTIONS = [
+  { type: 'income'  as const, label: 'Ingreso', color: '#00CB96', Icon: TrendingUp },
+  { type: 'expense' as const, label: 'Gasto',   color: '#FF4D6D', Icon: TrendingDown },
+]
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -54,6 +59,9 @@ export function SharedDashboard({ sharedAccess, accounts, transactions: initialT
     if (m > 12) { m = 1; y++ }
     router.push(`/shared/${sharedAccess.token}?month=${m}&year=${y}`)
   }
+
+  // ── FAB speed dial ──
+  const [fabOpen, setFabOpen] = useState(false)
 
   // ── Transaction dialog ──
   const [txOpen, setTxOpen] = useState(false)
@@ -506,20 +514,53 @@ export function SharedDashboard({ sharedAccess, accounts, transactions: initialT
         })}
       </div>
 
-      {/* Botón "+" flotante */}
-      <button
-        onClick={() => openTx('expense')}
-        className="fixed z-40 flex items-center justify-center rounded-full shadow-lg transition-transform active:scale-95"
-        style={{
-          bottom: '72px',
-          right: '20px',
-          width: '52px',
-          height: '52px',
-          background: 'linear-gradient(135deg, #00C9A7 0%, #00B4D8 100%)',
-        }}
-      >
-        <Plus className="h-6 w-6 text-white" strokeWidth={2.5} />
-      </button>
+      {/* Overlay para cerrar speed dial */}
+      {fabOpen && (
+        <div className="fixed inset-0 z-40" onClick={() => setFabOpen(false)} />
+      )}
+
+      {/* Speed dial — igual a la app */}
+      <div className="fixed right-4 z-50 flex flex-col items-end gap-3"
+        style={{ pointerEvents: 'none', bottom: 'calc(5rem + env(safe-area-inset-bottom))' }}>
+        <div className="flex flex-col items-end gap-2.5">
+          {FAB_ACTIONS.map((action, i) => (
+            <button
+              key={action.type}
+              onClick={() => { setFabOpen(false); openTx(action.type) }}
+              className="flex items-center gap-3 pr-1.5 pl-4 py-1.5 rounded-2xl border transition-all duration-200"
+              style={{
+                background: '#ffffff',
+                borderColor: action.color + '50',
+                boxShadow: fabOpen ? `0 4px 16px rgba(0,0,0,0.12), 0 2px 8px ${action.color}20` : 'none',
+                opacity: fabOpen ? 1 : 0,
+                transform: fabOpen ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.9)',
+                transitionDelay: fabOpen ? `${i * 55}ms` : `${(FAB_ACTIONS.length - 1 - i) * 30}ms`,
+                pointerEvents: fabOpen ? 'auto' : 'none',
+              }}
+            >
+              <span className="text-sm font-bold" style={{ color: action.color }}>{action.label}</span>
+              <div className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: `linear-gradient(135deg, ${action.color} 0%, ${action.color}cc 100%)`, boxShadow: `0 2px 10px ${action.color}50` }}>
+                <action.Icon className="h-4.5 w-4.5 text-white" strokeWidth={2.5} style={{ width: 18, height: 18 }} />
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Botón principal */}
+        <button
+          onClick={() => setFabOpen(f => !f)}
+          className="h-14 w-14 rounded-2xl shadow-xl flex items-center justify-center transition-all duration-300"
+          style={{
+            pointerEvents: 'auto',
+            background: fabOpen ? 'hsl(var(--muted))' : 'linear-gradient(135deg, #7C4DFF 0%, #9C6DFF 100%)',
+            boxShadow: fabOpen ? 'none' : '0 4px 28px #7C4DFF55',
+            transform: fabOpen ? 'rotate(45deg)' : 'rotate(0deg)',
+          }}
+        >
+          <Plus strokeWidth={2.5} style={{ width: 24, height: 24, color: fabOpen ? 'hsl(var(--foreground))' : '#fff' }} />
+        </button>
+      </div>
 
       {/* Dialog nueva transacción */}
       <Dialog open={txOpen} onOpenChange={open => { if (!open) setTxOpen(false) }}>
@@ -537,19 +578,6 @@ export function SharedDashboard({ sharedAccess, accounts, transactions: initialT
               <DialogTitle className="text-base font-semibold text-foreground">
                 {txForm.type === 'income' ? 'Nuevo ingreso' : 'Nuevo gasto'}
               </DialogTitle>
-            </div>
-            {/* Toggle tipo */}
-            <div className="flex rounded-xl overflow-hidden border border-border">
-              {(['expense', 'income'] as const).map(t => (
-                <button key={t} type="button"
-                  onClick={() => setTxForm(f => ({ ...f, type: t, category_id: '' }))}
-                  className="flex-1 py-2 text-xs font-semibold transition-colors"
-                  style={txForm.type === t
-                    ? { backgroundColor: t === 'income' ? '#00CB96' : '#FF4D6D', color: '#fff' }
-                    : { backgroundColor: 'transparent', color: 'hsl(var(--muted-foreground))' }}>
-                  {t === 'income' ? 'Ingreso' : 'Gasto'}
-                </button>
-              ))}
             </div>
           </div>
 

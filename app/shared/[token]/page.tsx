@@ -70,7 +70,7 @@ export default async function SharedPage({
           .in('name', fixed_group_names)
           .order('order')
       : Promise.resolve({ data: [] }),
-    supabase.from('categories').select('*').eq('user_id', user_id).order('name'),
+    supabase.from('categories').select('*').or(`user_id.eq.${user_id},is_default.eq.true`).order('name'),
     supabase.from('responsible_parties').select('*').eq('user_id', user_id).order('name'),
   ])
 
