@@ -33,7 +33,8 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   const { data: { publicUrl } } = service.storage.from('card-images').getPublicUrl(path)
-  await service.from('credit_card_months').update({ image_url: publicUrl }).eq('id', cardMonthId)
+  const { error: updateError } = await service.from('credit_card_months').update({ image_url: publicUrl }).eq('id', cardMonthId)
+  if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
 
   return NextResponse.json({ publicUrl })
 }
