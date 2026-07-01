@@ -3,8 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { formatCurrency } from '@/lib/utils'
 import { Account, BudgetCard, FixedExpenseGroup, FixedExpenseItem } from '@/types'
-import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react'
-import Link from 'next/link'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
@@ -91,7 +90,7 @@ export function SharedDashboard({ sharedAccess, accounts, transactions, budgetCa
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F5F5F7', fontFamily: 'var(--font-sans, system-ui)' }}>
+    <div className="min-h-screen pb-24" style={{ backgroundColor: '#F5F5F7', fontFamily: 'var(--font-sans, system-ui)' }}>
       {/* Hero */}
       <div className="relative overflow-hidden px-5 pt-10 pb-20"
         style={{ background: 'linear-gradient(135deg, #00C9A7 0%, #00B4D8 100%)' }}>
@@ -303,17 +302,6 @@ export function SharedDashboard({ sharedAccess, accounts, transactions, budgetCa
           </div>
         ))}
 
-        {/* Link a transacciones */}
-        <Link
-          href={`/shared/${sharedAccess.token}/transacciones?month=${month}&year=${year}`}
-          className="flex items-center justify-between p-4 bg-white rounded-2xl border border-border shadow-sm hover:bg-muted/30 transition-colors"
-        >
-          <div>
-            <p className="text-sm font-semibold text-foreground">Ver transacciones</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Todos los movimientos del mes</p>
-          </div>
-          <ExternalLink className="h-4 w-4 text-muted-foreground" />
-        </Link>
       </div>
     </div>
   )
