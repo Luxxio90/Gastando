@@ -58,9 +58,9 @@ export function SharedAccessSettings({ accounts, fixedGroupNames, initialSharedA
       toast.success('Acceso actualizado')
     } else {
       const { data, error } = await supabase.from('shared_access')
-        .insert({ user_id: userId, name: form.name.trim(), account_ids: form.account_ids, fixed_group_names: form.fixed_group_names })
+        .insert({ user_id: userId, token: crypto.randomUUID(), name: form.name.trim(), account_ids: form.account_ids, fixed_group_names: form.fixed_group_names })
         .select().single()
-      if (error) { toast.error('Error al crear acceso'); setLoading(false); return }
+      if (error) { toast.error(error.message); setLoading(false); return }
       setSharedAccess(data as SharedAccess)
       toast.success('Acceso compartido creado')
     }
