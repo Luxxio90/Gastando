@@ -14,8 +14,8 @@ export function SharedFooterNav() {
   const ACTIVE = '#00C9A7'
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border"
-      style={{ background: 'hsl(var(--card, #fff))', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-white"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="flex">
         <Link href={`/shared/${token}`}
           className="flex-1 flex flex-col items-center py-3 gap-0.5 transition-colors"

@@ -42,6 +42,8 @@ export default async function SharedPage({
     { data: transactions },
     { data: budgetCards },
     { data: fixedGroups },
+    { data: categories },
+    { data: responsibles },
   ] = await Promise.all([
     supabase.from('accounts').select('*').in('id', account_ids),
     supabase
@@ -68,6 +70,8 @@ export default async function SharedPage({
           .in('name', fixed_group_names)
           .order('order')
       : Promise.resolve({ data: [] }),
+    supabase.from('categories').select('*').eq('user_id', user_id).order('name'),
+    supabase.from('responsible_parties').select('*').eq('user_id', user_id).order('name'),
   ])
 
   const groupIds = (fixedGroups ?? []).map((g: any) => g.id)
@@ -87,6 +91,8 @@ export default async function SharedPage({
       budgetCards={budgetCards ?? []}
       fixedGroups={fixedGroups ?? []}
       fixedItems={fixedItems ?? []}
+      categories={categories ?? []}
+      responsibles={responsibles ?? []}
       month={month}
       year={year}
     />
