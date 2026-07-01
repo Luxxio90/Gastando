@@ -215,9 +215,9 @@ export function SharedDashboard({ sharedAccess, accounts, transactions: initialT
   const visibleCategories = txForm.type === 'income' ? incomeCategories : expenseCategories
 
   return (
-    <div className="min-h-screen pb-24" style={{ backgroundColor: '#F5F5F7' }}>
+    <div className="min-h-screen pb-24 font-sans" style={{ backgroundColor: '#F5F5F7' }}>
       {/* Hero */}
-      <div className="relative overflow-hidden px-5 pt-10 pb-20"
+      <div className="relative overflow-hidden px-5 pt-8 pb-14"
         style={{ background: 'linear-gradient(135deg, #00C9A7 0%, #00B4D8 100%)' }}>
         <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10 pointer-events-none" />
         <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full bg-white/10 pointer-events-none" />
@@ -240,7 +240,7 @@ export function SharedDashboard({ sharedAccess, accounts, transactions: initialT
         </div>
       </div>
 
-      <div className="relative -mt-12 px-4 space-y-4">
+      <div className="relative -mt-8 px-4 space-y-4">
         {/* Tarjetas de cuenta */}
         {accounts.map(a => {
           const inc = transactions.filter((t: any) => t.type === 'income' && t.account_id === a.id).reduce((s: number, t: any) => s + t.amount, 0)

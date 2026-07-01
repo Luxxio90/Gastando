@@ -45,7 +45,7 @@ export function SharedTransactions({ token, transactions, accounts, month, year 
   return (
     <div className="min-h-screen pb-24" style={{ backgroundColor: '#F5F5F7' }}>
       {/* Hero */}
-      <div className="relative overflow-hidden px-5 pt-10 pb-16"
+      <div className="relative overflow-hidden px-5 pt-8 pb-12"
         style={{ background: 'linear-gradient(135deg, #00C9A7 0%, #00B4D8 100%)' }}>
         <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10 pointer-events-none" />
         <div className="relative">
@@ -73,7 +73,7 @@ export function SharedTransactions({ token, transactions, accounts, month, year 
         </div>
       </div>
 
-      <div className="px-4 -mt-4 space-y-3">
+      <div className="px-4 -mt-3 space-y-3">
         {sortedDates.length === 0 ? (
           <div className="bg-white rounded-2xl border border-border p-8 text-center shadow-sm">
             <p className="text-sm text-muted-foreground">Sin transacciones este mes</p>
