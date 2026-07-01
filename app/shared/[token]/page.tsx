@@ -18,11 +18,19 @@ export default async function SharedPage({
 
   const supabase = createServiceClient()
 
-  const { data: sharedAccess } = await supabase.rpc('get_shared_access_by_token', { p_token: token })
+  const { data: { users } } = await supabase.auth.admin.listUsers({ perPage: 1000 })
+  const owner = users.find(u => u.user_metadata?.sa_token === token)
+  if (!owner) notFound()
 
-  if (!sharedAccess) notFound()
-
-  const { user_id, account_ids, fixed_group_names } = sharedAccess
+  const account_ids: string[] = owner.user_metadata.sa_accounts ?? []
+  const fixed_group_names: string[] = owner.user_metadata.sa_groups ?? []
+  const user_id = owner.id
+  const sharedAccess = {
+    id: 'metadata', token,
+    name: owner.user_metadata.sa_name as string,
+    account_ids,
+    fixed_group_names,
+  }
 
   const firstDay = new Date(year, month - 1, 1).toISOString().split('T')[0]
   const lastDay = new Date(year, month, 0).toISOString().split('T')[0]

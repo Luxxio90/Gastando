@@ -49,29 +49,24 @@ export function SharedAccessSettings({ accounts, fixedGroupNames, initialSharedA
     if (form.account_ids.length === 0) { toast.error('Seleccioná al menos una cuenta'); return }
     setLoading(true)
 
-    if (sharedAccess) {
-      const { error } = await supabase.rpc('update_shared_access_record', {
-        p_id: sharedAccess.id, p_name: form.name.trim(), p_account_ids: form.account_ids, p_fixed_group_names: form.fixed_group_names
-      })
-      if (error) { toast.error(error.message); setLoading(false); return }
-      setSharedAccess({ ...sharedAccess, name: form.name.trim(), account_ids: form.account_ids, fixed_group_names: form.fixed_group_names })
-      toast.success('Acceso actualizado')
-    } else {
-      const { data, error } = await supabase.rpc('create_shared_access_record', {
-        p_token: crypto.randomUUID(), p_name: form.name.trim(), p_account_ids: form.account_ids, p_fixed_group_names: form.fixed_group_names
-      })
-      if (error) { toast.error(error.message); setLoading(false); return }
-      setSharedAccess(data as unknown as SharedAccess)
-      toast.success('Acceso compartido creado')
-    }
+    const newToken = sharedAccess?.token ?? crypto.randomUUID()
+    const { data, error } = await supabase.auth.updateUser({
+      data: { sa_token: newToken, sa_name: form.name.trim(), sa_accounts: form.account_ids, sa_groups: form.fixed_group_names }
+    })
+    if (error) { toast.error(error.message); setLoading(false); return }
 
+    const meta = data.user.user_metadata
+    setSharedAccess({ id: 'metadata', token: meta.sa_token, name: meta.sa_name, account_ids: meta.sa_accounts ?? [], fixed_group_names: meta.sa_groups ?? [] })
+    toast.success(sharedAccess ? 'Acceso actualizado' : 'Acceso compartido creado')
     setLoading(false)
     setDialogOpen(false)
   }
 
   async function handleDelete() {
     if (!sharedAccess) return
-    const { error } = await supabase.rpc('delete_shared_access_record', { p_id: sharedAccess.id })
+    const { error } = await supabase.auth.updateUser({
+      data: { sa_token: null, sa_name: null, sa_accounts: null, sa_groups: null }
+    })
     if (error) { toast.error(error.message); return }
     setSharedAccess(null)
     setPendingDelete(false)

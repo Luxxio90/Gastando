@@ -18,7 +18,6 @@ export default async function SettingsPage() {
     { data: responsibles },
     { data: accounts },
     { data: fixedGroups },
-    { data: sharedAccess },
   ] = await Promise.all([
     supabase
       .from('categories')
@@ -48,12 +47,15 @@ export default async function SettingsPage() {
       .eq('user_id', user.id)
       .eq('month', month)
       .eq('year', year),
-    supabase.rpc('get_my_shared_access'),
   ])
 
   if (catError || etError) return <ErrorState title="Error al cargar los ajustes" />
 
   const fixedGroupNames = [...new Set((fixedGroups ?? []).map(g => g.name))]
+  const meta = user.user_metadata
+  const initialSharedAccess = meta?.sa_token
+    ? { id: 'metadata', token: meta.sa_token, name: meta.sa_name, account_ids: meta.sa_accounts ?? [], fixed_group_names: meta.sa_groups ?? [] }
+    : null
 
   return (
     <div className="p-6">
@@ -64,7 +66,7 @@ export default async function SettingsPage() {
         responsibles={responsibles ?? []}
         accounts={accounts ?? []}
         fixedGroupNames={fixedGroupNames}
-        initialSharedAccess={(sharedAccess ?? null) as any}
+        initialSharedAccess={initialSharedAccess}
       />
     </div>
   )
