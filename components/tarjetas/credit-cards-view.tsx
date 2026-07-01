@@ -610,18 +610,6 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
                     />
                   </div>
                 </div>
-                {/* Resumen adjunto */}
-                {selectedMonth.image_url && (
-                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-white/10">
-                    <a href={selectedMonth.image_url} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-[11px] font-semibold text-white/70 hover:text-white transition-colors">
-                      <ImageIcon className="h-3 w-3" /> Ver resumen adjunto
-                    </a>
-                    <button onClick={removeMonthImage} className="ml-auto text-white/40 hover:text-white/70 transition-colors">
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                )}
               </div>
 
               {/* Items table */}
@@ -661,18 +649,49 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
                 </div>
               </div>
 
+              {/* Resumen adjunto */}
+              {selectedMonth.image_url ? (
+                <div className="px-4 py-3 border-t border-border flex items-center gap-3 bg-muted/20">
+                  <div className="h-10 w-10 rounded-lg overflow-hidden flex-shrink-0 bg-muted border border-border">
+                    {/\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(selectedMonth.image_url) ? (
+                      <img src={selectedMonth.image_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Upload className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-foreground">Resumen adjunto</p>
+                    <a href={selectedMonth.image_url} target="_blank" rel="noopener noreferrer"
+                      className="text-[11px] text-primary hover:underline">Abrir archivo</a>
+                  </div>
+                  <Button size="sm" variant="outline" className="h-7 px-2.5 text-xs flex-shrink-0"
+                    disabled={monthImageUploading}
+                    onClick={() => monthImageInputRef.current?.click()}>
+                    {monthImageUploading ? '...' : 'Cambiar'}
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-7 w-7 p-0 flex-shrink-0 text-red-500 hover:text-red-600"
+                    onClick={removeMonthImage}>
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="px-4 py-2 border-t border-border">
+                  <Button size="sm" variant="outline" disabled={monthImageUploading}
+                    onClick={() => monthImageInputRef.current?.click()}
+                    className="w-full text-xs text-muted-foreground gap-2">
+                    <ImageIcon className="h-3.5 w-3.5" />
+                    {monthImageUploading ? 'Subiendo...' : 'Adjuntar resumen del mes'}
+                  </Button>
+                </div>
+              )}
+              <input ref={monthImageInputRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={handleMonthImageSelect} />
+
               <div className="px-4 py-3 border-t border-border flex gap-2">
                 <Button size="sm" variant="outline" onClick={openCreateItem} className="flex-1 justify-center">
                   <Plus className="h-3.5 w-3.5 mr-1.5" /> Agregar ítem
                 </Button>
-                <Button size="sm" variant="outline" disabled={monthImageUploading}
-                  onClick={() => monthImageInputRef.current?.click()}
-                  className="px-3 flex-shrink-0" title="Adjuntar resumen">
-                  {monthImageUploading
-                    ? <span className="text-[10px]">Subiendo...</span>
-                    : <ImageIcon className="h-3.5 w-3.5" />}
-                </Button>
-                <input ref={monthImageInputRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={handleMonthImageSelect} />
                 <Button size="sm" onClick={openPayDialog} disabled={selectedMonth.status === 'paid'} className="flex-1 justify-center">
                   {selectedMonth.status === 'paid' ? 'Ya pagada' : 'Registrar pago'}
                 </Button>
