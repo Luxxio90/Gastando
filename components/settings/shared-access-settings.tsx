@@ -61,7 +61,7 @@ export function SharedAccessSettings({ accounts, fixedGroupNames, initialSharedA
         p_token: crypto.randomUUID(), p_name: form.name.trim(), p_account_ids: form.account_ids, p_fixed_group_names: form.fixed_group_names
       })
       if (error) { toast.error(error.message); setLoading(false); return }
-      setSharedAccess(data as SharedAccess)
+      setSharedAccess(data as unknown as SharedAccess)
       toast.success('Acceso compartido creado')
     }
 
