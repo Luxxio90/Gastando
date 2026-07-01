@@ -50,16 +50,16 @@ export function SharedAccessSettings({ accounts, fixedGroupNames, initialSharedA
     setLoading(true)
 
     if (sharedAccess) {
-      const { error } = await supabase.from('shared_access')
-        .update({ name: form.name.trim(), account_ids: form.account_ids, fixed_group_names: form.fixed_group_names })
-        .eq('id', sharedAccess.id)
-      if (error) { toast.error('Error al guardar'); setLoading(false); return }
+      const { error } = await supabase.rpc('update_shared_access_record', {
+        p_id: sharedAccess.id, p_name: form.name.trim(), p_account_ids: form.account_ids, p_fixed_group_names: form.fixed_group_names
+      })
+      if (error) { toast.error(error.message); setLoading(false); return }
       setSharedAccess({ ...sharedAccess, name: form.name.trim(), account_ids: form.account_ids, fixed_group_names: form.fixed_group_names })
       toast.success('Acceso actualizado')
     } else {
-      const { data, error } = await supabase.from('shared_access')
-        .insert({ user_id: userId, token: crypto.randomUUID(), name: form.name.trim(), account_ids: form.account_ids, fixed_group_names: form.fixed_group_names })
-        .select().single()
+      const { data, error } = await supabase.rpc('create_shared_access_record', {
+        p_token: crypto.randomUUID(), p_name: form.name.trim(), p_account_ids: form.account_ids, p_fixed_group_names: form.fixed_group_names
+      })
       if (error) { toast.error(error.message); setLoading(false); return }
       setSharedAccess(data as SharedAccess)
       toast.success('Acceso compartido creado')
@@ -71,8 +71,8 @@ export function SharedAccessSettings({ accounts, fixedGroupNames, initialSharedA
 
   async function handleDelete() {
     if (!sharedAccess) return
-    const { error } = await supabase.from('shared_access').delete().eq('id', sharedAccess.id)
-    if (error) { toast.error('Error al eliminar'); return }
+    const { error } = await supabase.rpc('delete_shared_access_record', { p_id: sharedAccess.id })
+    if (error) { toast.error(error.message); return }
     setSharedAccess(null)
     setPendingDelete(false)
     toast.success('Acceso eliminado')

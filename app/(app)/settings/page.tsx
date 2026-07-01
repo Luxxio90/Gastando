@@ -48,11 +48,7 @@ export default async function SettingsPage() {
       .eq('user_id', user.id)
       .eq('month', month)
       .eq('year', year),
-    supabase
-      .from('shared_access')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle(),
+    supabase.rpc('get_my_shared_access'),
   ])
 
   if (catError || etError) return <ErrorState title="Error al cargar los ajustes" />

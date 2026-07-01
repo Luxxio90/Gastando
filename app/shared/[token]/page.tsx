@@ -18,11 +18,7 @@ export default async function SharedPage({
 
   const supabase = createServiceClient()
 
-  const { data: sharedAccess } = await supabase
-    .from('shared_access')
-    .select('*')
-    .eq('token', token)
-    .single()
+  const { data: sharedAccess } = await supabase.rpc('get_shared_access_by_token', { p_token: token })
 
   if (!sharedAccess) notFound()
 
