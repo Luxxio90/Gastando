@@ -41,15 +41,28 @@ export function SharedDashboard({ sharedAccess, accounts, transactions, budgetCa
   }
   const catBreakdown = Object.values(catMap).sort((a, b) => b.amount - a.amount)
 
-  function getCardAmount(card: BudgetCard): number {
-    if (card.manual_amount !== null) return card.manual_amount
-    if (card.sum_category_id) {
-      return transactions
-        .filter((t: any) => t.category_id === card.sum_category_id && t.type === 'expense')
-        .reduce((s: number, t: any) => s + t.amount, 0)
+  const cardAmounts = (() => {
+    const amounts = new Map<string, number>()
+    // Primera pasada: manual y suma por categoría
+    for (const card of budgetCards) {
+      if (card.manual_amount !== null) {
+        amounts.set(card.id, card.manual_amount)
+      } else if (card.sum_category_id) {
+        const sum = transactions
+          .filter((t: any) => t.category_id === card.sum_category_id && t.type === 'expense')
+          .reduce((s: number, t: any) => s + t.amount, 0)
+        amounts.set(card.id, sum)
+      }
     }
-    return 0
-  }
+    // Segunda pasada: porcentaje de otra card
+    for (const card of budgetCards) {
+      if (!amounts.has(card.id) && card.percentage !== null && card.source_card_id) {
+        const base = amounts.get(card.source_card_id) ?? 0
+        amounts.set(card.id, (base * card.percentage) / 100)
+      }
+    }
+    return amounts
+  })()
 
   const groupsWithItems = fixedGroups.map(g => ({
     group: g,
@@ -158,7 +171,7 @@ export function SharedDashboard({ sharedAccess, accounts, transactions, budgetCa
             </div>
             <div className="divide-y divide-border/50">
               {budgetCards.map(card => {
-                const amount = getCardAmount(card)
+                const amount = cardAmounts.get(card.id) ?? 0
                 return (
                   <div key={card.id} className="flex items-center justify-between px-4 py-3">
                     <div className="flex items-center gap-2 min-w-0">
@@ -166,6 +179,9 @@ export function SharedDashboard({ sharedAccess, accounts, transactions, budgetCa
                         <span className="text-sm flex-shrink-0">{(card.sum_category as any).icon}</span>
                       )}
                       <span className="text-sm font-medium text-foreground truncate">{card.name}</span>
+                      {card.percentage !== null && (
+                        <span className="text-[10px] text-muted-foreground flex-shrink-0">{card.percentage}%</span>
+                      )}
                     </div>
                     <span className="text-sm font-bold tabular-nums flex-shrink-0 ml-2">{formatCurrency(amount)}</span>
                   </div>
