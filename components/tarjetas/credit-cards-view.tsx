@@ -119,17 +119,14 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
     if (!file) return
     setMonthImageUploading(true)
     try {
-      const ext = file.name.split('.').pop() ?? 'jpg'
-      const path = `months/${userId}/${selectedMonth.id}.${ext}`
-      const { error } = await supabase.storage.from('card-images').upload(path, file, { upsert: true })
-      if (!error) {
-        const { data: { publicUrl } } = supabase.storage.from('card-images').getPublicUrl(path)
-        await supabase.from('credit_card_months').update({ image_url: publicUrl }).eq('id', selectedMonth.id)
-        setMonths(prev => prev.map(m => m.id === selectedMonth.id ? { ...m, image_url: publicUrl } : m))
-        toast.success('Resumen adjuntado')
-      } else {
-        toast.error('Error al subir el archivo')
-      }
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('cardMonthId', selectedMonth.id)
+      const res = await fetch('/api/upload/card-month-image', { method: 'POST', body: fd })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error)
+      setMonths(prev => prev.map(m => m.id === selectedMonth.id ? { ...m, image_url: json.publicUrl } : m))
+      toast.success('Resumen adjuntado')
     } catch { toast.error('Error al subir el archivo') }
     setMonthImageUploading(false)
     if (monthImageInputRef.current) monthImageInputRef.current.value = ''
@@ -138,12 +135,15 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
   async function removeMonthImage() {
     if (!selectedMonth?.image_url) return
     try {
-      const pathMatch = selectedMonth.image_url.match(/card-images\/(.+?)(\?|$)/)
-      if (pathMatch) await supabase.storage.from('card-images').remove([decodeURIComponent(pathMatch[1])])
-    } catch {}
-    await supabase.from('credit_card_months').update({ image_url: null }).eq('id', selectedMonth.id)
-    setMonths(prev => prev.map(m => m.id === selectedMonth.id ? { ...m, image_url: null } : m))
-    toast.success('Adjunto eliminado')
+      const res = await fetch('/api/upload/card-month-image', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cardMonthId: selectedMonth.id, imageUrl: selectedMonth.image_url }),
+      })
+      if (!res.ok) throw new Error()
+      setMonths(prev => prev.map(m => m.id === selectedMonth.id ? { ...m, image_url: null } : m))
+      toast.success('Adjunto eliminado')
+    } catch { toast.error('Error al eliminar') }
   }
 
   const [itemDialog, setItemDialog] = useState(false)
