@@ -3,9 +3,10 @@
 import { useRouter } from 'next/navigation'
 import { formatCurrency } from '@/lib/utils'
 import { Account } from '@/types'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight } from 'lucide-react'
 
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+const TRANSFER_COLOR = '#3BB2F6'
 
 function formatDate(dateStr: string) {
   const [y, m, d] = dateStr.split('-').map(Number)
@@ -31,7 +32,6 @@ export function SharedTransactions({ token, transactions, accounts, month, year 
     router.push(`/shared/${token}/transacciones?month=${m}&year=${y}`)
   }
 
-  // Agrupar por fecha
   const groups: Record<string, any[]> = {}
   for (const t of transactions) {
     if (!groups[t.date]) groups[t.date] = []
@@ -59,7 +59,6 @@ export function SharedTransactions({ token, transactions, accounts, month, year 
               <ChevronRight className="h-4 w-4 text-white" />
             </button>
           </div>
-          {/* Resumen */}
           <div className="flex gap-5 mt-4 pt-4 border-t border-white/20">
             <div>
               <p className="text-[10px] font-semibold text-white/60 uppercase tracking-wide">Ingresos</p>
@@ -73,56 +72,77 @@ export function SharedTransactions({ token, transactions, accounts, month, year 
         </div>
       </div>
 
-      <div className="px-4 -mt-3 space-y-3">
+      <div className="px-4 -mt-3">
         {sortedDates.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-border p-8 text-center shadow-sm">
+          <div className="bg-white rounded-2xl border border-border p-8 text-center shadow-sm mt-3">
             <p className="text-sm text-muted-foreground">Sin transacciones este mes</p>
           </div>
-        ) : sortedDates.map(date => (
-          <div key={date}>
-            {/* Header de fecha sticky */}
-            <div className="sticky top-0 z-10 py-2">
-              <span className="text-[11px] font-semibold text-muted-foreground capitalize px-1">
-                {formatDate(date)}
-              </span>
-            </div>
-            {/* Transacciones del día */}
-            <div className="bg-white rounded-2xl border border-border overflow-hidden shadow-sm divide-y divide-border/50">
-              {groups[date].map((t: any) => {
-                const isIncome = t.type === 'income'
-                const isTransfer = t.type === 'transfer'
-                const color = isIncome ? '#00CB96' : isTransfer ? '#3BB2F6' : '#FF4D6D'
-                return (
-                  <div key={t.id} className="flex items-center gap-3 px-4 py-3">
-                    <span className="text-xl flex-shrink-0">{t.category?.icon ?? (isTransfer ? '↔️' : '💸')}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">
-                        {t.description || t.category?.name || '—'}
-                      </p>
-                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                        {t.account && (
-                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                            style={{ background: t.account.color + '20', color: t.account.color }}>
-                            {t.account.name}
-                          </span>
-                        )}
-                        {t.responsible && (
-                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                            style={{ background: t.responsible.color + '20', color: t.responsible.color }}>
-                            {t.responsible.name}
-                          </span>
-                        )}
+        ) : (
+          <div className="bg-white rounded-2xl border border-border overflow-hidden shadow-sm">
+            {sortedDates.map(date => (
+              <div key={date}>
+                {/* Date header — igual a la app */}
+                <div className="px-4 py-2 bg-muted/40 border-b border-border/40 sticky top-0 z-10">
+                  <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest capitalize">
+                    {formatDate(date)}
+                  </span>
+                </div>
+                <div className="divide-y divide-border/50">
+                  {groups[date].map((t: any) => {
+                    const isTransfer = t.type === 'transfer'
+                    const isIncome   = t.type === 'income'
+                    const amountColor = isTransfer ? TRANSFER_COLOR : isIncome ? '#00CB96' : '#FF4D6D'
+
+                    return (
+                      <div key={t.id} className="flex items-center gap-3 px-4 py-3">
+                        {/* Ícono igual a la app */}
+                        <div className="h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                          style={{ backgroundColor: isTransfer ? TRANSFER_COLOR + '18' : isIncome ? '#00CB9618' : '#FF4D6D18' }}>
+                          {isTransfer
+                            ? <ArrowLeftRight className="h-4 w-4" style={{ color: TRANSFER_COLOR }} />
+                            : isIncome
+                              ? <ArrowUpCircle className="h-4 w-4 text-emerald-500" />
+                              : <ArrowDownCircle className="h-4 w-4 text-red-500" />
+                          }
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {t.description || t.category?.name || '—'}
+                          </p>
+                          {/* Chips de cuenta, categoría y encargado */}
+                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                            {t.account && (
+                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                                style={{ background: t.account.color + '20', color: t.account.color }}>
+                                {t.account.name}
+                              </span>
+                            )}
+                            {!isTransfer && t.category && (
+                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
+                                {t.category.icon} {t.category.name}
+                              </span>
+                            )}
+                            {t.responsible && (
+                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                                style={{ background: t.responsible.color + '20', color: t.responsible.color }}>
+                                {t.responsible.name}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <span className="text-sm font-bold tabular-nums flex-shrink-0" style={{ color: amountColor }}>
+                          {isTransfer ? '' : isIncome ? '+' : '-'}{formatCurrency(t.amount, t.account?.currency)}
+                        </span>
                       </div>
-                    </div>
-                    <span className="text-sm font-bold tabular-nums flex-shrink-0" style={{ color }}>
-                      {isIncome ? '+' : isTransfer ? '' : '-'}{formatCurrency(t.amount, t.account?.currency)}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
       </div>
     </div>
   )
