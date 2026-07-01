@@ -109,27 +109,41 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
 
-  // ── Image upload ───────────────────────────────────────────────
-  const [cardImageFile, setCardImageFile] = useState<File | null>(null)
-  const [cardImagePreview, setCardImagePreview] = useState<string | null>(null)
-  const [shouldRemoveImage, setShouldRemoveImage] = useState(false)
-  const imageInputRef = useRef<HTMLInputElement>(null)
+  // ── Month image (resumen adjunto) ──────────────────────────────
+  const [monthImageUploading, setMonthImageUploading] = useState(false)
+  const monthImageInputRef = useRef<HTMLInputElement>(null)
 
-  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleMonthImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!selectedMonth) return
     const file = e.target.files?.[0]
     if (!file) return
-    setCardImageFile(file)
-    setShouldRemoveImage(false)
-    const reader = new FileReader()
-    reader.onload = ev => setCardImagePreview(ev.target?.result as string)
-    reader.readAsDataURL(file)
+    setMonthImageUploading(true)
+    try {
+      const ext = file.name.split('.').pop() ?? 'jpg'
+      const path = `months/${userId}/${selectedMonth.id}.${ext}`
+      const { error } = await supabase.storage.from('card-images').upload(path, file, { upsert: true })
+      if (!error) {
+        const { data: { publicUrl } } = supabase.storage.from('card-images').getPublicUrl(path)
+        await supabase.from('credit_card_months').update({ image_url: publicUrl }).eq('id', selectedMonth.id)
+        setMonths(prev => prev.map(m => m.id === selectedMonth.id ? { ...m, image_url: publicUrl } : m))
+        toast.success('Resumen adjuntado')
+      } else {
+        toast.error('Error al subir el archivo')
+      }
+    } catch { toast.error('Error al subir el archivo') }
+    setMonthImageUploading(false)
+    if (monthImageInputRef.current) monthImageInputRef.current.value = ''
   }
 
-  function removeCurrentImage() {
-    setCardImageFile(null)
-    setCardImagePreview(null)
-    setShouldRemoveImage(true)
-    if (imageInputRef.current) imageInputRef.current.value = ''
+  async function removeMonthImage() {
+    if (!selectedMonth?.image_url) return
+    try {
+      const pathMatch = selectedMonth.image_url.match(/card-images\/(.+?)(\?|$)/)
+      if (pathMatch) await supabase.storage.from('card-images').remove([decodeURIComponent(pathMatch[1])])
+    } catch {}
+    await supabase.from('credit_card_months').update({ image_url: null }).eq('id', selectedMonth.id)
+    setMonths(prev => prev.map(m => m.id === selectedMonth.id ? { ...m, image_url: null } : m))
+    toast.success('Adjunto eliminado')
   }
 
   const [itemDialog, setItemDialog] = useState(false)
@@ -164,16 +178,8 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
   const totalAll = totalPending + totalPaid
 
   // ── Card CRUD ──────────────────────────────────────────────────
-  function openCreateCard() {
-    setEditingCard(null); setCardForm(emptyCardForm)
-    setCardImageFile(null); setCardImagePreview(null); setShouldRemoveImage(false)
-    setCardDialog(true)
-  }
-  function openEditCard(c: CC) {
-    setEditingCard(c); setCardForm({ name: c.name, network: c.network as CreditCardNetwork, account_id: c.account_id ?? '' })
-    setCardImageFile(null); setCardImagePreview(c.image_url ?? null); setShouldRemoveImage(false)
-    setCardDialog(true)
-  }
+  function openCreateCard() { setEditingCard(null); setCardForm(emptyCardForm); setCardDialog(true) }
+  function openEditCard(c: CC) { setEditingCard(c); setCardForm({ name: c.name, network: c.network as CreditCardNetwork, account_id: c.account_id ?? '' }); setCardDialog(true) }
 
   async function handleSaveCard(e: React.FormEvent) {
     e.preventDefault()
@@ -197,40 +203,10 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
       toast.success('Tarjeta creada')
     }
 
-    // Handle image upload/removal
-    if (savedCardId) {
-      if (shouldRemoveImage && editingCard?.image_url) {
-        try {
-          const pathMatch = editingCard.image_url.match(/card-images\/(.+?)(\?|$)/)
-          if (pathMatch) await supabase.storage.from('card-images').remove([decodeURIComponent(pathMatch[1])])
-        } catch {}
-        await supabase.from('credit_cards').update({ image_url: null }).eq('id', savedCardId)
-        setCards(prev => prev.map(c => c.id === savedCardId ? { ...c, image_url: null } : c))
-      } else if (cardImageFile) {
-        try {
-          const ext = cardImageFile.name.split('.').pop() ?? 'jpg'
-          const path = `${userId}/${savedCardId}.${ext}`
-          const { error: uploadErr } = await supabase.storage.from('card-images').upload(path, cardImageFile, { upsert: true })
-          if (!uploadErr) {
-            const { data: { publicUrl } } = supabase.storage.from('card-images').getPublicUrl(path)
-            await supabase.from('credit_cards').update({ image_url: publicUrl }).eq('id', savedCardId)
-            setCards(prev => prev.map(c => c.id === savedCardId ? { ...c, image_url: publicUrl } : c))
-          }
-        } catch {}
-      }
-    }
-
     setCardDialog(false); setCardLoading(false)
   }
 
   async function handleDeleteCard(id: string) {
-    const card = cards.find(c => c.id === id)
-    if (card?.image_url) {
-      try {
-        const pathMatch = card.image_url.match(/card-images\/(.+?)(\?|$)/)
-        if (pathMatch) await supabase.storage.from('card-images').remove([decodeURIComponent(pathMatch[1])])
-      } catch {}
-    }
     const { error } = await supabase.from('credit_cards').delete().eq('id', id)
     if (error) { toast.error('Error al eliminar'); return }
     setCards(prev => prev.filter(c => c.id !== id))
@@ -455,18 +431,10 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
             return (
               <div
                 key={card.id}
-                className="rounded-2xl overflow-hidden cursor-pointer select-none relative"
-                style={card.image_url ? {} : { background: NETWORK_GRADIENTS[card.network as CreditCardNetwork] }}
+                className="rounded-2xl overflow-hidden cursor-pointer select-none"
+                style={{ background: NETWORK_GRADIENTS[card.network as CreditCardNetwork] }}
                 onClick={() => { setSelectedCardId(card.id); setDetailDialog(true) }}
               >
-                {/* Background image + overlay */}
-                {card.image_url && (
-                  <>
-                    <img src={card.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                    <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.38) 100%)' }} />
-                  </>
-                )}
-
                 {/* Decorative circles */}
                 <div className="relative p-5">
                   <div className="absolute -top-10 -right-10 w-44 h-44 rounded-full bg-white/5 pointer-events-none" />
@@ -642,6 +610,18 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
                     />
                   </div>
                 </div>
+                {/* Resumen adjunto */}
+                {selectedMonth.image_url && (
+                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-white/10">
+                    <a href={selectedMonth.image_url} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-[11px] font-semibold text-white/70 hover:text-white transition-colors">
+                      <ImageIcon className="h-3 w-3" /> Ver resumen adjunto
+                    </a>
+                    <button onClick={removeMonthImage} className="ml-auto text-white/40 hover:text-white/70 transition-colors">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Items table */}
@@ -685,6 +665,14 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
                 <Button size="sm" variant="outline" onClick={openCreateItem} className="flex-1 justify-center">
                   <Plus className="h-3.5 w-3.5 mr-1.5" /> Agregar ítem
                 </Button>
+                <Button size="sm" variant="outline" disabled={monthImageUploading}
+                  onClick={() => monthImageInputRef.current?.click()}
+                  className="px-3 flex-shrink-0" title="Adjuntar resumen">
+                  {monthImageUploading
+                    ? <span className="text-[10px]">Subiendo...</span>
+                    : <ImageIcon className="h-3.5 w-3.5" />}
+                </Button>
+                <input ref={monthImageInputRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={handleMonthImageSelect} />
                 <Button size="sm" onClick={openPayDialog} disabled={selectedMonth.status === 'paid'} className="flex-1 justify-center">
                   {selectedMonth.status === 'paid' ? 'Ya pagada' : 'Registrar pago'}
                 </Button>
@@ -730,33 +718,6 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
                 </div>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Imagen <span className="text-muted-foreground font-normal text-xs">(opcional)</span></Label>
-              {cardImagePreview ? (
-                <div className="relative rounded-xl overflow-hidden h-28">
-                  <img src={cardImagePreview} alt="" className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/20" />
-                  <div className="absolute top-2 right-2 flex gap-1.5">
-                    <button type="button" onClick={() => imageInputRef.current?.click()}
-                      className="p-1.5 rounded-lg bg-white/85 text-foreground hover:bg-white transition-colors">
-                      <Upload className="h-3.5 w-3.5" />
-                    </button>
-                    <button type="button" onClick={removeCurrentImage}
-                      className="p-1.5 rounded-lg bg-white/85 text-red-500 hover:bg-white transition-colors">
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button type="button" onClick={() => imageInputRef.current?.click()}
-                  className="w-full h-20 rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:border-border/60 hover:bg-muted/30 transition-all">
-                  <ImageIcon className="h-5 w-5 opacity-40" />
-                  <span className="text-xs">Tocar para adjuntar imagen</span>
-                </button>
-              )}
-              <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
-            </div>
-
             <div className="space-y-2">
               <Label>Cuenta para pagar <span className="text-muted-foreground font-normal text-xs">(opcional)</span></Label>
               <Select value={cardForm.account_id} onValueChange={v => setCardForm({ ...cardForm, account_id: (v ?? '') === '__none__' ? '' : (v ?? '') })}>

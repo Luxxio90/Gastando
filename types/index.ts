@@ -151,6 +151,7 @@ export interface CreditCardMonth {
   account_id: string | null
   paid_amount: number | null
   transaction_id: string | null
+  image_url: string | null
   created_at: string | null
   card?: CreditCard
 }
