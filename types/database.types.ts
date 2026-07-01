@@ -734,7 +734,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_shared_access_record: {
+        Args: { p_token: string; p_name: string; p_account_ids: string[]; p_fixed_group_names: string[] }
+        Returns: Json
+      }
+      update_shared_access_record: {
+        Args: { p_id: string; p_name: string; p_account_ids: string[]; p_fixed_group_names: string[] }
+        Returns: undefined
+      }
+      delete_shared_access_record: {
+        Args: { p_id: string }
+        Returns: undefined
+      }
+      get_my_shared_access: {
+        Args: Record<string, never>
+        Returns: Json
+      }
+      get_shared_access_by_token: {
+        Args: { p_token: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
