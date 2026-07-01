@@ -17,14 +17,22 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { NotificationsToggle } from './notifications-toggle'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
-import { Category, ExpenseType, Responsible } from '@/types'
+import { Account, Category, ExpenseType, Responsible } from '@/types'
 import { cn } from '@/lib/utils'
+import { SharedAccessSettings } from './shared-access-settings'
+
+interface SharedAccessData {
+  id: string; token: string; name: string; account_ids: string[]; fixed_group_names: string[]
+}
 
 interface Props {
   user: SupabaseUser
   categories: Category[]
   expenseTypes: ExpenseType[]
   responsibles: Responsible[]
+  accounts: Account[]
+  fixedGroupNames: string[]
+  initialSharedAccess: SharedAccessData | null
 }
 
 const COMMON_ICONS = ['🏠','🍔','🚗','💊','🎬','👕','✈️','📚','💡','🐾','🎮','💰','💼','🎁','🏋️','🛒','☕','🍕','🎵','💅']
@@ -34,7 +42,7 @@ type CategoryForm = { name: string; icon: string; type: 'income' | 'expense'; ex
 type ExpenseTypeForm = { name: string; color: string }
 type ResponsibleForm = { name: string; color: string }
 
-export function SettingsView({ user, categories: initialCategories, expenseTypes: initialExpenseTypes, responsibles: initialResponsibles }: Props) {
+export function SettingsView({ user, categories: initialCategories, expenseTypes: initialExpenseTypes, responsibles: initialResponsibles, accounts, fixedGroupNames, initialSharedAccess }: Props) {
   const router = useRouter()
   const supabase = createClient()
 
@@ -396,6 +404,14 @@ export function SettingsView({ user, categories: initialCategories, expenseTypes
           </div>
         </CardContent>
       </Card>
+
+      {/* Acceso compartido */}
+      <SharedAccessSettings
+        accounts={accounts}
+        fixedGroupNames={fixedGroupNames}
+        initialSharedAccess={initialSharedAccess}
+        userId={user.id}
+      />
 
       {/* Cerrar sesión */}
       <Card>

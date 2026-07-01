@@ -161,63 +161,82 @@ export function AccountDetail({ account, transactions, categories, accounts, use
           <div className="text-center text-muted-foreground py-12 text-sm border border-dashed border-border rounded-xl">
             No hay movimientos en esta cuenta
           </div>
-        ) : (
-          <div className="space-y-2">
-            {withBalances.map(t => {
-              const isIncome = t.type === 'income'
-              const color    = isIncome ? '#00CB96' : '#FF4D6D'
-              const TxIcon   = isIncome ? TrendingUp : TrendingDown
-              return (
-                <div key={t.id} className="bg-card rounded-xl p-3.5 border border-border">
-                  <div className="flex items-start gap-3">
-                    {/* Icon */}
-                    <div
-                      className="mt-0.5 h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{ backgroundColor: color + '18' }}
-                    >
-                      <TxIcon className="h-4 w-4" style={{ color }} />
-                    </div>
+        ) : (() => {
+          const groups: Record<string, typeof withBalances> = {}
+          for (const t of withBalances) {
+            if (!groups[t.date]) groups[t.date] = []
+            groups[t.date].push(t)
+          }
+          const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a))
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="font-semibold text-sm text-foreground truncate">{t.description}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {formatDate(t.date)}
-                            {t.category && <> · {t.category.icon} {t.category.name}</>}
-                          </p>
+          return (
+            <div className="bg-card rounded-xl border border-border overflow-hidden">
+              {sortedDates.map(date => (
+                <div key={date}>
+                  <div className="px-4 py-2 bg-muted/40 border-b border-border/40 sticky top-0 z-10">
+                    <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                      {formatDate(date)}
+                    </span>
+                  </div>
+                  <div className="divide-y divide-border/50">
+                    {groups[date].map(t => {
+                      const isIncome = t.type === 'income'
+                      const color    = isIncome ? '#00CB96' : '#FF4D6D'
+                      const TxIcon   = isIncome ? TrendingUp : TrendingDown
+                      return (
+                        <div key={t.id} className="p-3.5">
+                          <div className="flex items-start gap-3">
+                            <div
+                              className="mt-0.5 h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                              style={{ backgroundColor: color + '18' }}
+                            >
+                              <TxIcon className="h-4 w-4" style={{ color }} />
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-sm text-foreground truncate">{t.description}</p>
+                                  {t.category && (
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                      {t.category.icon} {t.category.name}
+                                    </p>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-1.5 flex-shrink-0">
+                                  <span className="font-bold text-sm tabular-nums" style={{ color }}>
+                                    {isIncome ? '+' : '-'}{formatCurrency(t.amount, account.currency)}
+                                  </span>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger className="p-1 rounded-lg text-muted-foreground/40 hover:text-foreground hover:bg-muted/60 transition-colors">
+                                      <MoreVertical className="h-3.5 w-3.5" />
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => { setEditingTransaction(t); setDialogOpen(true) }}>Editar</DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem className="text-red-500" onClick={() => handleDeleteTransaction(t.id)}>Eliminar</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
+                                <span className="tabular-nums">{formatCurrency(t._before, account.currency)}</span>
+                                <ArrowRight className="h-3 w-3 text-muted-foreground/40 flex-shrink-0" />
+                                <span className="tabular-nums font-semibold" style={{ color }}>{formatCurrency(t._after, account.currency)}</span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <span className="font-bold text-sm tabular-nums" style={{ color }}>
-                            {isIncome ? '+' : '-'}{formatCurrency(t.amount, account.currency)}
-                          </span>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger className="p-1 rounded-lg text-muted-foreground/40 hover:text-foreground hover:bg-muted/60 transition-colors">
-                              <MoreVertical className="h-3.5 w-3.5" />
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => { setEditingTransaction(t); setDialogOpen(true) }}>Editar</DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-red-500" onClick={() => handleDeleteTransaction(t.id)}>Eliminar</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </div>
-
-                      {/* Running balance */}
-                      <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
-                        <span className="tabular-nums">{formatCurrency(t._before, account.currency)}</span>
-                        <ArrowRight className="h-3 w-3 text-muted-foreground/40 flex-shrink-0" />
-                        <span className="tabular-nums font-semibold" style={{ color }}>{formatCurrency(t._after, account.currency)}</span>
-                      </div>
-                    </div>
+                      )
+                    })}
                   </div>
                 </div>
-              )
-            })}
-          </div>
-        )}
+              ))}
+            </div>
+          )
+        })()}
       </div>
 
       {/* Dialog editar cuenta */}

@@ -1,0 +1,88 @@
+import { notFound } from 'next/navigation'
+import { createServiceClient } from '@/lib/supabase/service'
+import { SharedDashboard } from '@/components/shared/shared-dashboard'
+
+export default async function SharedPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ token: string }>
+  searchParams: Promise<{ month?: string; year?: string }>
+}) {
+  const { token } = await params
+  const sp = await searchParams
+
+  const now = new Date()
+  const month = Math.max(1, Math.min(12, parseInt(sp.month ?? String(now.getMonth() + 1))))
+  const year = parseInt(sp.year ?? String(now.getFullYear()))
+
+  const supabase = createServiceClient()
+
+  const { data: sharedAccess } = await supabase
+    .from('shared_access')
+    .select('*')
+    .eq('token', token)
+    .single()
+
+  if (!sharedAccess) notFound()
+
+  const { user_id, account_ids, fixed_group_names } = sharedAccess
+
+  const firstDay = new Date(year, month - 1, 1).toISOString().split('T')[0]
+  const lastDay = new Date(year, month, 0).toISOString().split('T')[0]
+
+  const [
+    { data: accounts },
+    { data: transactions },
+    { data: budgetCards },
+    { data: fixedGroups },
+  ] = await Promise.all([
+    supabase.from('accounts').select('*').in('id', account_ids),
+    supabase
+      .from('transactions')
+      .select('*, category:categories(id,name,icon,color,type)')
+      .eq('user_id', user_id)
+      .in('account_id', account_ids)
+      .gte('date', firstDay)
+      .lte('date', lastDay),
+    supabase
+      .from('budget_cards')
+      .select('*, sum_category:categories!sum_category_id(id,name,icon,type)')
+      .eq('user_id', user_id)
+      .eq('month', month)
+      .eq('year', year)
+      .order('created_at'),
+    fixed_group_names.length > 0
+      ? supabase
+          .from('fixed_expense_groups')
+          .select('*')
+          .eq('user_id', user_id)
+          .eq('month', month)
+          .eq('year', year)
+          .in('name', fixed_group_names)
+          .order('order')
+      : Promise.resolve({ data: [] }),
+  ])
+
+  const groupIds = (fixedGroups ?? []).map((g: any) => g.id)
+  const { data: fixedItems } = groupIds.length > 0
+    ? await supabase
+        .from('fixed_expense_items')
+        .select('*, category:categories(id,name,icon,color)')
+        .in('group_id', groupIds)
+        .order('created_at')
+    : { data: [] }
+
+  return (
+    <SharedDashboard
+      sharedAccess={sharedAccess}
+      accounts={accounts ?? []}
+      transactions={transactions ?? []}
+      budgetCards={budgetCards ?? []}
+      fixedGroups={fixedGroups ?? []}
+      fixedItems={fixedItems ?? []}
+      month={month}
+      year={year}
+    />
+  )
+}

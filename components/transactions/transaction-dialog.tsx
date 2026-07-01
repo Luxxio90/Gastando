@@ -23,6 +23,9 @@ interface Props {
   userId: string
   defaultType?: 'income' | 'expense'
   defaultAccountId?: string
+  defaultDescription?: string
+  defaultAmount?: string
+  defaultCategoryId?: string
   editingTransaction?: Transaction | null
   onSaved?: (data: {
     id: string; type: 'income' | 'expense'; amount: number; description: string
@@ -36,13 +39,13 @@ const todayLocal = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 }
 
-const emptyForm = (type: 'income' | 'expense', accountId: string) => ({
+const emptyForm = (type: 'income' | 'expense', accountId: string, description = '', amount = '', categoryId = '') => ({
   type,
-  amount: '',
-  description: '',
+  amount,
+  description,
   date: todayLocal(),
   account_id: accountId,
-  category_id: '',
+  category_id: categoryId,
   notes: '',
   responsible_party_id: '',
 })
@@ -50,12 +53,13 @@ const emptyForm = (type: 'income' | 'expense', accountId: string) => ({
 export function TransactionDialog({
   open, onClose, accounts, categories, responsibles, userId,
   defaultType = 'expense', defaultAccountId = '',
+  defaultDescription = '', defaultAmount = '', defaultCategoryId = '',
   editingTransaction, onSaved,
 }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
-  const [form, setForm] = useState(emptyForm(defaultType, defaultAccountId))
+  const [form, setForm] = useState(emptyForm(defaultType, defaultAccountId, defaultDescription, defaultAmount, defaultCategoryId))
   const [recurring, setRecurring] = useState(false)
   const [recurringDay, setRecurringDay] = useState('1')
 
@@ -92,7 +96,7 @@ export function TransactionDialog({
           .then(({ data }) => { if (data) setExistingSignedUrl(data.signedUrl) })
       }
     } else {
-      setForm(emptyForm(defaultType, defaultAccountId))
+      setForm(emptyForm(defaultType, defaultAccountId, defaultDescription, defaultAmount, defaultCategoryId))
       setRecurring(false)
       setRecurringDay('1')
       setExistingPath(null)
@@ -102,7 +106,7 @@ export function TransactionDialog({
       setAttachmentPreview(null)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingTransaction, defaultType, defaultAccountId, open])
+  }, [editingTransaction, defaultType, defaultAccountId, defaultDescription, defaultAmount, defaultCategoryId, open])
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]

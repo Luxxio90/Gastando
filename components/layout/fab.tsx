@@ -63,15 +63,15 @@ export function FloatingActionButton({ userId }: { userId: string }) {
               onClick={() => handleSelect(action.type)}
               className="flex items-center gap-3 pr-1.5 pl-4 py-1.5 rounded-2xl border transition-all duration-200"
               style={{
-                background: 'hsl(var(--card))',
-                borderColor: action.color + '35',
-                boxShadow: open ? `0 4px 24px ${action.color}25` : 'none',
+                background: '#ffffff',
+                borderColor: action.color + '50',
+                boxShadow: open ? `0 4px 16px rgba(0,0,0,0.12), 0 2px 8px ${action.color}20` : 'none',
                 opacity: open ? 1 : 0,
                 transform: open ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.9)',
                 transitionDelay: open
                   ? `${i * 55}ms`
                   : `${(ACTIONS.length - 1 - i) * 30}ms`,
-                pointerEvents: open ? 'auto' : 'none', // container is none, so 'auto' here re-enables
+                pointerEvents: open ? 'auto' : 'none',
               }}
             >
               <span className="text-sm font-bold" style={{ color: action.color }}>
