@@ -43,26 +43,39 @@ export function SharedDashboard({ sharedAccess, accounts, transactions, budgetCa
 
   const cardAmounts = (() => {
     const amounts = new Map<string, number>()
-    // Primera pasada: manual y suma por categoría
     for (const card of budgetCards) {
-      if (card.manual_amount !== null) {
-        amounts.set(card.id, card.manual_amount)
-      } else if (card.sum_category_id) {
+      if (card.calc_type === 'category_sum' && card.sum_category_id) {
+        const txType = card.card_type === 'income' ? 'income' : 'expense'
         const sum = transactions
-          .filter((t: any) => t.category_id === card.sum_category_id && t.type === 'expense')
+          .filter((t: any) => t.category_id === card.sum_category_id && t.type === txType)
           .reduce((s: number, t: any) => s + t.amount, 0)
         amounts.set(card.id, sum)
+      } else if (card.manual_amount !== null) {
+        amounts.set(card.id, card.manual_amount)
       }
     }
-    // Segunda pasada: porcentaje de otra card
     for (const card of budgetCards) {
-      if (!amounts.has(card.id) && card.percentage !== null && card.source_card_id) {
+      if (card.calc_type === 'percentage' && card.source_card_id && card.percentage !== null) {
         const base = amounts.get(card.source_card_id) ?? 0
         amounts.set(card.id, (base * card.percentage) / 100)
       }
     }
     return amounts
   })()
+
+  const incomeCards  = budgetCards.filter(c => c.card_type === 'income')
+  const expenseCards = budgetCards.filter(c => c.card_type === 'expense')
+  const totalIncome  = incomeCards.reduce((s, c) => s + (cardAmounts.get(c.id) ?? 0), 0)
+  const totalExpense = expenseCards.reduce((s, c) => s + (cardAmounts.get(c.id) ?? 0), 0)
+  const unassigned   = totalIncome - totalExpense
+
+  function calcLabel(card: BudgetCard): string {
+    if (card.calc_type === 'category_sum' && (card.sum_category as any)?.name)
+      return `${(card.sum_category as any).icon} ${(card.sum_category as any).name}`
+    if (card.calc_type === 'percentage' && card.source_card_id)
+      return `${card.percentage}% de ${budgetCards.find(c => c.id === card.source_card_id)?.name ?? '...'}`
+    return 'Manual'
+  }
 
   const groupsWithItems = fixedGroups.map(g => ({
     group: g,
@@ -162,32 +175,96 @@ export function SharedDashboard({ sharedAccess, accounts, transactions, budgetCa
           </div>
         )}
 
-        {/* Tabla de distribución (solo lectura) */}
+        {/* Distribución (solo lectura, idéntico a la app) */}
         {budgetCards.length > 0 && (
-          <div className="bg-white rounded-2xl border border-border overflow-hidden shadow-sm">
-            <div className="px-4 py-3 border-b border-border/60"
-              style={{ background: 'linear-gradient(90deg, #3BB2F610 0%, transparent 60%)' }}>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Distribución</p>
+          <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+            {/* Header columnas */}
+            <div className="grid grid-cols-[1fr_56px_120px] items-center bg-muted/40 border-b border-border px-4 py-2.5">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Categoría</span>
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest text-center">%</span>
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest text-right">Monto</span>
             </div>
-            <div className="divide-y divide-border/50">
-              {budgetCards.map(card => {
+
+            {/* Ingresos */}
+            {incomeCards.length > 0 && <>
+              <div className="px-4 py-2 border-b border-border/50" style={{ backgroundColor: '#00CB9612' }}>
+                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#00CB96' }}>Ingresos</span>
+              </div>
+              {incomeCards.map(card => {
                 const amount = cardAmounts.get(card.id) ?? 0
+                const p = totalIncome > 0 ? ((amount / totalIncome) * 100).toFixed(1) : null
                 return (
-                  <div key={card.id} className="flex items-center justify-between px-4 py-3">
-                    <div className="flex items-center gap-2 min-w-0">
-                      {(card.sum_category as any)?.icon && (
-                        <span className="text-sm flex-shrink-0">{(card.sum_category as any).icon}</span>
-                      )}
-                      <span className="text-sm font-medium text-foreground truncate">{card.name}</span>
-                      {card.percentage !== null && (
-                        <span className="text-[10px] text-muted-foreground flex-shrink-0">{card.percentage}%</span>
-                      )}
+                  <div key={card.id} className="grid grid-cols-[1fr_56px_120px] items-center px-4 py-3 border-b border-border">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{card.name}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{calcLabel(card)}</p>
                     </div>
-                    <span className="text-sm font-bold tabular-nums flex-shrink-0 ml-2">{formatCurrency(amount)}</span>
+                    <div className="flex justify-center">
+                      {p !== null
+                        ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ color: '#00CB96', backgroundColor: '#00CB9618' }}>{p}%</span>
+                        : <span className="text-xs text-muted-foreground/40">—</span>}
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-bold tabular-nums" style={{ color: '#00CB96' }}>{formatCurrency(amount)}</span>
+                    </div>
                   </div>
                 )
               })}
-            </div>
+              <div className="grid grid-cols-[1fr_56px_120px] items-center px-4 py-2.5 border-b border-border/50" style={{ backgroundColor: '#00CB9610' }}>
+                <span className="text-xs font-bold" style={{ color: '#00CB96' }}>Total ingresos</span>
+                <span className="text-center text-[10px] font-bold" style={{ color: '#00CB96' }}>100%</span>
+                <span className="text-right text-sm font-bold tabular-nums" style={{ color: '#00CB96' }}>{formatCurrency(totalIncome)}</span>
+              </div>
+            </>}
+
+            {/* Gastos */}
+            {expenseCards.length > 0 && <>
+              <div className="px-4 py-2 border-b border-border/50" style={{ backgroundColor: '#7C4DFF12' }}>
+                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#7C4DFF' }}>Distribución de gastos</span>
+              </div>
+              {expenseCards.map(card => {
+                const amount = cardAmounts.get(card.id) ?? 0
+                const p = totalIncome > 0 ? ((amount / totalIncome) * 100).toFixed(1) : null
+                const barWidth = totalIncome > 0 ? Math.min(100, (amount / totalIncome) * 100) : 0
+                return (
+                  <div key={card.id} className="border-b border-border">
+                    <div className="grid grid-cols-[1fr_56px_120px] items-center px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{card.name}</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{calcLabel(card)}</p>
+                      </div>
+                      <div className="flex justify-center">
+                        {p !== null
+                          ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ color: '#7C4DFF', backgroundColor: '#7C4DFF18' }}>{p}%</span>
+                          : <span className="text-xs text-muted-foreground/40">—</span>}
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-semibold tabular-nums text-foreground">{formatCurrency(amount)}</span>
+                      </div>
+                    </div>
+                    {barWidth > 0 && (
+                      <div className="h-0.5 mx-4 bg-muted/40 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${barWidth}%`, backgroundColor: '#7C4DFFaa' }} />
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+              <div className="grid grid-cols-[1fr_56px_120px] items-center px-4 py-2.5 border-b border-border/50" style={{ backgroundColor: '#7C4DFF10' }}>
+                <span className="text-xs font-bold" style={{ color: '#7C4DFF' }}>Total distribuido</span>
+                <span className="text-center text-[10px] font-bold" style={{ color: '#7C4DFF' }}>{totalIncome > 0 ? `${((totalExpense / totalIncome) * 100).toFixed(1)}%` : '—'}</span>
+                <span className="text-right text-sm font-bold tabular-nums" style={{ color: '#7C4DFF' }}>{formatCurrency(totalExpense)}</span>
+              </div>
+            </>}
+
+            {/* Sin asignar */}
+            {totalIncome > 0 && (
+              <div className="grid grid-cols-[1fr_56px_120px] items-center px-4 py-3 bg-muted/30">
+                <span className="text-sm font-semibold text-muted-foreground">Sin asignar</span>
+                <span className="text-center text-[10px] font-semibold text-muted-foreground">{`${((unassigned / totalIncome) * 100).toFixed(1)}%`}</span>
+                <span className="text-right text-sm font-bold tabular-nums" style={{ color: unassigned >= 0 ? '#00CB96' : '#FF4D6D' }}>{formatCurrency(unassigned)}</span>
+              </div>
+            )}
           </div>
         )}
 
