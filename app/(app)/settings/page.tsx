@@ -64,7 +64,7 @@ export default async function SettingsPage() {
         responsibles={responsibles ?? []}
         accounts={accounts ?? []}
         fixedGroupNames={fixedGroupNames}
-        initialSharedAccess={sharedAccess ?? null}
+        initialSharedAccess={(sharedAccess ?? null) as any}
       />
     </div>
   )
