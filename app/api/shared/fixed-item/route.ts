@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { todayLocalStr } from '@/lib/utils'
 
 export async function PATCH(req: NextRequest) {
   const body = await req.json()
@@ -50,7 +51,7 @@ export async function PATCH(req: NextRequest) {
 
   if (wasntPaid && isNowPaid && acctId && newAmount > 0) {
     const desc = description?.trim() || item.description || (updated as any)?.category?.name || 'Gasto fijo'
-    const today = new Date().toISOString().split('T')[0]
+    const today = todayLocalStr()
     await supabase.from('transactions').insert({
       user_id: owner.id,
       account_id: acctId,

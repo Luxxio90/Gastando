@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import { todayLocalStr } from '@/lib/utils'
 import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Check, CreditCard, ChevronRight, Bell, PartyPopper, AlertTriangle } from 'lucide-react'
@@ -355,7 +356,7 @@ export function AvisosView({ fixedExpenses, cardMonths, exceededBudgets, userId,
       user_id: userId, account_id: alert.accountId, category_id: catId,
       type: 'expense', amount: alert.total,
       description: `Pago tarjeta: ${alert.name}`,
-      date: new Date().toISOString().split('T')[0], notes: null,
+      date: todayLocalStr(), notes: null,
     }).select('id').single()
     const [r2, r3] = await Promise.all([
       supabase.from('accounts').update({ balance: account.balance - alert.total }).eq('id', alert.accountId),

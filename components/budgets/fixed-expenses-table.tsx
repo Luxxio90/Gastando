@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Plus, CalendarDays, TrendingDown, MoreVertical, Layers, Check, ChevronDown, Download, ArrowUpDown } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, todayLocalStr } from '@/lib/utils'
 import type { Account, Category, FixedExpenseGroup, FixedExpenseItem, FixedExpenseStatus, Responsible } from '@/types'
 
 const GROUP_COLORS = ['#7C4DFF', '#00CB96', '#3BB2F6', '#FF4D6D', '#F59E0B', '#EC4899', '#10b981', '#f97316']
@@ -278,7 +278,7 @@ export function FixedExpensesTable({ groups: initialGroups, items: initialItems,
       const isNewlyPaid = itemForm.status === 'paid' && (!editingItem || editingItem.status !== 'paid')
       if (isNewlyPaid && itemForm.account_id && amount > 0) {
         const desc = itemForm.description.trim() || (saved as any)?.category?.name || 'Gasto fijo'
-        const today = new Date().toISOString().split('T')[0]
+        const today = todayLocalStr()
         await supabase.from('transactions').insert({
           user_id: userId, account_id: itemForm.account_id,
           category_id: (itemForm.category_id || null) as string,

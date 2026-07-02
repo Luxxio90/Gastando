@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Investment } from '@/types'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate, todayLocalStr } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -31,7 +31,7 @@ interface Props {
 export function InvestmentsList({ investments, userId }: Props) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [form, setForm] = useState({ name: '', type: 'stock', initial_amount: '', current_value: '', currency: 'ARS', purchase_date: new Date().toISOString().split('T')[0], notes: '' })
+  const [form, setForm] = useState({ name: '', type: 'stock', initial_amount: '', current_value: '', currency: 'ARS', purchase_date: todayLocalStr(), notes: '' })
   const router = useRouter()
   const supabase = createClient()
 

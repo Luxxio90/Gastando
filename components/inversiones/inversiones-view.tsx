@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, todayLocalStr } from '@/lib/utils'
 import type { Investment, InvestmentType } from '@/types'
 
 const TYPE_META: Record<InvestmentType, { label: string; icon: string; color: string }> = {
@@ -35,7 +35,7 @@ type Form = {
 
 const emptyForm: Form = {
   name: '', type: 'stock', initial_amount: '', current_value: '',
-  currency: 'ARS', purchase_date: new Date().toISOString().split('T')[0], notes: '',
+  currency: 'ARS', purchase_date: todayLocalStr(), notes: '',
 }
 
 interface Props {

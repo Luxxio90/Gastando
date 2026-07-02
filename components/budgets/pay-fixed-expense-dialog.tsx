@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Account, Responsible } from '@/types'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, todayLocalStr } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Check } from 'lucide-react'
@@ -41,7 +41,7 @@ export function PayFixedExpenseDialog({ open, onClose, item, accounts, responsib
     }
     setLoading(true)
     try {
-      const today = new Date().toISOString().split('T')[0]
+      const today = todayLocalStr()
       const desc  = item.description || item.category?.name || 'Gasto fijo'
 
       const [r1, r2] = await Promise.all([

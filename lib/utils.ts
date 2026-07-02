@@ -9,6 +9,11 @@ export function formatCurrency(amount: number, currency = 'ARS') {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency }).format(amount)
 }
 
+export function todayLocalStr() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export function formatDate(date: string) {
   const [y, m, d] = date.split('-').map(Number)
   return new Date(y, m - 1, d).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })

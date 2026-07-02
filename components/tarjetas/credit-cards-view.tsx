@@ -10,8 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
-import { cn } from '@/lib/utils'
-import { formatCurrency } from '@/lib/utils'
+import { cn, formatCurrency, todayLocalStr } from '@/lib/utils'
 import type { CreditCard as CC, CreditCardMonth, CreditCardItem, CreditCardNetwork, CreditCardStatus, Account } from '@/types'
 import { CreditCardChart } from './credit-card-chart'
 
@@ -238,7 +237,7 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
               user_id: userId, account_id: card.account_id, category_id: catId,
               type: 'expense', amount: total,
               description: `Pago tarjeta: ${card.name}`,
-              date: new Date().toISOString().split('T')[0], notes: null,
+              date: todayLocalStr(), notes: null,
             }).select('id').single()
             await Promise.all([
               supabase.from('accounts').update({ balance: account.balance - total }).eq('id', card.account_id),
@@ -358,7 +357,7 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
     const { data: txData, error: txError } = await supabase.from('transactions').insert({
       user_id: userId, account_id: payForm.account_id, category_id: catId,
       type: 'expense', amount, description: `Pago tarjeta: ${selectedCard?.name}`,
-      date: new Date().toISOString().split('T')[0], notes: null,
+      date: todayLocalStr(), notes: null,
     }).select('id').single()
     const r2 = await supabase.from('accounts').update({ balance: acc.balance - amount }).eq('id', payForm.account_id)
     if (txError || r2.error) { toast.error('Error al registrar el pago'); setPayLoading(false); return }
