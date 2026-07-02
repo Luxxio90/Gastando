@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Account } from '@/types'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, todayLocalStr } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -197,15 +197,37 @@ export function AccountsList({ accounts, userId }: Props) {
       else { toast.success('Cuenta creada'); closeDialog(); router.refresh() }
     } else if (mode === 'edit' && editing) {
       const newBalance = parseFloat(form.balance) || 0
+      const diff = newBalance - editing.balance
       const { error } = await supabase.from('accounts').update({ name: form.name, type: form.type, balance: newBalance, currency: form.currency, color: form.color }).eq('id', editing.id)
-      if (error) toast.error('Error al guardar los cambios')
-      else {
-        setLocalAccounts(prev => prev.map(a => a.id === editing.id
-          ? { ...a, name: form.name, type: form.type, balance: newBalance, currency: form.currency, color: form.color }
-          : a
-        ))
-        toast.success('Cuenta actualizada'); closeDialog(); router.refresh()
+      if (error) { toast.error('Error al guardar los cambios'); setLoading(false); return }
+
+      if (diff !== 0) {
+        const adjType = diff > 0 ? 'income' : 'expense'
+        const { data: cats } = await supabase.from('categories').select('id')
+          .eq('name', 'Ajuste de saldo').eq('type', adjType)
+          .or(`user_id.eq.${userId},is_default.eq.true`).limit(1)
+        let catId: string | null = cats?.[0]?.id ?? null
+        if (!catId) {
+          const { data: newCat } = await supabase.from('categories').insert({
+            user_id: userId, name: 'Ajuste de saldo', icon: '⚖️', color: '#F59E0B', type: adjType, is_default: false,
+          }).select('id').single()
+          catId = newCat?.id ?? null
+        }
+        if (catId) {
+          await supabase.from('transactions').insert({
+            user_id: userId, account_id: editing.id, category_id: catId,
+            type: adjType, amount: Math.abs(diff),
+            description: 'Ajuste de saldo',
+            date: todayLocalStr(), notes: null,
+          })
+        }
       }
+
+      setLocalAccounts(prev => prev.map(a => a.id === editing.id
+        ? { ...a, name: form.name, type: form.type, balance: newBalance, currency: form.currency, color: form.color }
+        : a
+      ))
+      toast.success('Cuenta actualizada'); closeDialog(); router.refresh()
     }
     setLoading(false)
   }
@@ -368,7 +390,9 @@ export function AccountsList({ accounts, userId }: Props) {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Balance</label>
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+                  {mode === 'edit' ? 'Nuevo saldo' : 'Balance'}
+                </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
                   <Input
@@ -378,6 +402,15 @@ export function AccountsList({ accounts, userId }: Props) {
                     className="pl-6 bg-muted/40 border-border/60 font-semibold"
                   />
                 </div>
+                {mode === 'edit' && editing && (() => {
+                  const diff = (parseFloat(form.balance) || 0) - editing.balance
+                  if (diff === 0) return null
+                  return (
+                    <p className="text-[11px] font-medium" style={{ color: diff > 0 ? '#00CB96' : '#FF4D6D' }}>
+                      Se generará un ajuste de {diff > 0 ? '+' : ''}{formatCurrency(diff, editing.currency)}
+                    </p>
+                  )
+                })()}
               </div>
             </div>
 

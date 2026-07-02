@@ -223,6 +223,10 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
       if (card?.account_id) {
         const total = cardTotal(cardId)
         const account = accounts.find(a => a.id === card.account_id)
+        if (account && total > account.balance) {
+          toast.error('Saldo insuficiente en la cuenta vinculada')
+          return
+        }
         if (account && total > 0) {
           let catId: string | null = null
           const { data: cats } = await supabase.from('categories').select('id').eq('name', 'Tarjeta de crédito').eq('type', 'expense').or(`user_id.eq.${userId},is_default.eq.true`).limit(1)
@@ -353,6 +357,7 @@ export function CreditCardsView({ cards: initialCards, months: initialMonths, it
 
     const { data: acc } = await supabase.from('accounts').select('balance').eq('id', payForm.account_id).single()
     if (!acc) { toast.error('Cuenta no encontrada'); setPayLoading(false); return }
+    if (amount > acc.balance) { toast.error('Saldo insuficiente en la cuenta seleccionada'); setPayLoading(false); return }
 
     const { data: txData, error: txError } = await supabase.from('transactions').insert({
       user_id: userId, account_id: payForm.account_id, category_id: catId,

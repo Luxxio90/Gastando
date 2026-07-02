@@ -339,6 +339,10 @@ export function AvisosView({ fixedExpenses, cardMonths, exceededBudgets, userId,
     if (!alert.accountId) return
     const account = accounts.find(a => a.id === alert.accountId)
     if (!account) return
+    if (alert.total > account.balance) {
+      toast.error('Saldo insuficiente en la cuenta vinculada')
+      return
+    }
     setMarking(prev => new Set([...prev, alert.id]))
 
     let catId: string | null = null

@@ -39,6 +39,11 @@ export function PayFixedExpenseDialog({ open, onClose, item, accounts, responsib
       toast.error('Seleccioná un encargado')
       return
     }
+    const selectedAccount = accounts.find(a => a.id === accountId)
+    if (selectedAccount && item.amount > selectedAccount.balance) {
+      toast.error('Saldo insuficiente en la cuenta seleccionada')
+      return
+    }
     setLoading(true)
     try {
       const today = todayLocalStr()

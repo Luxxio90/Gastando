@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Account, Transaction, Category } from '@/types'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate, todayLocalStr } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import {
@@ -80,12 +80,37 @@ export function AccountDetail({ account, transactions, categories, accounts, use
 
   async function handleSaveAccount(e: React.FormEvent) {
     e.preventDefault(); setEditLoading(true)
+    const newBalance = parseFloat(editForm.balance) || 0
+    const diff = newBalance - account.balance
     const { error } = await supabase.from('accounts').update({
       name: editForm.name, type: editForm.type,
-      balance: parseFloat(editForm.balance) || 0, currency: editForm.currency, color: editForm.color,
+      balance: newBalance, currency: editForm.currency, color: editForm.color,
     }).eq('id', account.id)
-    if (error) toast.error('Error al guardar los cambios')
-    else { toast.success('Cuenta actualizada'); setEditAccountOpen(false); router.refresh() }
+    if (error) { toast.error('Error al guardar los cambios'); setEditLoading(false); return }
+
+    if (diff !== 0) {
+      const adjType = diff > 0 ? 'income' : 'expense'
+      const { data: cats } = await supabase.from('categories').select('id')
+        .eq('name', 'Ajuste de saldo').eq('type', adjType)
+        .or(`user_id.eq.${userId},is_default.eq.true`).limit(1)
+      let catId: string | null = cats?.[0]?.id ?? null
+      if (!catId) {
+        const { data: newCat } = await supabase.from('categories').insert({
+          user_id: userId, name: 'Ajuste de saldo', icon: '⚖️', color: '#F59E0B', type: adjType, is_default: false,
+        }).select('id').single()
+        catId = newCat?.id ?? null
+      }
+      if (catId) {
+        await supabase.from('transactions').insert({
+          user_id: userId, account_id: account.id, category_id: catId,
+          type: adjType, amount: Math.abs(diff),
+          description: 'Ajuste de saldo',
+          date: todayLocalStr(), notes: null,
+        })
+      }
+    }
+
+    toast.success('Cuenta actualizada'); setEditAccountOpen(false); router.refresh()
     setEditLoading(false)
   }
 
@@ -276,7 +301,7 @@ export function AccountDetail({ account, transactions, categories, accounts, use
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Balance</label>
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Nuevo saldo</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
                   <Input
@@ -286,6 +311,15 @@ export function AccountDetail({ account, transactions, categories, accounts, use
                     className="pl-6 bg-muted/40 border-border/60 font-semibold"
                   />
                 </div>
+                {(() => {
+                  const diff = (parseFloat(editForm.balance) || 0) - account.balance
+                  if (diff === 0) return null
+                  return (
+                    <p className="text-[11px] font-medium" style={{ color: diff > 0 ? '#00CB96' : '#FF4D6D' }}>
+                      Se generará un ajuste de {diff > 0 ? '+' : ''}{formatCurrency(diff, account.currency)}
+                    </p>
+                  )
+                })()}
               </div>
             </div>
 
