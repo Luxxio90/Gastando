@@ -179,10 +179,22 @@ export function TransactionList({ transactions, accounts, categories, responsibl
     if (t.transfer_group_id) {
       const { data: pair } = await supabase
         .from('transactions')
-        .select('id')
+        .select('id, type, account_id, amount')
         .eq('transfer_group_id', t.transfer_group_id)
         .neq('id', t.id)
         .single()
+
+      // Revert account balances
+      const expenseTx = t.type === 'expense' ? t : pair
+      const incomeTx  = t.type === 'income'  ? t : pair
+      if (expenseTx && incomeTx) {
+        const fromAcct = accounts.find(a => a.id === expenseTx.account_id)
+        const toAcct   = accounts.find(a => a.id === incomeTx.account_id)
+        await Promise.all([
+          fromAcct ? supabase.from('accounts').update({ balance: fromAcct.balance + t.amount }).eq('id', fromAcct.id) : Promise.resolve(),
+          toAcct   ? supabase.from('accounts').update({ balance: toAcct.balance   - t.amount }).eq('id', toAcct.id)  : Promise.resolve(),
+        ])
+      }
 
       if (pair) await supabase.from('transactions').delete().eq('id', pair.id)
 

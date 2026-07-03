@@ -90,9 +90,29 @@ export function AccountDetail({ account, transactions, categories, accounts, use
   const typeLabel = ACCOUNT_TYPES.find(t => t.value === account.type)?.label ?? ''
 
   async function handleDeleteTransaction(id: string) {
+    const tx = transactions.find(t => t.id === id)
+    if (tx?.transfer_group_id) {
+      const { data: pair } = await supabase
+        .from('transactions')
+        .select('id, type, account_id, amount')
+        .eq('transfer_group_id', tx.transfer_group_id)
+        .neq('id', id)
+        .single()
+      const expenseTx = tx.type === 'expense' ? tx : pair
+      const incomeTx  = tx.type === 'income'  ? tx : pair
+      if (expenseTx && incomeTx) {
+        const fromAcct = accounts.find(a => a.id === expenseTx.account_id)
+        const toAcct   = accounts.find(a => a.id === incomeTx.account_id)
+        await Promise.all([
+          fromAcct ? supabase.from('accounts').update({ balance: fromAcct.balance + tx.amount }).eq('id', fromAcct.id) : Promise.resolve(),
+          toAcct   ? supabase.from('accounts').update({ balance: toAcct.balance   - tx.amount }).eq('id', toAcct.id)  : Promise.resolve(),
+          pair ? supabase.from('transactions').delete().eq('id', pair.id) : Promise.resolve(),
+        ])
+      }
+    }
     const { error } = await supabase.from('transactions').delete().eq('id', id)
     if (error) { toast.error('Error al eliminar'); return }
-    toast.success('Transacción eliminada')
+    toast.success(tx?.transfer_group_id ? 'Transferencia eliminada' : 'Transacción eliminada')
     router.refresh()
   }
 

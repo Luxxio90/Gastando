@@ -87,6 +87,10 @@ export function TransferDialog({ open, onClose, accounts, responsibles, userId }
       if (r1.error || r2.error) {
         toast.error('Error al realizar la transferencia')
       } else {
+        await Promise.all([
+          fromAccount ? supabase.from('accounts').update({ balance: fromAccount.balance - amount }).eq('id', form.from_id) : Promise.resolve(),
+          toAccount   ? supabase.from('accounts').update({ balance: toAccount.balance   + amount }).eq('id', form.to_id)   : Promise.resolve(),
+        ])
         toast.success(`${formatCurrency(amount)} transferido a ${toAccount?.name}`)
         setForm({ from_id: '', to_id: '', amount: '', description: 'Transferencia', responsible_id: '' })
         onClose()
