@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 import {
   ArrowLeft, ArrowRight, MoreVertical, Plus, Pencil,
   Wallet, Landmark, CreditCard, PiggyBank, Banknote,
-  TrendingUp, TrendingDown, Check,
+  TrendingUp, TrendingDown, Check, Calendar, ChevronDown,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -52,6 +52,20 @@ function computeRunningBalances(transactions: Transaction[], currentBalance: num
   return sorted.reverse() as (Transaction & { _before: number; _after: number })[]
 }
 
+const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+
+function getMonthOptions() {
+  const now = new Date()
+  const options: { key: string; label: string }[] = [{ key: '', label: 'Todos los meses' }]
+  for (let i = 0; i < 18; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const m = d.getMonth() + 1
+    const y = d.getFullYear()
+    options.push({ key: `${y}-${String(m).padStart(2, '0')}`, label: `${MONTH_NAMES[m - 1]} ${y}` })
+  }
+  return options
+}
+
 export function AccountDetail({ account, transactions, categories, accounts, userId }: Props) {
   const router   = useRouter()
   const supabase = createClient()
@@ -59,14 +73,18 @@ export function AccountDetail({ account, transactions, categories, accounts, use
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
   const [editAccountOpen, setEditAccountOpen]       = useState(false)
   const [editLoading, setEditLoading]               = useState(false)
+  const [monthFilter, setMonthFilter]               = useState<string>('')
   const [editForm, setEditForm] = useState({
     name: account.name, type: account.type,
     balance: account.balance.toString(), currency: account.currency, color: account.color,
   })
 
-  const withBalances  = computeRunningBalances(transactions, account.balance)
-  const totalIncome   = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-  const totalExpense  = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+  const MONTH_OPTIONS = getMonthOptions()
+
+  const displayedTx   = monthFilter ? transactions.filter(t => t.date.startsWith(monthFilter)) : transactions
+  const withBalances  = computeRunningBalances(displayedTx, account.balance)
+  const totalIncome   = displayedTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+  const totalExpense  = displayedTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
 
   const TypeIcon = ACCOUNT_TYPES.find(t => t.value === account.type)?.icon ?? Banknote
   const typeLabel = ACCOUNT_TYPES.find(t => t.value === account.type)?.label ?? ''
@@ -127,6 +145,29 @@ export function AccountDetail({ account, transactions, categories, accounts, use
           <h1 className="text-xl font-bold text-foreground truncate">{account.name}</h1>
           <p className="text-xs text-muted-foreground">{typeLabel}</p>
         </div>
+        {/* Month selector */}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="h-8 flex items-center gap-1.5 px-2.5 rounded-lg border text-xs font-semibold transition-colors"
+            style={monthFilter
+              ? { borderColor: account.color + '80', color: account.color, background: account.color + '12' }
+              : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))', background: 'transparent' }
+            }
+          >
+            <Calendar className="h-3.5 w-3.5" />
+            {monthFilter ? MONTH_OPTIONS.find(o => o.key === monthFilter)?.label?.split(' ')[0] : 'Mes'}
+            <ChevronDown className="h-3 w-3" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="max-h-72 overflow-y-auto">
+            {MONTH_OPTIONS.map(o => (
+              <DropdownMenuItem key={o.key} onClick={() => setMonthFilter(o.key)}>
+                {monthFilter === o.key && <span className="mr-2" style={{ color: account.color }}>✓</span>}
+                {monthFilter !== o.key && <span className="mr-2 opacity-0">✓</span>}
+                {o.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Button
           variant="ghost" size="icon" className="h-8 w-8"
           onClick={() => { setEditForm({ name: account.name, type: account.type, balance: account.balance.toString(), currency: account.currency, color: account.color }); setEditAccountOpen(true) }}
@@ -163,13 +204,17 @@ export function AccountDetail({ account, transactions, categories, accounts, use
 
           <div className="flex gap-5 mt-4 pt-4 border-t border-white/20">
             <div>
-              <p className="text-[10px] font-semibold text-white/60 uppercase tracking-wide">Ingresos</p>
+              <p className="text-[10px] font-semibold text-white/60 uppercase tracking-wide">
+                {monthFilter ? `Ingresos · ${MONTH_OPTIONS.find(o => o.key === monthFilter)?.label?.split(' ')[0]}` : 'Ingresos'}
+              </p>
               <p className="font-bold text-sm tabular-nums mt-0.5 text-white">
                 +{formatCurrency(totalIncome, account.currency)}
               </p>
             </div>
             <div>
-              <p className="text-[10px] font-semibold text-white/60 uppercase tracking-wide">Gastos</p>
+              <p className="text-[10px] font-semibold text-white/60 uppercase tracking-wide">
+                {monthFilter ? `Gastos · ${MONTH_OPTIONS.find(o => o.key === monthFilter)?.label?.split(' ')[0]}` : 'Gastos'}
+              </p>
               <p className="font-bold text-sm tabular-nums mt-0.5 text-white">
                 -{formatCurrency(totalExpense, account.currency)}
               </p>
@@ -180,11 +225,13 @@ export function AccountDetail({ account, transactions, categories, accounts, use
 
       {/* Movimientos */}
       <div className="space-y-2">
-        <h2 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest px-1">Movimientos</h2>
+        <h2 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest px-1">
+          {monthFilter ? `Movimientos · ${MONTH_OPTIONS.find(o => o.key === monthFilter)?.label}` : 'Movimientos'}
+        </h2>
 
         {withBalances.length === 0 ? (
           <div className="text-center text-muted-foreground py-12 text-sm border border-dashed border-border rounded-xl">
-            No hay movimientos en esta cuenta
+            {monthFilter ? 'Sin movimientos en este mes' : 'No hay movimientos en esta cuenta'}
           </div>
         ) : (() => {
           const groups: Record<string, typeof withBalances> = {}

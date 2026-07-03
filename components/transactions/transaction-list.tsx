@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Plus, MoreVertical, Pencil, Trash2, Search, X, ChevronDown, Download, Paperclip } from 'lucide-react'
+import { ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Plus, MoreVertical, Pencil, Trash2, Search, X, ChevronDown, Download, Paperclip, Calendar } from 'lucide-react'
 import { TransactionDialog } from './transaction-dialog'
 import { RecurringList } from './recurring-list'
 import { createClient } from '@/lib/supabase/client'
@@ -16,6 +16,19 @@ import { useRouter } from 'next/navigation'
 
 const PAGE_SIZE   = 30
 const TRANSFER_COLOR = '#3BB2F6'
+const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+
+function getMonthOptions() {
+  const now = new Date()
+  const options: { key: string; label: string }[] = [{ key: '', label: 'Todos los meses' }]
+  for (let i = 0; i < 18; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const m = d.getMonth() + 1
+    const y = d.getFullYear()
+    options.push({ key: `${y}-${String(m).padStart(2, '0')}`, label: `${MONTH_NAMES[m - 1]} ${y}` })
+  }
+  return options
+}
 
 interface Props {
   transactions: Transaction[]
@@ -42,12 +55,36 @@ export function TransactionList({ transactions, accounts, categories, responsibl
   const [loadingMore, setLoadingMore]     = useState(false)
   const [lightboxUrl, setLightboxUrl]     = useState<string | null>(null)
   const [lightboxLoading, setLightboxLoading] = useState(false)
+  const [monthFilter, setMonthFilter]     = useState<string>('')   // 'YYYY-MM' o ''
+  const [monthlyTx, setMonthlyTx]         = useState<Transaction[] | null>(null)
+  const [loadingMonth, setLoadingMonth]   = useState(false)
 
   const router   = useRouter()
   const supabase = createClient()
+  const MONTH_OPTIONS = getMonthOptions()
+
+  async function selectMonth(key: string) {
+    setMonthFilter(key)
+    if (!key) { setMonthlyTx(null); return }
+    setLoadingMonth(true)
+    const [y, m] = key.split('-').map(Number)
+    const firstDay = `${y}-${String(m).padStart(2, '0')}-01`
+    const lastDay  = `${y}-${String(m).padStart(2, '0')}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`
+    const { data } = await supabase
+      .from('transactions')
+      .select('*, category:categories(*), account:accounts(*), responsible:responsible_parties(*)')
+      .eq('user_id', userId)
+      .gte('date', firstDay)
+      .lte('date', lastDay)
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false })
+    setMonthlyTx((data as Transaction[]) ?? [])
+    setLoadingMonth(false)
+  }
 
   const q = search.trim().toLowerCase()
-  const filtered = allLoaded.filter(t => {
+  const sourceTx = monthFilter ? (monthlyTx ?? []) : allLoaded
+  const filtered = sourceTx.filter(t => {
     if (filter !== 'all' && t.type !== filter) return false
     if (catFilter && t.category_id !== catFilter) return false
     if (accFilter && t.account_id !== accFilter) return false
@@ -339,6 +376,31 @@ export function TransactionList({ transactions, accounts, categories, responsibl
             </DropdownMenuContent>
           </DropdownMenu>
         )}
+
+        {/* Mes dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
+            style={monthFilter
+              ? { background: '#F59E0B20', borderColor: '#F59E0B60', color: '#F59E0B' }
+              : { background: 'transparent', borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }
+            }
+          >
+            <Calendar className="h-3 w-3" />
+            {monthFilter ? MONTH_OPTIONS.find(o => o.key === monthFilter)?.label ?? 'Mes' : 'Mes'}
+            {loadingMonth && <span className="ml-1 h-2.5 w-2.5 rounded-full border border-current border-t-transparent animate-spin" />}
+            {!loadingMonth && <ChevronDown className="h-3 w-3" />}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
+            {MONTH_OPTIONS.map(o => (
+              <DropdownMenuItem key={o.key} onClick={() => selectMonth(o.key)}>
+                {monthFilter === o.key && <span className="mr-2 text-[#F59E0B]">✓</span>}
+                {monthFilter !== o.key && <span className="mr-2 opacity-0">✓</span>}
+                {o.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <Card>
@@ -460,7 +522,7 @@ export function TransactionList({ transactions, accounts, categories, responsibl
       </Card>
 
       {/* Load more */}
-      {hasMore && !q && (
+      {hasMore && !q && !monthFilter && (
         <button
           onClick={loadMore}
           disabled={loadingMore}
