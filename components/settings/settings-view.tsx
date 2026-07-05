@@ -379,62 +379,68 @@ export function SettingsView({ user, categories: initialCategories, expenseTypes
                 <Plus className="h-4 w-4" />
               </button>
             </div>
-            <div className="px-4 pb-3 space-y-3">
-              <div>
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-1.5 px-2">Gastos</p>
-                <div className="space-y-0.5">
-                  {expenses.map(c => (
-                    <div key={c.id} onClick={() => openEditCat(c)} className="flex items-center justify-between py-2 px-2 rounded-xl hover:bg-muted/50 cursor-pointer transition-colors">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-base flex-shrink-0 leading-none">{c.icon}</span>
-                        <span className="text-sm text-foreground truncate">{c.name}</span>
-                        {c.expense_type && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0"
-                            style={{ backgroundColor: `${c.expense_type.color ?? '#3b82f6'}20`, color: c.expense_type.color ?? '#3b82f6' }}>
-                            {c.expense_type.name}
-                          </span>
-                        )}
+            {(() => {
+              const expensesByType = expenseTypes
+                .map(et => ({ type: et, cats: expenses.filter(c => c.expense_type_id === et.id) }))
+                .filter(g => g.cats.length > 0)
+              const unclassified = expenses.filter(c => !c.expense_type_id)
+
+              const renderCatRow = (c: Category) => (
+                <div key={c.id} onClick={() => openEditCat(c)} className="flex items-center justify-between py-2 px-2 rounded-xl hover:bg-muted/50 cursor-pointer transition-colors">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-base flex-shrink-0 leading-none">{c.icon}</span>
+                    <span className="text-sm text-foreground truncate">{c.name}</span>
+                  </div>
+                  <div onClick={e => e.stopPropagation()} className="flex-shrink-0 ml-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-foreground hover:bg-muted transition-colors">
+                        <MoreVertical className="h-3.5 w-3.5" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEditCat(c)}>Editar</DropdownMenuItem>
+                        {!c.is_default && (<><DropdownMenuSeparator /><DropdownMenuItem className="text-red-400" onClick={() => handleDeleteCat(c.id)}>Eliminar</DropdownMenuItem></>)}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              )
+
+              return (
+                <div className="px-4 pb-3 space-y-3">
+                  {/* Grupos por tipo de gasto */}
+                  {expensesByType.map(({ type: et, cats }) => (
+                    <div key={et.id}>
+                      <div className="flex items-center gap-1.5 mb-1 px-2">
+                        <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: et.color ?? '#6b7280' }} />
+                        <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: et.color ?? '#6b7280' }}>
+                          {et.name}
+                        </p>
                       </div>
-                      <div onClick={e => e.stopPropagation()} className="flex-shrink-0 ml-2">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-foreground hover:bg-muted transition-colors">
-                            <MoreVertical className="h-3.5 w-3.5" />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openEditCat(c)}>Editar</DropdownMenuItem>
-                            {!c.is_default && (<><DropdownMenuSeparator /><DropdownMenuItem className="text-red-400" onClick={() => handleDeleteCat(c.id)}>Eliminar</DropdownMenuItem></>)}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+                      <div className="space-y-0.5">{cats.map(renderCatRow)}</div>
                     </div>
                   ))}
-                </div>
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-1.5 px-2">Ingresos</p>
-                <div className="space-y-0.5">
-                  {incomes.map(c => (
-                    <div key={c.id} onClick={() => openEditCat(c)} className="flex items-center justify-between py-2 px-2 rounded-xl hover:bg-muted/50 cursor-pointer transition-colors">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-base flex-shrink-0 leading-none">{c.icon}</span>
-                        <span className="text-sm text-foreground truncate">{c.name}</span>
-                      </div>
-                      <div onClick={e => e.stopPropagation()} className="flex-shrink-0 ml-2">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-foreground hover:bg-muted transition-colors">
-                            <MoreVertical className="h-3.5 w-3.5" />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openEditCat(c)}>Editar</DropdownMenuItem>
-                            {!c.is_default && (<><DropdownMenuSeparator /><DropdownMenuItem className="text-red-400" onClick={() => handleDeleteCat(c.id)}>Eliminar</DropdownMenuItem></>)}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+
+                  {/* Sin clasificar */}
+                  {unclassified.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-1 px-2">Sin clasificar</p>
+                      <div className="space-y-0.5">{unclassified.map(renderCatRow)}</div>
                     </div>
-                  ))}
+                  )}
+
+                  {/* Ingresos */}
+                  {incomes.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1 px-2">
+                        <div className="h-2 w-2 rounded-full flex-shrink-0 bg-emerald-500" />
+                        <p className="text-[10px] font-semibold text-emerald-600 uppercase tracking-widest">Ingresos</p>
+                      </div>
+                      <div className="space-y-0.5">{incomes.map(renderCatRow)}</div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            </div>
+              )
+            })()}
           </div>
 
         </div>
