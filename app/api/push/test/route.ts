@@ -3,9 +3,6 @@ import webpush from 'web-push'
 import { createClient } from '@/lib/supabase/server'
 
 export async function POST() {
-  if (process.env.NODE_ENV === 'production')
-    return NextResponse.json({ error: 'Only available in development' }, { status: 403 })
-
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

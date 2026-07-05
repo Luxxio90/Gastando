@@ -14,6 +14,7 @@ function urlBase64ToUint8Array(base64String: string) {
 export function NotificationsToggle() {
   const [status, setStatus]   = useState<'loading' | 'unsupported' | 'denied' | 'enabled' | 'disabled'>('loading')
   const [working, setWorking] = useState(false)
+  const [testing, setTesting] = useState(false)
 
   useEffect(() => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -74,6 +75,21 @@ export function NotificationsToggle() {
     }
   }
 
+  async function testNotification() {
+    setTesting(true)
+    try {
+      const res = await fetch('/api/push/test', { method: 'POST' })
+      const body = await res.json()
+      if (!res.ok) toast.error(body.error ?? 'Error al enviar notificación de prueba')
+      else if (body.sent > 0) toast.success('Notificación enviada — debería aparecer en segundos')
+      else toast.error('No se pudo enviar. Revisá que los permisos estén activos.')
+    } catch {
+      toast.error('Error de conexión')
+    } finally {
+      setTesting(false)
+    }
+  }
+
   async function disable() {
     setWorking(true)
     try {
@@ -126,45 +142,59 @@ export function NotificationsToggle() {
   const color = isEnabled ? '#00CB96' : '#7C4DFF'
 
   return (
-    <button
-      onClick={isEnabled ? disable : enable}
-      disabled={working}
-      className="w-full flex items-center gap-3 p-4 rounded-xl border transition-all text-left"
-      style={isEnabled
-        ? { backgroundColor: '#00CB9612', borderColor: '#00CB9640' }
-        : { backgroundColor: 'transparent', borderColor: 'hsl(var(--border))' }
-      }
-    >
-      <div
-        className="h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0"
-        style={{ backgroundColor: color + '20' }}
-      >
-        {isEnabled
-          ? <Bell className="h-4 w-4" style={{ color }} />
-          : <BellOff className="h-4 w-4" style={{ color }} />
+    <div className="space-y-2">
+      <button
+        onClick={isEnabled ? disable : enable}
+        disabled={working}
+        className="w-full flex items-center gap-3 p-4 rounded-xl border transition-all text-left"
+        style={isEnabled
+          ? { backgroundColor: '#00CB9612', borderColor: '#00CB9640' }
+          : { backgroundColor: 'transparent', borderColor: 'hsl(var(--border))' }
         }
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-foreground">
-          {working ? 'Procesando...' : isEnabled ? 'Notificaciones activas' : 'Activar notificaciones'}
-        </p>
-        <p className="text-[11px] text-muted-foreground mt-0.5">
-          {isEnabled
-            ? 'Recibís avisos el día anterior a cada vencimiento'
-            : 'Avisamos cuando un gasto o tarjeta está por vencer'
-          }
-        </p>
-      </div>
-      {/* Toggle visual */}
-      <div
-        className="w-10 h-6 rounded-full flex-shrink-0 flex items-center transition-colors px-0.5"
-        style={{ backgroundColor: isEnabled ? '#00CB96' : 'hsl(var(--muted))' }}
       >
         <div
-          className="w-5 h-5 rounded-full bg-white shadow transition-transform"
-          style={{ transform: isEnabled ? 'translateX(16px)' : 'translateX(0px)' }}
-        />
-      </div>
-    </button>
+          className="h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{ backgroundColor: color + '20' }}
+        >
+          {isEnabled
+            ? <Bell className="h-4 w-4" style={{ color }} />
+            : <BellOff className="h-4 w-4" style={{ color }} />
+          }
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-foreground">
+            {working ? 'Procesando...' : isEnabled ? 'Notificaciones activas' : 'Activar notificaciones'}
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            {isEnabled
+              ? 'Recibís avisos el día anterior a cada vencimiento'
+              : 'Avisamos cuando un gasto o tarjeta está por vencer'
+            }
+          </p>
+        </div>
+        {/* Toggle visual */}
+        <div
+          className="w-10 h-6 rounded-full flex-shrink-0 flex items-center transition-colors px-0.5"
+          style={{ backgroundColor: isEnabled ? '#00CB96' : 'hsl(var(--muted))' }}
+        >
+          <div
+            className="w-5 h-5 rounded-full bg-white shadow transition-transform"
+            style={{ transform: isEnabled ? 'translateX(16px)' : 'translateX(0px)' }}
+          />
+        </div>
+      </button>
+
+      {isEnabled && (
+        <button
+          onClick={testNotification}
+          disabled={testing}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed text-sm font-medium transition-colors"
+          style={{ borderColor: '#00CB9640', color: '#00CB96', backgroundColor: '#00CB9608' }}
+        >
+          <Bell className="h-3.5 w-3.5" />
+          {testing ? 'Enviando...' : 'Enviar notificación de prueba'}
+        </button>
+      )}
+    </div>
   )
 }
