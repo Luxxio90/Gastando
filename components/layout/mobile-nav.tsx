@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 
 interface Props {
   userEmail?: string | null
+  avisosCount?: number
 }
 
 const NAV_ITEMS = [
@@ -31,7 +32,7 @@ const DRAWER_ITEMS = [
   { href: '/settings',     icon: Settings,    label: 'Ajustes',     description: 'Cuentas, categorías y más',         color: '#7C4DFF' },
 ]
 
-export function MobileNav({ userEmail }: Props) {
+export function MobileNav({ userEmail, avisosCount = 0 }: Props) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const pathname  = usePathname()
   const router    = useRouter()
@@ -85,26 +86,37 @@ export function MobileNav({ userEmail }: Props) {
         </div>
 
         <nav className="flex-1 overflow-y-auto p-4 space-y-1.5">
-          {DRAWER_ITEMS.map(({ href, icon: Icon, label, description, color }) => (
-            <Link
-              key={href}
-              href={href}
-              onClick={() => setDrawerOpen(false)}
-              className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/60 transition-colors"
-            >
-              <div
-                className="h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: color + '18' }}
+          {DRAWER_ITEMS.map(({ href, icon: Icon, label, description, color }) => {
+            const isAvisos = href === '/avisos'
+            return (
+              <Link
+                key={href}
+                href={href}
+                onClick={() => setDrawerOpen(false)}
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/60 transition-colors"
               >
-                <Icon style={{ color, width: 18, height: 18 }} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground">{label}</p>
-                <p className="text-[10px] text-muted-foreground truncate">{description}</p>
-              </div>
-              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 flex-shrink-0" />
-            </Link>
-          ))}
+                <div
+                  className="h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0 relative"
+                  style={{ backgroundColor: color + '18' }}
+                >
+                  <Icon style={{ color, width: 18, height: 18 }} />
+                  {isAvisos && avisosCount > 0 && (
+                    <span
+                      className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center"
+                      style={{ backgroundColor: '#FF4D6D', lineHeight: 1 }}
+                    >
+                      {avisosCount > 99 ? '99+' : avisosCount}
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">{label}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{description}</p>
+                </div>
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 flex-shrink-0" />
+              </Link>
+            )
+          })}
         </nav>
 
         <div className="p-4 border-t border-border flex-shrink-0">
@@ -155,8 +167,11 @@ export function MobileNav({ userEmail }: Props) {
 
             {/* Menú — opens drawer */}
             <button onClick={() => setDrawerOpen(true)} className="flex flex-col items-center gap-1 px-3 py-1">
-              <div className={cn('p-2 rounded-xl transition-all duration-200', drawerOpen ? 'bg-primary/15' : '')}>
+              <div className={cn('p-2 rounded-xl transition-all duration-200 relative', drawerOpen ? 'bg-primary/15' : '')}>
                 <Menu className={cn('h-5 w-5 transition-colors', drawerOpen ? 'text-primary' : 'text-muted-foreground')} />
+                {avisosCount > 0 && (
+                  <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-[#FF4D6D]" />
+                )}
               </div>
               <span className={cn('text-[10px] font-medium transition-colors', drawerOpen ? 'text-primary' : 'text-muted-foreground')}>
                 Menú

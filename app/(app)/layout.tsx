@@ -10,12 +10,28 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
+  let avisosCount = 0
+  if (user) {
+    const now   = new Date()
+    const month = now.getMonth() + 1
+    const year  = now.getFullYear()
+    const [{ count: fc }, { count: cc }] = await Promise.all([
+      supabase.from('fixed_expense_items').select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id).eq('month', month).eq('year', year)
+        .eq('status', 'pending').not('due_day', 'is', null),
+      supabase.from('credit_card_months').select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id).eq('month', month).eq('year', year)
+        .eq('status', 'pending').not('due_date', 'is', null),
+    ])
+    avisosCount = (fc ?? 0) + (cc ?? 0)
+  }
+
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
       <PullToRefresh>{children}</PullToRefresh>
       <Suspense>
-        <MobileNav userEmail={user?.email} />
+        <MobileNav userEmail={user?.email} avisosCount={avisosCount} />
       </Suspense>
       {user && <FloatingActionButton userId={user.id} />}
       <InstallBanner />
