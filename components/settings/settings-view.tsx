@@ -5,14 +5,12 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { LogOut, User, Mail, Shield, Plus, MoreVertical, FileText } from 'lucide-react'
+import { LogOut, User, Mail, Shield, Plus, MoreVertical, FileText, Bell, Tag, Users, LayoutGrid, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { NotificationsToggle } from './notifications-toggle'
@@ -220,190 +218,227 @@ export function SettingsView({ user, categories: initialCategories, expenseTypes
   const incomes = categories.filter(c => c.type === 'income')
 
   return (
-    <div className="max-w-lg space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">Ajustes</h1>
+    <div className="max-w-lg space-y-5 pb-4">
+
+      {/* Perfil */}
+      <div
+        className="rounded-2xl overflow-hidden border border-border"
+        style={{ background: 'linear-gradient(135deg, #7C4DFF18 0%, transparent 60%)' }}
+      >
+        <div className="px-5 pt-6 pb-5">
+          <div className="flex items-center gap-4">
+            <div
+              className="h-16 w-16 rounded-2xl flex items-center justify-center text-xl font-bold text-white flex-shrink-0 shadow-lg"
+              style={{ background: 'linear-gradient(135deg, #7C4DFF 0%, #9C6DFF 100%)' }}
+            >
+              {initials}
+            </div>
+            <div className="min-w-0">
+              <p className="text-lg font-bold text-foreground truncate">{name}</p>
+              <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+            </div>
+          </div>
+        </div>
+        <div className="border-t border-border/60 divide-y divide-border/60">
+          <div className="flex items-center gap-3 px-5 py-3">
+            <Shield className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
+            <span className="text-sm text-muted-foreground">
+              Email {user.email_confirmed_at ? 'verificado' : 'sin verificar'}
+            </span>
+            {user.email_confirmed_at && (
+              <span className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                style={{ backgroundColor: '#00CB9618', color: '#00CB96' }}>
+                Verificado
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3 px-5 py-3">
+            <User className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
+            <span className="text-sm text-muted-foreground">
+              Miembro desde {new Date(user.created_at).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}
+            </span>
+          </div>
+        </div>
+      </div>
 
       {/* Notificaciones */}
-      <Card>
-        <CardHeader><CardTitle className="text-base">Notificaciones</CardTitle></CardHeader>
-        <CardContent>
+      <div>
+        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest px-1 mb-2">Notificaciones</p>
+        <div className="rounded-2xl border border-border bg-card overflow-hidden px-4 py-4">
           <NotificationsToggle />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Mi cuenta */}
-      <Card>
-        <CardHeader><CardTitle className="text-base">Mi cuenta</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-14 w-14">
-              <AvatarFallback className="bg-emerald-600 text-white text-lg font-bold">{initials}</AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="font-semibold text-foreground">{name}</p>
-              <p className="text-sm text-muted-foreground">{user.email}</p>
-            </div>
-          </div>
-          <Separator />
-          <div className="space-y-3 text-sm">
-            <div className="flex items-center gap-3 text-muted-foreground"><Mail className="h-4 w-4 text-muted-foreground/60" /><span>{user.email}</span></div>
-            <div className="flex items-center gap-3 text-muted-foreground"><Shield className="h-4 w-4 text-muted-foreground/60" /><span>Email {user.email_confirmed_at ? 'verificado' : 'sin verificar'}</span></div>
-            <div className="flex items-center gap-3 text-muted-foreground"><User className="h-4 w-4 text-muted-foreground/60" /><span>Cuenta creada el {new Date(user.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}</span></div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Configuración */}
+      <div>
+        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest px-1 mb-2">Configuración</p>
+        <div className="rounded-2xl border border-border bg-card overflow-hidden divide-y divide-border/60">
 
-      {/* Tipos de gasto */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Tipos de gasto</CardTitle>
-          <Button size="sm" onClick={openCreateEt} className="bg-emerald-600 hover:bg-emerald-700 h-8">
-            <Plus className="h-4 w-4 mr-1" /> Nuevo
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-0.5">
-          {expenseTypes.map(et => (
-            <div key={et.id} onClick={() => openEditEt(et)} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-muted/50 cursor-pointer">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="h-3 w-3 rounded-full flex-shrink-0" style={{ backgroundColor: et.color ?? '#6b7280' }} />
-                <span className="text-sm text-foreground truncate">{et.name}</span>
-              </div>
-              <div onClick={e => e.stopPropagation()} className="flex-shrink-0 ml-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger className="p-1.5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted transition-colors">
-                    <MoreVertical className="h-3.5 w-3.5" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => openEditEt(et)}>Editar</DropdownMenuItem>
-                    {!et.is_default && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-400" onClick={() => handleDeleteEt(et.id)}>Eliminar</DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      {/* Encargados */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Encargados</CardTitle>
-          <Button size="sm" onClick={openCreateResp} className="bg-emerald-600 hover:bg-emerald-700 h-8">
-            <Plus className="h-4 w-4 mr-1" /> Nuevo
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-0.5">
-          {responsibles.length === 0 && (
-            <p className="text-sm text-muted-foreground py-2 px-2">Sin encargados creados</p>
-          )}
-          {responsibles.map(r => (
-            <div key={r.id} onClick={() => openEditResp(r)} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-muted/50 cursor-pointer">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="h-3 w-3 rounded-full flex-shrink-0" style={{ backgroundColor: r.color }} />
-                <span className="text-sm text-foreground truncate">{r.name}</span>
-              </div>
-              <div onClick={e => e.stopPropagation()} className="flex-shrink-0 ml-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger className="p-1.5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted transition-colors">
-                    <MoreVertical className="h-3.5 w-3.5" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => openEditResp(r)}>Editar</DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-red-400" onClick={() => handleDeleteResp(r.id)}>Eliminar</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      {/* Categorías */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Categorías</CardTitle>
-          <Button size="sm" onClick={openCreateCat} className="bg-emerald-600 hover:bg-emerald-700 h-8">
-            <Plus className="h-4 w-4 mr-1" /> Nueva
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Gastos */}
+          {/* Tipos de gasto */}
           <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Gastos</p>
-            <div className="space-y-0.5">
-              {expenses.map(c => (
-                <div key={c.id} onClick={() => openEditCat(c)} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-muted/50 cursor-pointer">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-base flex-shrink-0">{c.icon}</span>
-                    <div className="min-w-0">
-                      <span className="text-sm text-foreground">{c.name}</span>
-                      {c.expense_type && (
-                        <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                          style={{ backgroundColor: `${c.expense_type.color ?? '#3b82f6'}20`, color: c.expense_type.color ?? '#3b82f6' }}>
-                          {c.expense_type.name}
-                        </span>
-                      )}
+            <div className="flex items-center justify-between px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#3BB2F618' }}>
+                  <Tag className="h-4 w-4" style={{ color: '#3BB2F6' }} />
+                </div>
+                <span className="text-sm font-semibold text-foreground">Tipos de gasto</span>
+              </div>
+              <button
+                onClick={openCreateEt}
+                className="h-7 w-7 rounded-lg flex items-center justify-center transition-colors hover:bg-muted"
+                style={{ color: '#3BB2F6' }}
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+            {expenseTypes.length > 0 && (
+              <div className="px-4 pb-3 space-y-0.5">
+                {expenseTypes.map(et => (
+                  <div key={et.id} onClick={() => openEditEt(et)} className="flex items-center justify-between py-2 px-2 rounded-xl hover:bg-muted/50 cursor-pointer transition-colors">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: et.color ?? '#6b7280' }} />
+                      <span className="text-sm text-foreground truncate">{et.name}</span>
+                      {et.is_default && <span className="text-[10px] text-muted-foreground/50">predeterminado</span>}
+                    </div>
+                    <div onClick={e => e.stopPropagation()} className="flex-shrink-0 ml-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-foreground hover:bg-muted transition-colors">
+                          <MoreVertical className="h-3.5 w-3.5" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openEditEt(et)}>Editar</DropdownMenuItem>
+                          {!et.is_default && (<><DropdownMenuSeparator /><DropdownMenuItem className="text-red-400" onClick={() => handleDeleteEt(et.id)}>Eliminar</DropdownMenuItem></>)}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
-                  <div onClick={e => e.stopPropagation()} className="flex-shrink-0 ml-2">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger className="p-1.5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted transition-colors">
-                        <MoreVertical className="h-3.5 w-3.5" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEditCat(c)}>Editar</DropdownMenuItem>
-                        {!c.is_default && (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-400" onClick={() => handleDeleteCat(c.id)}>Eliminar</DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
-          <Separator />
-          {/* Ingresos */}
+
+          {/* Encargados */}
           <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Ingresos</p>
-            <div className="space-y-0.5">
-              {incomes.map(c => (
-                <div key={c.id} onClick={() => openEditCat(c)} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-muted/50 cursor-pointer">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-base flex-shrink-0">{c.icon}</span>
-                    <span className="text-sm text-foreground truncate">{c.name}</span>
-                  </div>
-                  <div onClick={e => e.stopPropagation()} className="flex-shrink-0 ml-2">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger className="p-1.5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted transition-colors">
-                        <MoreVertical className="h-3.5 w-3.5" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEditCat(c)}>Editar</DropdownMenuItem>
-                        {!c.is_default && (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-400" onClick={() => handleDeleteCat(c.id)}>Eliminar</DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+            <div className="flex items-center justify-between px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#7C4DFF18' }}>
+                  <Users className="h-4 w-4" style={{ color: '#7C4DFF' }} />
                 </div>
-              ))}
+                <span className="text-sm font-semibold text-foreground">Encargados</span>
+              </div>
+              <button
+                onClick={openCreateResp}
+                className="h-7 w-7 rounded-lg flex items-center justify-center transition-colors hover:bg-muted"
+                style={{ color: '#7C4DFF' }}
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+            {responsibles.length === 0 ? (
+              <p className="text-xs text-muted-foreground px-6 pb-3">Sin encargados creados</p>
+            ) : (
+              <div className="px-4 pb-3 space-y-0.5">
+                {responsibles.map(r => (
+                  <div key={r.id} onClick={() => openEditResp(r)} className="flex items-center justify-between py-2 px-2 rounded-xl hover:bg-muted/50 cursor-pointer transition-colors">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: r.color }} />
+                      <span className="text-sm text-foreground truncate">{r.name}</span>
+                    </div>
+                    <div onClick={e => e.stopPropagation()} className="flex-shrink-0 ml-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-foreground hover:bg-muted transition-colors">
+                          <MoreVertical className="h-3.5 w-3.5" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openEditResp(r)}>Editar</DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-red-400" onClick={() => handleDeleteResp(r.id)}>Eliminar</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Categorías */}
+          <div>
+            <div className="flex items-center justify-between px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#F59E0B18' }}>
+                  <LayoutGrid className="h-4 w-4" style={{ color: '#F59E0B' }} />
+                </div>
+                <span className="text-sm font-semibold text-foreground">Categorías</span>
+              </div>
+              <button
+                onClick={openCreateCat}
+                className="h-7 w-7 rounded-lg flex items-center justify-center transition-colors hover:bg-muted"
+                style={{ color: '#F59E0B' }}
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="px-4 pb-3 space-y-3">
+              <div>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-1.5 px-2">Gastos</p>
+                <div className="space-y-0.5">
+                  {expenses.map(c => (
+                    <div key={c.id} onClick={() => openEditCat(c)} className="flex items-center justify-between py-2 px-2 rounded-xl hover:bg-muted/50 cursor-pointer transition-colors">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-base flex-shrink-0 leading-none">{c.icon}</span>
+                        <span className="text-sm text-foreground truncate">{c.name}</span>
+                        {c.expense_type && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0"
+                            style={{ backgroundColor: `${c.expense_type.color ?? '#3b82f6'}20`, color: c.expense_type.color ?? '#3b82f6' }}>
+                            {c.expense_type.name}
+                          </span>
+                        )}
+                      </div>
+                      <div onClick={e => e.stopPropagation()} className="flex-shrink-0 ml-2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-foreground hover:bg-muted transition-colors">
+                            <MoreVertical className="h-3.5 w-3.5" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEditCat(c)}>Editar</DropdownMenuItem>
+                            {!c.is_default && (<><DropdownMenuSeparator /><DropdownMenuItem className="text-red-400" onClick={() => handleDeleteCat(c.id)}>Eliminar</DropdownMenuItem></>)}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-1.5 px-2">Ingresos</p>
+                <div className="space-y-0.5">
+                  {incomes.map(c => (
+                    <div key={c.id} onClick={() => openEditCat(c)} className="flex items-center justify-between py-2 px-2 rounded-xl hover:bg-muted/50 cursor-pointer transition-colors">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-base flex-shrink-0 leading-none">{c.icon}</span>
+                        <span className="text-sm text-foreground truncate">{c.name}</span>
+                      </div>
+                      <div onClick={e => e.stopPropagation()} className="flex-shrink-0 ml-2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-foreground hover:bg-muted transition-colors">
+                            <MoreVertical className="h-3.5 w-3.5" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEditCat(c)}>Editar</DropdownMenuItem>
+                            {!c.is_default && (<><DropdownMenuSeparator /><DropdownMenuItem className="text-red-400" onClick={() => handleDeleteCat(c.id)}>Eliminar</DropdownMenuItem></>)}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+
+        </div>
+      </div>
 
       {/* Acceso compartido */}
       <SharedAccessSettings
@@ -413,14 +448,33 @@ export function SettingsView({ user, categories: initialCategories, expenseTypes
         userId={user.id}
       />
 
-      {/* Cerrar sesión */}
-      <Card>
-        <CardContent className="pt-6">
-          <Button variant="destructive" className="w-full" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-2" /> Cerrar sesión
-          </Button>
-        </CardContent>
-      </Card>
+      {/* Legal + Sesión */}
+      <div>
+        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest px-1 mb-2">Más</p>
+        <div className="rounded-2xl border border-border bg-card overflow-hidden divide-y divide-border/60">
+          <Link href="/privacidad" className="flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-colors">
+            <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#6b728018' }}>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <span className="text-sm text-foreground flex-1">Política de Privacidad</span>
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40" />
+          </Link>
+          <Link href="/terminos" className="flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-colors">
+            <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#6b728018' }}>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <span className="text-sm text-foreground flex-1">Términos de Uso</span>
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40" />
+          </Link>
+          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-red-500/5 transition-colors">
+            <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#FF4D6D18' }}>
+              <LogOut className="h-4 w-4" style={{ color: '#FF4D6D' }} />
+            </div>
+            <span className="text-sm font-semibold" style={{ color: '#FF4D6D' }}>Cerrar sesión</span>
+          </button>
+        </div>
+        <p className="text-[11px] text-muted-foreground/40 text-center mt-4">Gastando v1.0 · Mayo 2026</p>
+      </div>
 
       {/* Dialog categoría */}
       <Dialog open={catDialogOpen} onOpenChange={setCatDialogOpen}>
