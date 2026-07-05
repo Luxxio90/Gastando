@@ -184,17 +184,15 @@ export function NotificationsToggle() {
         </div>
       </button>
 
-      {isEnabled && (
-        <button
-          onClick={testNotification}
-          disabled={testing}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed text-sm font-medium transition-colors"
-          style={{ borderColor: '#00CB9640', color: '#00CB96', backgroundColor: '#00CB9608' }}
-        >
-          <Bell className="h-3.5 w-3.5" />
-          {testing ? 'Enviando...' : 'Enviar notificación de prueba'}
-        </button>
-      )}
+      <button
+        onClick={testNotification}
+        disabled={testing}
+        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed text-sm font-medium transition-colors"
+        style={{ borderColor: '#00CB9640', color: '#00CB96', backgroundColor: '#00CB9608' }}
+      >
+        <Bell className="h-3.5 w-3.5" />
+        {testing ? 'Enviando...' : 'Enviar notificación de prueba'}
+      </button>
     </div>
   )
 }
