@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Account, Transaction, Category } from '@/types'
 import { formatCurrency, formatDate, todayLocalStr } from '@/lib/utils'
@@ -73,6 +73,7 @@ export function AccountDetail({ account, transactions, categories, accounts, use
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
   const [editAccountOpen, setEditAccountOpen]       = useState(false)
   const [editLoading, setEditLoading]               = useState(false)
+  const editSubmitting = useRef(false)
   const [monthFilter, setMonthFilter]               = useState<string>('')
   const [editForm, setEditForm] = useState({
     name: account.name, type: account.type,
@@ -117,39 +118,51 @@ export function AccountDetail({ account, transactions, categories, accounts, use
   }
 
   async function handleSaveAccount(e: React.FormEvent) {
-    e.preventDefault(); setEditLoading(true)
-    const newBalance = parseFloat(editForm.balance) || 0
-    const diff = newBalance - account.balance
-    const { error } = await supabase.from('accounts').update({
-      name: editForm.name, type: editForm.type,
-      balance: newBalance, currency: editForm.currency, color: editForm.color,
-    }).eq('id', account.id)
-    if (error) { toast.error('Error al guardar los cambios'); setEditLoading(false); return }
+    e.preventDefault()
+    if (editSubmitting.current) return
+    editSubmitting.current = true
+    setEditLoading(true)
+    try {
+      const newBalance = parseFloat(editForm.balance) || 0
 
-    if (diff !== 0) {
-      const adjType = diff > 0 ? 'income' : 'expense'
-      const { data: cats } = await supabase.from('categories').select('id')
-        .eq('name', 'Ajuste de saldo').eq('type', adjType)
-        .or(`user_id.eq.${userId},is_default.eq.true`).limit(1)
-      let catId: string | null = cats?.[0]?.id ?? null
-      if (!catId) {
-        const { data: newCat } = await supabase.from('categories').insert({
-          user_id: userId, name: 'Ajuste de saldo', icon: '⚖️', color: '#F59E0B', type: adjType, is_default: false,
-        }).select('id').single()
-        catId = newCat?.id ?? null
+      // Re-read balance from DB to avoid stale prop/closure values
+      const { data: fresh } = await supabase.from('accounts').select('balance').eq('id', account.id).single()
+      const currentBalance = typeof fresh?.balance === 'number' ? fresh.balance : account.balance
+      const diff = newBalance - currentBalance
+
+      const { error } = await supabase.from('accounts').update({
+        name: editForm.name, type: editForm.type,
+        balance: newBalance, currency: editForm.currency, color: editForm.color,
+      }).eq('id', account.id)
+      if (error) { toast.error('Error al guardar los cambios'); return }
+
+      if (diff !== 0) {
+        const adjType = diff > 0 ? 'income' : 'expense'
+        const { data: cats } = await supabase.from('categories').select('id')
+          .eq('name', 'Ajuste de saldo').eq('type', adjType)
+          .or(`user_id.eq.${userId},is_default.eq.true`).limit(1)
+        let catId: string | null = cats?.[0]?.id ?? null
+        if (!catId) {
+          const { data: newCat } = await supabase.from('categories').insert({
+            user_id: userId, name: 'Ajuste de saldo', icon: '⚖️', color: '#F59E0B', type: adjType, is_default: false,
+          }).select('id').single()
+          catId = newCat?.id ?? null
+        }
+        if (catId) {
+          await supabase.from('transactions').insert({
+            user_id: userId, account_id: account.id, category_id: catId,
+            type: adjType, amount: Math.abs(diff),
+            description: 'Ajuste de saldo',
+            date: todayLocalStr(), notes: null,
+          })
+        }
       }
-      if (catId) {
-        await supabase.from('transactions').insert({
-          user_id: userId, account_id: account.id, category_id: catId,
-          type: adjType, amount: Math.abs(diff),
-          description: 'Ajuste de saldo',
-          date: todayLocalStr(), notes: null,
-        })
-      }
+
+      toast.success('Cuenta actualizada'); setEditAccountOpen(false); router.refresh()
+    } finally {
+      editSubmitting.current = false
+      setEditLoading(false)
     }
-
-    toast.success('Cuenta actualizada'); setEditAccountOpen(false); router.refresh()
-    setEditLoading(false)
   }
 
   return (

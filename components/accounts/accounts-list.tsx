@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Account } from '@/types'
@@ -115,6 +115,7 @@ export function AccountsList({ accounts, userId }: Props) {
   const [mode, setMode]                       = useState<'create' | 'edit' | null>(null)
   const [editing, setEditing]                 = useState<Account | null>(null)
   const [loading, setLoading]                 = useState(false)
+  const submitting = useRef(false)
   const [form, setForm]                       = useState<FormState>(emptyForm)
   const [balanceIds, setBalanceIds]           = useState<string[] | null>(null)
   const [balanceConfigOpen, setBalanceConfigOpen] = useState(false)
@@ -190,46 +191,58 @@ export function AccountsList({ accounts, userId }: Props) {
   function closeDialog() { setMode(null); setEditing(null); setForm(emptyForm) }
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault(); setLoading(true)
-    if (mode === 'create') {
-      const { error } = await supabase.from('accounts').insert({ user_id: userId, name: form.name, type: form.type, balance: parseFloat(form.balance) || 0, currency: form.currency, color: form.color })
-      if (error) toast.error('Error al crear la cuenta')
-      else { toast.success('Cuenta creada'); closeDialog(); router.refresh() }
-    } else if (mode === 'edit' && editing) {
-      const newBalance = parseFloat(form.balance) || 0
-      const diff = newBalance - editing.balance
-      const { error } = await supabase.from('accounts').update({ name: form.name, type: form.type, balance: newBalance, currency: form.currency, color: form.color }).eq('id', editing.id)
-      if (error) { toast.error('Error al guardar los cambios'); setLoading(false); return }
+    e.preventDefault()
+    if (submitting.current) return
+    submitting.current = true
+    setLoading(true)
+    try {
+      if (mode === 'create') {
+        const { error } = await supabase.from('accounts').insert({ user_id: userId, name: form.name, type: form.type, balance: parseFloat(form.balance) || 0, currency: form.currency, color: form.color })
+        if (error) toast.error('Error al crear la cuenta')
+        else { toast.success('Cuenta creada'); closeDialog(); router.refresh() }
+      } else if (mode === 'edit' && editing) {
+        const newBalance = parseFloat(form.balance) || 0
 
-      if (diff !== 0) {
-        const adjType = diff > 0 ? 'income' : 'expense'
-        const { data: cats } = await supabase.from('categories').select('id')
-          .eq('name', 'Ajuste de saldo').eq('type', adjType)
-          .or(`user_id.eq.${userId},is_default.eq.true`).limit(1)
-        let catId: string | null = cats?.[0]?.id ?? null
-        if (!catId) {
-          const { data: newCat } = await supabase.from('categories').insert({
-            user_id: userId, name: 'Ajuste de saldo', icon: '⚖️', color: '#F59E0B', type: adjType, is_default: false,
-          }).select('id').single()
-          catId = newCat?.id ?? null
+        // Re-read balance from DB to avoid stale state values
+        const { data: fresh } = await supabase.from('accounts').select('balance').eq('id', editing.id).single()
+        const currentBalance = typeof fresh?.balance === 'number' ? fresh.balance : editing.balance
+        const diff = newBalance - currentBalance
+
+        const { error } = await supabase.from('accounts').update({ name: form.name, type: form.type, balance: newBalance, currency: form.currency, color: form.color }).eq('id', editing.id)
+        if (error) { toast.error('Error al guardar los cambios'); return }
+
+        if (diff !== 0) {
+          const adjType = diff > 0 ? 'income' : 'expense'
+          const { data: cats } = await supabase.from('categories').select('id')
+            .eq('name', 'Ajuste de saldo').eq('type', adjType)
+            .or(`user_id.eq.${userId},is_default.eq.true`).limit(1)
+          let catId: string | null = cats?.[0]?.id ?? null
+          if (!catId) {
+            const { data: newCat } = await supabase.from('categories').insert({
+              user_id: userId, name: 'Ajuste de saldo', icon: '⚖️', color: '#F59E0B', type: adjType, is_default: false,
+            }).select('id').single()
+            catId = newCat?.id ?? null
+          }
+          if (catId) {
+            await supabase.from('transactions').insert({
+              user_id: userId, account_id: editing.id, category_id: catId,
+              type: adjType, amount: Math.abs(diff),
+              description: 'Ajuste de saldo',
+              date: todayLocalStr(), notes: null,
+            })
+          }
         }
-        if (catId) {
-          await supabase.from('transactions').insert({
-            user_id: userId, account_id: editing.id, category_id: catId,
-            type: adjType, amount: Math.abs(diff),
-            description: 'Ajuste de saldo',
-            date: todayLocalStr(), notes: null,
-          })
-        }
+
+        setLocalAccounts(prev => prev.map(a => a.id === editing.id
+          ? { ...a, name: form.name, type: form.type, balance: newBalance, currency: form.currency, color: form.color }
+          : a
+        ))
+        toast.success('Cuenta actualizada'); closeDialog(); router.refresh()
       }
-
-      setLocalAccounts(prev => prev.map(a => a.id === editing.id
-        ? { ...a, name: form.name, type: form.type, balance: newBalance, currency: form.currency, color: form.color }
-        : a
-      ))
-      toast.success('Cuenta actualizada'); closeDialog(); router.refresh()
+    } finally {
+      submitting.current = false
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   async function handleDelete(id: string) {
